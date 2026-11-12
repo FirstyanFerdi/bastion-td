@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BASTION - Grid Defense</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5l11.5 6.5v14L16 29.5 4.5 23V9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 20.5l6-8.5 6 8.5" fill="none" stroke="#e2a72e" stroke-width="2.6" stroke-linejoin="round"/></svg><div><b>BASTION</b><small>GRID DEFENSE SYSTEM</small></div></div>
+    <div class="chips">
+      <div class="chip" id="chipLives"><span class="ic" data-ico="shield"></span><div><label>LIVES</label><b id="vLives">25</b></div></div>
+      <div class="chip" id="chipGold"><span class="ic" data-ico="coin"></span><div><label>GOLD</label><b id="vGold">0</b></div></div>
+      <div class="chip"><span class="ic" data-ico="wave"></span><div><label>WAVE</label><b id="vWave">0</b></div></div>
+      <div class="chip"><span class="ic" data-ico="target"></span><div><label>SCORE</label><b id="vScore">0</b><small id="vBestScore"></small></div></div>
+      <div class="chip"><span class="ic" data-ico="flag"></span><div><label>BEST WAVE</label><b id="vBestWave">0</b></div></div>
+    </div>
+    <div class="ctrls">
+      <div class="seg" id="speedSeg">
+        <button data-speed="1" class="on" tabindex="-1">1x</button>
+        <button data-speed="2" tabindex="-1">2x</button>
+        <button data-speed="3" tabindex="-1">3x</button>
+      </div>
+      <button class="ibtn" id="btnPause" title="Pause (P)" tabindex="-1"></button>
+      <button class="ibtn" id="btnMute" title="Mute (M)" tabindex="-1"></button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="stage">
+      <div id="canvasWrap">
+        <canvas id="game"></canvas>
+        <div id="overlay"></div>
+      </div>
+    </section>
+    <aside id="side">
+      <div class="card" id="waveCard">
+        <div class="wc-head"><span class="lbl">NEXT WAVE</span><b id="wcNum">1</b></div>
+        <div class="wc-badges" id="wcBadges"></div>
+        <div class="tags" id="wcTags"></div>
+        <button class="primary" id="btnCall" tabindex="-1">Start Wave 1</button>
+        <div class="hint" id="wcHint">Calling early pays a gold bonus. Clearing a wave pays interest on unspent gold.</div>
+      </div>
+      <div class="card" id="inspector"></div>
+    </aside>
+  </main>
+
+  <footer id="dock"></footer>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/towers.js"></script>
+<script src="js/waves.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/input.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
