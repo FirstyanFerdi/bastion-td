@@ -10,9 +10,18 @@ function startWave() {
   for (const x of ev) G.queue.push({ at: base + x.t, type: x.type, wave: n });
   G.queue.sort((a, b) => a.at - b.at);
   G.state = 'active';
+  G.leakedThisWave = 0;
   if (n > SAVE.bestWave) { SAVE.bestWave = n; Store.set('nb_bestWave', n); }
   const boss = n % 5 === 0;
-  G.banner = { text: boss ? 'BOSS WAVE ' + n : 'WAVE ' + n, sub: boss ? 'Heavy hostile signature detected' : '', t: 0, max: 2.4, color: boss ? '#d9534f' : '#e2a72e' };
+  if (n >= 7 && (n % 2 === 1 || boss)) {
+    const mKeys = Object.keys(WAVE_MUTATORS);
+    G.mutator = WAVE_MUTATORS[mKeys[(n * 3) % mKeys.length]];
+  } else {
+    G.mutator = null;
+  }
+  let sub = boss ? 'Heavy hostile signature detected' : '';
+  if (G.mutator) sub = (sub ? sub + ' · ' : '') + 'MUTATOR: ' + G.mutator.name;
+  G.banner = { text: boss ? 'BOSS WAVE ' + n : 'WAVE ' + n, sub, t: 0, max: 2.6, color: boss ? '#d9534f' : (G.mutator ? '#f59e0b' : '#e2a72e') };
   if (boss) shake(8);
   Sfx.play('wave');
   G.uiDirty = true;
@@ -22,7 +31,7 @@ function earlyBonus() {
   return 8 + G.wave;
 }
 function canCall() {
-  if (!G || (G.state !== 'prep' && G.state !== 'active')) return false;
+  if (!G || (G.state !== 'prep' && G.state !== 'active') || G.drafting) return false;
   if (G.wave >= WIN_WAVE && !G.endless) return false;
   return true;
 }
@@ -33,13 +42,44 @@ function callWave() {
   startWave();
 }
 function onWaveClear() {
-  const n = G.wave, bonus = 25 + n * 4, interest = Math.min(150, Math.floor(G.gold * 0.08));
+  const n = G.wave, bonus = 25 + n * 4;
+  const isVC = hasPerk('venture_capital');
+  const intRate = isVC ? 0.14 : 0.08, intCap = isVC ? 260 : 150;
+  const interest = Math.min(intCap, Math.floor(G.gold * intRate));
   G.gold += bonus + interest; G.score += n * 100 + bonus + interest;
   addText(W / 2, 90, 'WAVE ' + n + ' CLEARED  +' + bonus, '#6ee7b7', 22);
-  if (interest > 0) addText(W / 2, 118, 'interest +' + interest, '#fbbf24', 16);
+  if (interest > 0) addText(W / 2, 118, 'interest +' + interest + (isVC ? ' (Venture Capital)' : ''), '#fbbf24', 16);
   Sfx.play('coin');
   saveBest();
+
+  // Boss Wave Roguelite Tech Requisition Draft
+  if (n % 5 === 0) {
+    const unowned = Object.keys(PERKS).filter(k => G.perks.indexOf(k) < 0);
+    if (unowned.length > 0) {
+      const pool = [...unowned], picked = [];
+      while (picked.length < 3 && pool.length > 0) {
+        const idx = Math.floor(Math.random() * pool.length);
+        picked.push(pool.splice(idx, 1)[0]);
+      }
+      G.drafting = { cards: picked };
+      showOverlay('draft');
+      Sfx.play('perk');
+      G.uiDirty = true;
+      return;
+    }
+  }
+
   if (n >= WIN_WAVE && !G.endless) { endGame(true); return; }
+  G.state = 'prep'; G.prepT = 20; G.uiDirty = true;
+}
+function selectPerk(id) {
+  if (!G || !G.drafting) return;
+  G.perks.push(id);
+  G.drafting = null;
+  showOverlay(null);
+  addText(W / 2, 140, 'REQUISITIONED: ' + PERKS[id].name, '#38bdf8', 18);
+  Sfx.play('upgrade');
+  if (G.wave >= WIN_WAVE && !G.endless) { endGame(true); return; }
   G.state = 'prep'; G.prepT = 20; G.uiDirty = true;
 }
 function saveBest() {
@@ -50,7 +90,7 @@ function endGame(won) {
   if (won) G.score += G.lives * 50;
   saveBest();
   G.state = won ? 'victory' : 'over';
-  G.placing = null;
+  G.placing = null; G.casting = null; G.drafting = null;
   showOverlay(won ? 'win' : 'over');
   Sfx.play(won ? 'victory' : 'gameover');
 }
@@ -59,7 +99,43 @@ function endGame(won) {
    UPDATE
    ============================================================ */
 function update(dt) {
+  if (G.drafting) return;
   G.time += dt; G.anim += dt;
+
+  // Commander skills cooldown
+  for (const k of ['orbital', 'overcharge', 'caltrops']) {
+    if (G.skills[k] && G.skills[k].cd > 0) {
+      const cdRate = hasPerk('orbital_salvo') && k === 'orbital' ? 1.5 : 1;
+      G.skills[k].cd = Math.max(0, G.skills[k].cd - dt * cdRate);
+    }
+  }
+
+  // Hazards tick
+  for (let i = G.hazards.length - 1; i >= 0; i--) {
+    const h = G.hazards[i];
+    h.life -= dt;
+    if (h.type === 'caltrops') {
+      for (const e of G.enemies) {
+        if (e.dead) continue;
+        if ((e.x - h.x) ** 2 + (e.y - h.y) ** 2 <= (h.r + e.r) ** 2) {
+          e.slowAmt = Math.max(e.slowAmt, 0.6); e.slowT = 0.5;
+          e.revealT = 2.0;
+          dealDamage(e, h.dps * dt, 'phys', null);
+          if (hasPerk('nanite_infusion') && e.armor > 0) e.shred = Math.min(e.armor, e.shred + 0.15 * dt);
+        }
+      }
+    } else if (h.type === 'radiation') {
+      for (const e of G.enemies) {
+        if (e.dead) continue;
+        if ((e.x - h.x) ** 2 + (e.y - h.y) ** 2 <= (h.r + e.r) ** 2) {
+          dealDamage(e, h.dps * dt, 'plasma', h.src);
+          if (e.armor > 0) e.shred = Math.min(e.armor, e.shred + 0.18 * dt);
+        }
+      }
+    }
+    if (h.life <= 0) G.hazards.splice(i, 1);
+  }
+
   while (G.queue.length && G.queue[0].at <= G.time) { const q = G.queue.shift(); spawnEnemy(q.type, q.wave); }
   for (let i = 0; i < G.enemies.length; i++) updateEnemy(G.enemies[i], dt);
   let w = 0;

@@ -34,7 +34,16 @@ const types = ['gatling', 'plasma', 'cryo', 'tesla', 'rail', 'gatling', 'plasma'
 let next = 0;
 function bot() {
   const G = nb.G;
-  for (const t of G.towers) if (t.tier < 2 && G.gold >= nb.TD[t.type].tiers[t.tier + 1].upg + 60) nb.upgradeTower(t);
+  if (G.drafting && G.drafting.cards && G.drafting.cards.length > 0) {
+    nb.selectPerk(G.drafting.cards[0]);
+  }
+  for (const t of G.towers) {
+    if (t.tier === 0 && G.gold >= nb.TD[t.type].tiers[1].upg + 50) {
+      nb.upgradeTower(t);
+    } else if (t.tier === 1 && G.gold >= nb.TD[t.type].branches.A.upg + 50) {
+      nb.upgradeTower(t, (t.c + t.r) % 2 === 0 ? 'A' : 'B');
+    }
+  }
   while (next < spots.length) {
     const ty = types[next % types.length], [c, r] = spots[next];
     if (G.gold < nb.TD[ty].cost + 30) break;
@@ -47,6 +56,9 @@ let steps = 0;
 try {
   for (let i = 0; i < 2000000; i++) {
     const G = nb.G;
+    if (G.drafting && G.drafting.cards && G.drafting.cards.length > 0) {
+      nb.selectPerk(G.drafting.cards[0]);
+    }
     if (G.state === 'over') break;
     if (G.state === 'victory') { if (maxWave <= 20) break; G.endless = true; G.state = 'prep'; G.prepT = 15; }
     if (G.wave >= maxWave && G.state === 'prep') break;

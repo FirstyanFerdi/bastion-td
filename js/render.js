@@ -145,6 +145,56 @@ function drawFx(c) {
     c.globalAlpha = 1;
   }
 }
+function drawHazards(c, time) {
+  for (const h of G.hazards) {
+    if (h.type === 'radiation') {
+      const g = c.createRadialGradient(h.x, h.y, 4, h.x, h.y, h.r);
+      const k = clamp(h.life / h.max, 0, 1);
+      g.addColorStop(0, 'rgba(251,146,60,' + (0.45 * k) + ')');
+      g.addColorStop(0.6, 'rgba(234,88,12,' + (0.25 * k) + ')');
+      g.addColorStop(1, 'rgba(234,88,12,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(h.x, h.y, h.r, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(253,186,116,' + (0.4 * k) + ')'; c.lineWidth = 1.5;
+      c.beginPath(); c.arc(h.x, h.y, h.r * (0.4 + 0.3 * Math.sin(time * 6)), 0, TAU); c.stroke();
+    } else if (h.type === 'caltrops') {
+      const k = clamp(h.life / h.max, 0, 1);
+      c.fillStyle = 'rgba(226,167,46,' + (0.15 * k) + ')'; c.beginPath(); c.arc(h.x, h.y, h.r, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(242,193,79,' + (0.6 * k) + ')'; c.lineWidth = 1.2;
+      for (let i = 0; i < 5; i++) {
+        const q = i * TAU / 5 + time * 0.4, sx = h.x + Math.cos(q) * 14, sy = h.y + Math.sin(q) * 14;
+        c.beginPath(); c.moveTo(sx - 3, sy); c.lineTo(sx + 3, sy); c.moveTo(sx, sy - 3); c.lineTo(sx, sy + 3); c.stroke();
+      }
+    }
+  }
+}
+
+function drawCasting(c, time) {
+  if (!G.casting || !G.mouse.in) return;
+  const mx = G.mouse.x, my = G.mouse.y;
+  if (G.casting === 'orbital') {
+    const rad = 95 * (hasPerk('orbital_salvo') ? 1.4 : 1.0);
+    c.strokeStyle = '#f43f5e'; c.lineWidth = 2; c.setLineDash([8, 6]);
+    c.beginPath(); c.arc(mx, my, rad, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = 'rgba(244,63,94,0.14)'; c.beginPath(); c.arc(mx, my, rad, 0, TAU); c.fill();
+    c.strokeStyle = '#fff'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(mx - 16, my); c.lineTo(mx + 16, my); c.moveTo(mx, my - 16); c.lineTo(mx, my + 16); c.stroke();
+    c.fillStyle = '#f43f5e'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
+    c.fillText('ORBITAL IMPACT TARGET', mx, my - rad - 8);
+  } else if (G.casting === 'overcharge') {
+    c.strokeStyle = '#38bdf8'; c.lineWidth = 2; c.setLineDash([6, 5]);
+    c.beginPath(); c.arc(mx, my, 40, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = 'rgba(56,189,248,0.15)'; c.beginPath(); c.arc(mx, my, 40, 0, TAU); c.fill();
+    c.fillStyle = '#38bdf8'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
+    c.fillText('SELECT TOWER TO OVERCHARGE', mx, my - 48);
+  } else if (G.casting === 'caltrops') {
+    c.strokeStyle = '#e2a72e'; c.lineWidth = 2;
+    c.fillStyle = 'rgba(226,167,46,0.2)';
+    c.beginPath(); c.arc(mx, my, 34, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = '#e2a72e'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
+    c.fillText('DEPLOY NANITE CALTROPS ON ROAD', mx, my - 42);
+  }
+}
+
 function render() {
   const c = ctx;
   c.setTransform(S, 0, 0, S, 0, 0);
@@ -154,27 +204,43 @@ function render() {
   c.drawImage(mapCanvas, 0, 0, W, H);
   drawFlow(c); drawSpawnBase(c);
   const time = G.anim;
-  // placement / hover / selection
-  if (G.hover) {
+  drawHazards(c, time);
+
+  // Tesla Overcharger conduits
+  for (const t of G.towers) {
+    if (t.type === 'tesla' && t.branch === 'A' && t.empT <= 0) {
+      for (const o of G.towers) {
+        if (o !== t && (o.x - t.x) ** 2 + (o.y - t.y) ** 2 <= (2.2 * TILE) ** 2) {
+          c.strokeStyle = 'rgba(234,179,8,0.45)'; c.lineWidth = 1.8;
+          c.beginPath(); c.moveTo(t.x, t.y); c.lineTo((t.x + o.x) / 2 + rand(-3, 3), (t.y + o.y) / 2 + rand(-3, 3)); c.lineTo(o.x, o.y); c.stroke();
+        }
+      }
+    }
+  }
+
+  // placement / hover / selection / casting
+  if (G.casting) {
+    drawCasting(c, time);
+  } else if (G.hover) {
     const { c: hc, r: hr } = G.hover, x = hc * TILE, y = hr * TILE;
     if (G.placing) {
       const def = TD[G.placing], ok = !pathTile[hr][hc] && !G.grid[hr][hc], afford = G.gold >= def.cost, good = ok && afford;
       c.fillStyle = good ? 'rgba(52,211,153,0.16)' : 'rgba(244,63,94,0.2)'; c.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
       c.strokeStyle = good ? '#34d399' : '#f43f5e'; c.lineWidth = 2; c.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
-      const rg = def.tiers[0].range * TILE, cx = x + TILE / 2, cy = y + TILE / 2;
+      const rg = def.tiers[0].range * (hasPerk('targeting_matrix') ? 1.15 : 1) * TILE, cx = x + TILE / 2, cy = y + TILE / 2;
       c.fillStyle = good ? 'rgba(52,211,153,0.07)' : 'rgba(244,63,94,0.07)'; c.strokeStyle = good ? 'rgba(52,211,153,0.6)' : 'rgba(244,63,94,0.5)';
       c.lineWidth = 1.5; c.setLineDash([6, 5]); c.beginPath(); c.arc(cx, cy, rg, 0, TAU); c.fill(); c.stroke(); c.setLineDash([]);
       if (ok) { c.globalAlpha = 0.65; drawTowerSprite(c, G.placing, 0, { x: cx, y: cy, angle: -Math.PI / 4, spin: time, charge: 1 }, time); c.globalAlpha = 1; }
     } else if (G.grid[hr][hc] && G.grid[hr][hc] !== G.sel) {
-      const t = G.grid[hr][hc], rg = TD[t.type].tiers[t.tier].range * TILE;
+      const t = G.grid[hr][hc], rg = getTierData(t).range * (hasPerk('targeting_matrix') ? 1.15 : 1) * TILE;
       c.strokeStyle = 'rgba(148,163,184,0.45)'; c.lineWidth = 1.5; c.setLineDash([4, 5]); c.beginPath(); c.arc(t.x, t.y, rg, 0, TAU); c.stroke(); c.setLineDash([]);
     } else if (!G.grid[hr][hc] && !pathTile[hr][hc]) {
       c.strokeStyle = 'rgba(255,255,255,0.22)'; c.lineWidth = 1; c.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
     }
   }
   if (G.sel) {
-    const t = G.sel, def = TD[t.type], rg = def.tiers[t.tier].range * TILE;
-    c.fillStyle = 'rgba(255,255,255,0.045)'; c.strokeStyle = def.color; c.lineWidth = 1.5; c.setLineDash([8, 6]);
+    const t = G.sel, def = TD[t.type], rg = getTierData(t).range * (hasPerk('targeting_matrix') ? 1.15 : 1) * TILE;
+    c.fillStyle = 'rgba(255,255,255,0.045)'; c.strokeStyle = t.branch ? def.branches[t.branch].color : def.color; c.lineWidth = 1.5; c.setLineDash([8, 6]);
     c.beginPath(); c.arc(t.x, t.y, rg, 0, TAU); c.fill(); c.stroke(); c.setLineDash([]);
     c.strokeStyle = '#fff'; c.lineWidth = 2; rr(c, t.x - 28, t.y - 28, 56, 56, 10); c.stroke();
   }

@@ -26,7 +26,7 @@ function init() {
   ctx = canvas.getContext('2d');
   buildMap(); buildDock();
   document.querySelectorAll('[data-ico]').forEach(el => { el.innerHTML = svg(el.dataset.ico); });
-  ['scout', 'swarm', 'brute', 'healer', 'boss'].forEach(k => enemyIcons[k] = enemyIcon(k));
+  ['scout', 'swarm', 'brute', 'healer', 'stealth', 'carrier', 'breacher', 'boss'].forEach(k => enemyIcons[k] = enemyIcon(k));
   newGame(false); G.state = 'menu';
   showOverlay('menu');
   fit(); window.addEventListener('resize', fit);
@@ -46,14 +46,20 @@ function init() {
   $('btnMute').addEventListener('click', toggleMute);
   $('btnCall').addEventListener('click', () => { Sfx.init(); Sfx.resume(); if (G.state === 'menu') return; Sfx.play('click'); callWave(); });
   $('dock').addEventListener('click', e => { const s = e.target.closest('.shop'); if (s) { Sfx.init(); Sfx.resume(); selectShop(s.dataset.type); } });
+  $('cmdSkills').addEventListener('click', e => {
+    const b = e.target.closest('.cmd-btn');
+    if (b && b.dataset.skill) triggerSkill(b.dataset.skill);
+  });
   $('inspector').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !G.sel) return;
     const act = b.dataset.act;
-    if (act === 'upgrade') upgradeTower(G.sel);
+    if (act === 'upgrade') upgradeTower(G.sel, b.dataset.branch);
     else if (act === 'sell') sellTower(G.sel);
     else if (act === 'prio') { G.sel.prio = b.dataset.prio; G.uiDirty = true; Sfx.play('click'); }
   });
   $('overlay').addEventListener('click', e => {
+    const card = e.target.closest('[data-perk]');
+    if (card && G.drafting) { selectPerk(card.dataset.perk); return; }
     const b = e.target.closest('button'); if (!b) return;
     Sfx.init(); Sfx.resume();
     const a = b.dataset.ov;
@@ -66,4 +72,4 @@ function init() {
 init();
 
 // Small debug/test hook (harmless in production)
-window.__nb = { get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI };
+window.__nb = { get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData };

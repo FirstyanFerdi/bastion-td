@@ -4,7 +4,7 @@
 /* ============================================================
    SPRITES, towers
    ============================================================ */
-function drawBase(c, col, tier) {
+function drawBase(c, col, tier, branch) {
   c.fillStyle = '#0b0f12'; rr(c, -26, -26, 52, 52, 3); c.fill();
   c.fillStyle = '#1f272c'; rr(c, -24, -24, 48, 48, 2); c.fill();
   c.lineWidth = 2; c.strokeStyle = tier === 0 ? '#4a575f' : col; rr(c, -24, -24, 48, 48, 2); c.stroke();
@@ -14,50 +14,63 @@ function drawBase(c, col, tier) {
   for (const sx of [-1, 1]) for (const sy of [-1, 1]) c.fillRect(sx * 20 - 1.5, sy * 20 - 1.5, 3, 3);
   c.fillStyle = col;
   for (let i = 0; i <= tier; i++) c.fillRect((i - tier / 2) * 7 - 2.5, 16.5, 5, 3);
+  if (branch) {
+    c.fillStyle = branch === 'A' ? '#38bdf8' : '#f59e0b';
+    c.font = '700 8px ' + FONT; c.textAlign = 'center';
+    c.fillText(branch, 0, -17);
+  }
 }
 function drawTowerSprite(c, type, tier, o, time) {
-  const col = TD[type].color, rec = o.recoil || 0, fl = o.flash || 0, a = o.angle || 0;
+  const col = o.branch ? TD[type].branches[o.branch].color : TD[type].color;
+  const rec = o.recoil || 0, fl = o.flash || 0, a = o.angle || 0;
   c.save(); c.translate(o.x, o.y);
   const pop = o.pop || 0; if (pop > 0) { const s = 1 + pop * 0.18; c.scale(s, s); }
-  drawBase(c, col, tier);
+  drawBase(c, col, tier, o.branch);
+  if (o.overchargeT > 0) glow(c, 0, 0, 32, '#38bdf8', 0.5 + 0.3 * Math.sin(time * 15));
+  if (o.empT > 0) glow(c, 0, 0, 26, '#facc15', 0.4 + 0.4 * Math.sin(time * 20));
   switch (type) {
     case 'gatling': {
       c.rotate(a);
-      const n = 2 + tier, R = 5.5 + tier * 0.8, len = 19 + tier * 3 - rec * 5;
+      const isOverdrive = o.branch === 'A', isFlak = o.branch === 'B';
+      const n = isOverdrive ? 6 : (2 + tier), R = 5.5 + tier * 0.8, len = 19 + tier * 3 - rec * 5;
       c.fillStyle = '#24304f'; rr(c, -10, -8, 11, 16, 3); c.fill();
+      const heat = o.heat || 0;
       for (let i = 0; i < n; i++) {
         const ang = o.spin + i * TAU / n, y = Math.sin(ang) * R, z = Math.cos(ang), g = Math.round(112 + z * 48);
-        c.fillStyle = 'rgb(' + g + ',' + (g + 24) + ',' + (g + 46) + ')'; c.fillRect(3, y - 2, len, 4);
-        c.fillStyle = col; c.fillRect(3 + len - 3, y - 2, 3, 4);
+        c.fillStyle = isOverdrive && heat > 0.2 ? 'rgb(' + Math.round(180 + heat * 75) + ',' + Math.round(80 * (1 - heat)) + ',40)' : 'rgb(' + g + ',' + (g + 24) + ',' + (g + 46) + ')';
+        c.fillRect(3, y - 2, len, isFlak ? 5 : 4);
+        c.fillStyle = col; c.fillRect(3 + len - 3, y - 2, 3, isFlak ? 5 : 4);
       }
       c.fillStyle = '#1b2540'; c.beginPath(); c.arc(0, 0, 10 + tier, 0, TAU); c.fill();
       c.strokeStyle = col; c.lineWidth = 1.5; c.stroke();
       c.fillStyle = col; c.beginPath(); c.arc(0, 0, 3, 0, TAU); c.fill();
       if (tier >= 2) { c.strokeStyle = col; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, 15, -0.9, 0.9); c.stroke(); c.beginPath(); c.arc(0, 0, 15, Math.PI - 0.9, Math.PI + 0.9); c.stroke(); }
-      if (fl > 0) glow(c, 25 + tier * 3 + len * 0.3, 0, 16, '#cffafe', fl);
+      if (fl > 0) glow(c, 25 + tier * 3 + len * 0.3, 0, 16, isOverdrive ? '#fde047' : '#cffafe', fl);
       break;
     }
     case 'plasma': {
       c.rotate(a);
-      const bw = 9 + tier * 2.5, len = 22 + tier * 2 - rec * 6;
+      const isMortar = o.branch === 'A';
+      const bw = (isMortar ? 14 : 9) + tier * 2.5, len = (isMortar ? 26 : 22) + tier * 2 - rec * 6;
       if (tier >= 1) { c.fillStyle = '#33261b'; rr(c, -6, -19, 20, 6, 3); c.fill(); rr(c, -6, 13, 20, 6, 3); c.fill(); c.fillStyle = col; c.fillRect(8, -17.5, 3, 3); c.fillRect(8, 14.5, 3, 3); }
-      c.fillStyle = '#2b2118'; c.beginPath(); c.arc(0, 0, 14, 0, TAU); c.fill(); c.strokeStyle = col; c.lineWidth = 2; c.stroke();
-      c.fillStyle = '#3a2d22'; rr(c, 2, -bw / 2, len, bw, 3); c.fill(); c.strokeStyle = col; c.lineWidth = 1.2; c.stroke();
+      c.fillStyle = '#2b2118'; c.beginPath(); c.arc(0, 0, isMortar ? 16 : 14, 0, TAU); c.fill(); c.strokeStyle = col; c.lineWidth = 2; c.stroke();
+      c.fillStyle = isMortar ? '#451a03' : '#3a2d22'; rr(c, 2, -bw / 2, len, bw, 3); c.fill(); c.strokeStyle = col; c.lineWidth = 1.2; c.stroke();
       c.fillStyle = col; c.fillRect(2 + len - 4, -bw / 2 - 1.5, 4, bw + 3);
       if (tier >= 2) c.fillRect(2 + len * 0.5, -bw / 2 - 1.5, 3, bw + 3);
       const pulse = 0.6 + 0.4 * Math.sin(time * 5);
-      glow(c, 0, 0, 9, '#fdba74', 0.5 + 0.5 * pulse);
+      glow(c, 0, 0, isMortar ? 12 : 9, isMortar ? '#ea580c' : '#fdba74', 0.5 + 0.5 * pulse);
       if (fl > 0) glow(c, 26 + len * 0.4, 0, 18, '#fff7ed', fl);
       break;
     }
     case 'cryo': {
+      const isAbsZero = o.branch === 'A', isVortex = o.branch === 'B';
       const pulse = 0.5 + 0.5 * Math.sin(time * 3);
-      glow(c, 0, 0, 26, '#60a5fa', 0.2 + 0.15 * pulse + fl * 0.5);
-      c.save(); c.rotate(o.spin);
-      const sp = 4 + tier * 2;
+      glow(c, 0, 0, 26, isAbsZero ? '#93c5fd' : (isVortex ? '#3b82f6' : '#60a5fa'), 0.2 + 0.15 * pulse + fl * 0.5);
+      c.save(); c.rotate(isVortex ? -o.spin * 1.5 : o.spin);
+      const sp = isAbsZero ? 8 : (4 + tier * 2);
       for (let i = 0; i < sp; i++) {
         c.save(); c.rotate(i * TAU / sp);
-        const L = 15 + tier * 3 - (i % 2 ? 3 : 0);
+        const L = (isAbsZero ? 18 : 15) + tier * 3 - (i % 2 ? 3 : 0);
         c.fillStyle = i % 2 ? '#93c5fd' : '#bfdbfe'; c.beginPath(); c.moveTo(6, -3.2); c.lineTo(L, 0); c.lineTo(6, 3.2); c.closePath(); c.fill();
         c.restore();
       }
@@ -68,6 +81,7 @@ function drawTowerSprite(c, type, tier, o, time) {
       break;
     }
     case 'tesla': {
+      const isDisrupter = o.branch === 'B';
       const rings = 3 + tier;
       for (let i = 0; i < rings; i++) {
         const r = 15 - i * (8 / rings);
@@ -81,17 +95,18 @@ function drawTowerSprite(c, type, tier, o, time) {
         c.fillStyle = col; c.beginPath(); c.arc(x2, y2, 2, 0, TAU); c.fill(); tips.push(x2, y2);
       }
       if (Math.sin(time * 13 + (o.x || 0)) > 0.75 && tips.length >= 4) {
-        c.strokeStyle = '#fef08a'; c.lineWidth = 1; c.beginPath(); c.moveTo(tips[0], tips[1]);
+        c.strokeStyle = isDisrupter ? '#7dd3fc' : '#fef08a'; c.lineWidth = 1; c.beginPath(); c.moveTo(tips[0], tips[1]);
         c.lineTo((tips[0] + tips[2]) / 2 + rand(-4, 4), (tips[1] + tips[3]) / 2 + rand(-4, 4)); c.lineTo(tips[2], tips[3]); c.stroke();
       }
       const pulse = 0.6 + 0.4 * Math.sin(time * 6);
-      glow(c, 0, 0, 9 + fl * 6, '#fde047', 0.7 * pulse + 0.3 + fl * 0.5);
+      glow(c, 0, 0, 9 + fl * 6, isDisrupter ? '#38bdf8' : '#fde047', 0.7 * pulse + 0.3 + fl * 0.5);
       c.fillStyle = '#fffbeb'; c.beginPath(); c.arc(0, 0, 2.6, 0, TAU); c.fill();
       break;
     }
     case 'rail': {
       c.rotate(a);
-      const L = 26 + tier * 4 - rec * 8;
+      const isExec = o.branch === 'B';
+      const L = (isExec ? 32 : 26) + tier * 4 - rec * 8;
       c.fillStyle = '#2a1018'; rr(c, -15, -10, 15, 20, 3); c.fill(); c.strokeStyle = col; c.lineWidth = 1.5; c.stroke();
       for (let i = 0; i <= tier; i++) { c.fillStyle = col; c.beginPath(); c.arc(-11 + i * 4, 0, 1.4, 0, TAU); c.fill(); }
       if (tier >= 1) { c.fillStyle = '#3b1520'; c.beginPath(); c.moveTo(-4, -10); c.lineTo(8, -14); c.lineTo(8, -8); c.closePath(); c.fill(); c.beginPath(); c.moveTo(-4, 10); c.lineTo(8, 14); c.lineTo(8, 8); c.closePath(); c.fill(); }
@@ -162,15 +177,44 @@ function drawEnemy(c, e, time) {
     case 'boss': {
       c.rotate(-e.ang + e.anim * 0.35);
       const spikes = 10;
-      c.fillStyle = '#581c87'; c.strokeStyle = '#d8b4fe'; c.lineWidth = 2;
+      c.fillStyle = e.phase === 3 ? '#881337' : '#581c87'; c.strokeStyle = e.phase === 3 ? '#fb7185' : '#d8b4fe'; c.lineWidth = 2;
       c.beginPath();
       for (let i = 0; i < spikes * 2; i++) { const q = i * Math.PI / spikes, rad = i % 2 ? r * 0.82 : r * 1.12; c.lineTo(Math.cos(q) * rad, Math.sin(q) * rad); }
       c.closePath(); c.fill(); c.stroke();
-      c.fillStyle = '#7e22ce'; c.beginPath(); c.arc(0, 0, r * 0.72, 0, TAU); c.fill(); c.strokeStyle = '#c084fc'; c.stroke();
-      c.save(); c.rotate(-e.anim * 0.9); c.strokeStyle = 'rgba(233,213,255,0.7)'; c.lineWidth = 2; c.setLineDash([8, 6]); c.beginPath(); c.arc(0, 0, r * 0.52, 0, TAU); c.stroke(); c.restore();
-      const pulse = 0.6 + 0.4 * Math.sin(e.anim * 5);
-      glow(c, 0, 0, r * 0.45, '#fb7185', 0.8 * pulse + 0.2);
+      c.fillStyle = e.phase === 3 ? '#9f1239' : '#7e22ce'; c.beginPath(); c.arc(0, 0, r * 0.72, 0, TAU); c.fill(); c.strokeStyle = e.phase === 3 ? '#f43f5e' : '#c084fc'; c.stroke();
+      c.save(); c.rotate(-e.anim * (e.phase === 3 ? 1.8 : 0.9)); c.strokeStyle = 'rgba(233,213,255,0.7)'; c.lineWidth = 2; c.setLineDash([8, 6]); c.beginPath(); c.arc(0, 0, r * 0.52, 0, TAU); c.stroke(); c.restore();
+      const pulse = 0.6 + 0.4 * Math.sin(e.anim * (e.phase === 3 ? 14 : 5));
+      glow(c, 0, 0, r * 0.45, e.phase === 3 ? '#f43f5e' : '#fb7185', 0.8 * pulse + 0.2);
       c.fillStyle = '#fff1f2'; c.beginPath(); c.arc(0, 0, r * 0.12, 0, TAU); c.fill();
+      if (e.phase === 3) glow(c, 0, 0, r * 1.5, '#f43f5e', 0.6 + 0.3 * Math.sin(time * 15));
+      break;
+    }
+    case 'stealth': {
+      const rev = e.revealT > 0;
+      c.globalAlpha = rev ? 0.9 : (0.28 + 0.14 * Math.sin(time * 12));
+      c.fillStyle = rev ? '#0284c7' : '#0369a1'; c.strokeStyle = '#38bdf8'; c.lineWidth = 1.4;
+      c.beginPath(); c.moveTo(r * 1.3, 0); c.lineTo(-r * 0.9, -r * 0.7); c.lineTo(-r * 0.4, 0); c.lineTo(-r * 0.9, r * 0.7); c.closePath(); c.fill(); c.stroke();
+      if (!rev) { c.strokeStyle = '#7dd3fc'; c.lineWidth = 1; c.strokeRect(-r * 0.4, -r * 0.3, r * 0.8, r * 0.6); }
+      break;
+    }
+    case 'carrier': {
+      c.fillStyle = '#1e293b'; c.strokeStyle = '#38bdf8'; c.lineWidth = 2;
+      c.beginPath();
+      for (let i = 0; i < 6; i++) { const q = i * TAU / 6; c.lineTo(Math.cos(q) * r, Math.sin(q) * r); }
+      c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#0f172a'; c.beginPath(); c.arc(0, 0, r * 0.5, 0, TAU); c.fill();
+      glow(c, 0, 0, r * 0.4, '#38bdf8', 0.6 + 0.4 * Math.sin(time * 4));
+      for (let i = 0; i < 3; i++) {
+        const q = time * 2.5 + i * TAU / 3, dx = Math.cos(q) * (r + 9), dy = Math.sin(q) * (r + 9);
+        c.fillStyle = '#38bdf8'; c.beginPath(); c.arc(dx, dy, 2.8, 0, TAU); c.fill();
+      }
+      break;
+    }
+    case 'breacher': {
+      c.fillStyle = '#451a03'; c.strokeStyle = '#f59e0b'; c.lineWidth = 1.8;
+      rr(c, -r, -r * 0.7, r * 2, r * 1.4, 3); c.fill(); c.stroke();
+      c.fillStyle = '#dc2626'; c.beginPath(); c.arc(0, 0, r * 0.4, 0, TAU); c.fill();
+      glow(c, 0, 0, r * 0.7, '#fbbf24', 0.5 + 0.5 * Math.sin(time * 18));
       break;
     }
   }
@@ -202,8 +246,8 @@ function drawBars(c, e) {
 function enemyIcon(type) {
   const cv = document.createElement('canvas'); cv.width = cv.height = 52;
   const c = cv.getContext('2d'), d = ED[type];
-  const sc = type === 'boss' ? 0.75 : type === 'brute' ? 1.05 : type === 'swarm' ? 2.2 : type === 'scout' ? 1.6 : 1.5;
-  const fake = { type, x: 0, y: 0, r: d.r, ang: type === 'boss' || type === 'healer' ? 0 : -0.4, anim: 1, curSpeed: 0, armor: d.armor, shred: 0, flash: 0, slowT: 0, brittleT: 0, stunT: 0, shield: 0, healFx: 0 };
+  const sc = type === 'boss' ? 0.75 : type === 'brute' ? 1.05 : type === 'carrier' ? 0.95 : type === 'stealth' ? 1.7 : type === 'breacher' ? 1.4 : type === 'swarm' ? 2.2 : type === 'scout' ? 1.6 : 1.5;
+  const fake = { type, x: 0, y: 0, r: d.r, ang: type === 'boss' || type === 'healer' || type === 'carrier' ? 0 : -0.4, anim: 1, curSpeed: 0, armor: d.armor, shred: 0, flash: 0, slowT: 0, brittleT: 0, stunT: 0, shield: 0, healFx: 0, revealT: 1 };
   c.translate(26, 26); c.scale(sc, sc);
   drawEnemy(c, fake, 0);
   return cv.toDataURL();

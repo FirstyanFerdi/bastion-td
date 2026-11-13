@@ -6,7 +6,7 @@
    ============================================================ */
 const Sfx = {
   ctx: null, master: null, noiseBuf: null, muted: SAVE.muted, last: {},
-  GAP: { gatling: 55, hit: 45, kill: 40, plasma: 90, boom: 70, cryo: 120, tesla: 80, rail: 120, heal: 300, shield: 200, click: 20 },
+  GAP: { gatling: 55, hit: 45, kill: 40, plasma: 90, boom: 70, cryo: 120, tesla: 80, rail: 120, heal: 300, shield: 200, click: 20, orbital: 300, overcharge: 200, caltrops: 150, shatter: 80, perk: 300, emp: 200 },
   init() {
     if (this.ctx) return;
     try {
@@ -73,6 +73,12 @@ const Sfx = {
       case 'heal': this.tone('sine', 620, 940, 0.16, 0.06); break;
       case 'shield': this.tone('sine', 380, 980, 0.3, 0.1); break;
       case 'coin': this.tone('sine', 1100, 1500, 0.09, 0.1); break;
+      case 'orbital': this.noise(0.8, 0.7, 180, 1, 'lowpass'); this.tone('sine', 80, 24, 0.7, 0.5); break;
+      case 'overcharge': this.tone('sawtooth', 340, 880, 0.35, 0.22); this.noise(0.2, 0.2, 2800, 2, 'bandpass'); break;
+      case 'caltrops': this.tone('square', 480, 220, 0.08, 0.15); this.noise(0.12, 0.25, 1800, 1, 'highpass'); break;
+      case 'shatter': this.tone('triangle', 1800, 600, 0.18, 0.18); this.noise(0.15, 0.2, 4000, 2, 'highpass'); break;
+      case 'perk': [523, 659, 784, 1046].forEach((f, i) => this.tone('sine', f, f * 1.05, 0.35, 0.16, i * 0.08)); break;
+      case 'emp': this.tone('sawtooth', 500, 80, 0.5, 0.25); this.noise(0.4, 0.3, 1200, 2, 'bandpass'); break;
       case 'gameover': [330, 262, 196, 130].forEach((f, i) => this.tone('sawtooth', f, f * 0.9, 0.4, 0.2, i * 0.28)); break;
       case 'victory': [392, 494, 587, 784, 988].forEach((f, i) => this.tone('triangle', f, f, 0.3, 0.2, i * 0.12)); break;
     }
