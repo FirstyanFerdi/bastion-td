@@ -110,46 +110,84 @@ Ditambahkan panel komando (`#cmdTray`) tepat di atas dock toko dengan 3 kemampua
 
 ---
 
-## 5. Rincian Modifikasi Berkas Kode
+## 5. Tahap 4: Implementasi Advanced Mechanics — Fase 1: Sinergi & Reaksi Elemen
+
+Mengacu pada cetak biru lanjutan `bastion_td_advanced_mechanics_blueprint.md`, Fase 1 telah diimplementasikan penuh untuk menghadirkan kedalaman taktis sinergi antar-menara tanpa bergantung pada perk pasif semata:
+
+### 5.1 Empat Reaksi Elemen Dinamis (Elemental Combos)
+1. **Thermal Shockwave (`Cryo` + `Plasma`):**
+   * **Pemicu:** Proyektil Plasma menghantam musuh yang sedang mengalami efek slow atau beku (`e.slowT > 0 || e.stunT > 0`).
+   * **Dampak:** Menghasilkan ledakan uap 250% damage instan, merontokkan 50% sisa armor musuh seketika (`e.shred`), dan memberikan splash damage 75px ke musuh di sekitarnya.
+   * **Audio & Visual:** SFX `shockwave`, cincin kejut cyan `#38bdf8`, partikel uap, dan floating text `THERMAL SHOCK`.
+
+2. **Electrolytic Detonation (`Acid` + `Tesla`):**
+   * **Pemicu:** Sambaran listrik Tesla menghantam musuh berstatus asam korosif (`e.acidT > 0`) dari tembakan Plasma *Acid Melter*.
+   * **Dampak:** Cairan asam menjadi konduktor murni; sambaran listrik melompat dan meledak ke **SEMUA musuh di peta yang terlapisi Acid** tanpa batas target (*unlimited chain*).
+   * **Audio & Visual:** SFX `reaction`, kilatan petir hijau `#a3e635`, dan floating text `ELECTROLYTIC` & `CONDUCTED`.
+
+3. **Thermite Incineration (`Bleed` + `Radiation` / `Plasma`):**
+   * **Pemicu:** Tembakan Plasma atau kubangan radiasi Nova Mortar mengenai musuh yang sedang mengalami pendarahan fisik (*Bleed* dari Gatling DU atau Caltrops).
+   * **Dampak:** Luka terbuka terinflamasi menjadi kobaran Thermite yang membakar $3.5\%$ Max HP/detik selama 3 detik murni, melumat musuh bertubuh tebal (*Brute* dan *Boss*).
+   * **Audio & Visual:** SFX `reaction`, semburan api oranye `#f97316`, dan floating text `THERMITE BURN`.
+
+4. **Superconductor Surge (`Cryo` + `Tesla`):**
+   * **Pemicu:** Sambaran petir Tesla mengenai musuh yang sedang membeku atau bergerak lambat.
+   * **Dampak:** Suhu mendekati nol mutlak memicu konduktivitas absolut; serangan otomatis menjadi **100% Critical Strike** ($2\times$ damage) dan melipatgandakan durasi stun musuh.
+   * **Audio & Visual:** SFX `reaction`, cincin listrik kuning emas `#fde047`, dan floating text `SUPERCONDUCTOR` + `CRIT`.
+
+### 5.2 Antarmuka & Umpan Balik Visual Pemain
+* **Tactical Inspector Field Guide:** Saat tidak ada menara yang dipilih, panel inspektur menampilkan panduan visual resep reaksi elemen lengkap beserta peran dan warnanya.
+* **Sprite Debuff Indicators:** Visual debuff musuh diperkaya dengan cincin aura korosi asam hijau (`#a3e635`) dan cincin kobaran thermite (`#f97316`).
+* **Sintesis Audio Baru:** Dua instrumen suara baru `reaction` (nada arpeggio frekuensi tinggi) dan `shockwave` (dentuman rumble kompresi uap) ditambahkan ke Web Audio API tanpa aset eksternal.
+
+---
+
+## 6. Rincian Modifikasi Berkas Kode
 
 | Berkas | Jenis Perubahan | Detail Modifikasi |
 |---|---|---|
 | [`index.html`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/index.html) | Markup | Menambahkan kontainer `#cmdTray` (`#cmdSkills` & `#perkTray`) di atas dock. |
 | [`css/style.css`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/css/style.css) | Styling | Desain tombol ability commander, cooldown fill animation, branch selection grid di inspector, kartu modal tech draft, dan tag badge mutator. |
-| [`js/audio.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/audio.js) | Sound Synth | Menambahkan 6 instrumen sintetik audio baru: `orbital`, `overcharge`, `caltrops`, `shatter`, `perk`, dan `emp`. |
-| [`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js) | Konfigurasi Data | Struktur `branches` (A & B) tiap tower, `PERKS` (10 kartu), `COMMANDER_SKILLS` (Q, W, E), `WAVE_MUTATORS`, musuh baru di `ED`, dan generator wave adaptif. |
-| [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) | State & Logic | Penambahan state perk, cooldown skill, hazards, kalkulasi bleed/acid/titan-hunter di `dealDamage`, efek shatter & EMP breacher di `killEnemy`. |
-| [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js) | AI Musuh | Instansiasi unit stealth/carrier/breacher, AI carrier shield pulsing, boss 3-phase state transitions, dan penanganan emergency forcefield pada kebocoran base. |
-| [`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js) | Senjata & Targeting | Penanganan targeting unit stealth, logika upgrade cabang spesialisasi, heat gauge minigun, flak burst, nova mortar radiation pool, acid melter, vortex gravity pull, overcharger aura, EMP shield strip, dan executioner instant-kill. |
-| [`js/waves.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/waves.js) | Wave Controller | Pemilihan wave mutator, pembagian bunga modal ventura, penghentian wave untuk tech draft modal, fungsi `selectPerk()`, dan simulasi kerusakan hazards (caltrops/radiasi). |
-| [`js/sprites.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/sprites.js) | Prosedural Canvas | Visualisasi sprite cabang A & B menara, indikator laras panas, status overcharge/EMP pada menara, visual musuh stealth shimmer, carrier escort drones, dan boss berserk aura. |
-| [`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js) | Rendering Pipeline | Render kolam radiasi, ranjau caltrops di jalan, kabel konduit listrik overcharger, dan retikel kursor bidik ability komando (orbital, overcharge, caltrops). |
-| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | UI pemilihan cabang di inspector, ability bar dengan timer cooldown, barisan badge perk aktif, preview badge musuh baru, dan modal tech draft. |
-| [`js/input.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/input.js) | Kontrol & Input | Fungsi `triggerSkill()`, eksekusi penargetan klik mouse untuk orbital/overcharge/caltrops, serta hotkey `Q`, `W`, `E`. |
-| [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js) | Inisialisasi & Harness | Event listener untuk ability bar dan kartu draft modal, pendaftaran icon musuh baru, serta ekspor fungsi ke hook test `window.__nb`. |
-| [`tests/smoke.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/smoke.js) | Otomasi Pengujian | Penyesuaian bot otomatis untuk memilih kartu perk saat draft aktif dan menguji upgrade cabang spesialisasi A & B. |
-| [`README.md`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/README.md) | Dokumentasi | Pembaruan ringkasan fitur taktis baru, panduan kontrol tombol `Q/W/E`, dan instruksi pengujian. |
-| [`dev.bat`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/dev.bat) | Launcher Windows | Script batch interaktif untuk membuka game secara instan di browser, menjalankan server lokal, menjalankan smoke test, atau mengecek status git. |
+| [`js/audio.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/audio.js) | Sound Synth | Menambahkan 8 instrumen sintetik audio baru: `orbital`, `overcharge`, `caltrops`, `shatter`, `perk`, `emp`, `reaction`, dan `shockwave`. |
+| [`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js) | Konfigurasi Data | Struktur `branches` (A & B) tiap tower, `PERKS` (10 kartu), `COMMANDER_SKILLS` (Q, W, E), `WAVE_MUTATORS`, musuh baru di `ED`, dan kamus `ELEMENTAL_REACTIONS`. |
+| [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) | State & Logic | Penanganan kalkulasi 4 Reaksi Elemen (*Thermal Shock, Electrolytic, Thermite, Superconductor*) di dalam `dealDamage` dengan proteksi anti-loop rekursi. |
+| [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js) | AI Musuh | Inisialisasi state `acidT`, `thermiteT`, dan `thermiteDps`, peluruhan waktu debuff asam, serta kalkulasi pembakaran berkala DoT thermite. |
+| [`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js) | Senjata & Targeting | Penambahan infusi status `acidT` pada ledakan proyektil Acid Melter. |
+| [`js/sprites.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/sprites.js) | Prosedural Canvas | Penambahan visualisasi aura cincin debuff asam korosif (`acidT`) dan cincin api thermite (`thermiteT`) pada unit musuh. |
+| [`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js) | Rendering Pipeline | Render kolam radiasi, ranjau caltrops di jalan, kabel konduit listrik overcharger, dan retikel kursor bidik ability komando. |
+| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Tampilan Tactical Inspector Field Guide yang merender resep sinergi elemen interaktif. |
+| [`tests/test_reactions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_reactions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas dan formula 4 reaksi elemen. |
+| [`tests/smoke.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/smoke.js) | Otomasi Pengujian | Simulasi 20 wave standar dan 40 wave mode endless dengan bot otomatis. |
+| [`dev.bat`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/dev.bat) | Launcher Windows | Penambahan eksekusi otomatis `test_reactions.js` ke dalam opsi pengetesan dev. |
 
 ---
 
-## 6. Verifikasi & Pengujian Mutu (Testing)
+## 7. Verifikasi & Pengujian Mutu (Testing)
 
 Pengujian simulasi otomatis secara headless dijalankan menggunakan Node.js:
 
-1. **Uji Standar (20 Wave Menang):**
+1. **Uji Sinergi Elemen (Unit Test Fase 1):**
+   * **Perintah:** `node tests/test_reactions.js`
+   * **Hasil:**
+     * ✔ Thermal Shockwave: 250% dmg burst & 50% armor shred terverifikasi
+     * ✔ Electrolytic Detonation: rantai listrik asam tanpa batas target terverifikasi
+     * ✔ Thermite Incineration: DoT 3.5% Max HP/detik terverifikasi
+     * ✔ Superconductor Surge: garansi critical strike & durasi stun ganda terverifikasi
+   * **Status:** **LULUS (100% PASS)**
+
+2. **Uji Standar (20 Wave Menang):**
    * **Perintah:** `node tests/smoke.js`
-   * **Hasil:** `OK state=victory wave=20 lives=25 towers=24 score=97133 steps=18510`
+   * **Hasil:** `OK state=victory wave=20 lives=25 towers=24 score=97178 steps=18947`
    * **Status:** **LULUS (100% stabil, 0 error)**
 
-2. **Uji Endless Mode (40 Wave Ekstrem):**
+3. **Uji Endless Mode (40 Wave Ekstrem):**
    * **Perintah:** `node tests/smoke.js 40`
-   * **Hasil:** `OK state=prep wave=40 lives=25 towers=24 score=482632 steps=56129`
+   * **Hasil:** `OK state=prep wave=40 lives=25 towers=24 score=483357 steps=55414`
    * **Status:** **LULUS (100% stabil, 0 error)**
 
 ---
 
-## 7. Status Akhir & Panduan Unggah ke GitHub
+## 8. Status Akhir & Panduan Unggah ke GitHub
 
 Seluruh kode dalam kondisi bersih, aman, bebas dependensi pihak ketiga, dan siap diunggah ke repositori GitHub.
 
@@ -162,7 +200,7 @@ git add .
 git status
 
 # 3. Lakukan commit perubahan
-git commit -m "feat: complete tactical evolution update and add process documentation"
+git commit -m "feat(fase-1): implement elemental reactions, debuff visualizers, and reaction testing"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git

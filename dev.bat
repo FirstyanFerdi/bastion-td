@@ -65,6 +65,9 @@ exit /b 0
 
 :run_test
 echo.
+echo [TEST] Menjalankan elemental reactions test...
+node tests\test_reactions.js
+echo.
 echo [TEST] Menjalankan automated smoke test (Wave 20)...
 node tests\smoke.js
 echo.
@@ -72,7 +75,7 @@ pause
 goto menu
 
 :run_test_arg
-node tests\smoke.js
+node tests\test_reactions.js && node tests\smoke.js
 exit /b %errorlevel%
 
 :run_endless

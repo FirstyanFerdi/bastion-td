@@ -80,12 +80,20 @@ function renderInspector() {
         '<div class="note">Click a free tile to build (hold Shift to keep building). Esc / right-click cancels.</div>';
       return;
     }
+    const rxList = Object.values(ELEMENTAL_REACTIONS).map(rx =>
+      '<div style="border-left:3px solid ' + rx.color + ';padding-left:6px;margin-top:5px">' +
+      '<div style="font-weight:700;color:' + rx.color + ';font-size:11px">' + rx.name.toUpperCase() + ' <span style="color:#94a3b8;font-weight:400">(' + rx.combo + ')</span></div>' +
+      '<div style="font-size:11px;color:#cbd5e1;line-height:1.25;margin-top:1px">' + rx.desc + '</div>' +
+      '</div>'
+    ).join('');
+
     box.innerHTML = '<h3>TACTICAL INSPECTOR</h3><div class="legend">' +
       '<div>Select a tower on the grid to upgrade, specialize or change its <b>targeting priority</b>.</div>' +
       '<div><span class="kbd">1</span>-<span class="kbd">5</span> build &nbsp; <span class="kbd">Q</span>/<span class="kbd">W</span>/<span class="kbd">E</span> commander powers</div>' +
       '<div><span class="kbd">U</span> upgrade &nbsp; <span class="kbd">X</span> sell &nbsp; <span class="kbd">Space</span> wave / pause</div>' +
       '<div><span class="kbd">P</span> pause &nbsp; <span class="kbd">F</span> speed &nbsp; <span class="kbd">M</span> mute</div>' +
-      '<div style="margin-top:6px"><b>Synergies:</b> Plasma shreds armor → Gatling &amp; Rail hit Brutes harder. Cryo makes everything hit +20% harder. Tesla melts shields.</div></div>';
+      '<div style="margin-top:8px;font-weight:700;color:#f8fafc;letter-spacing:0.4px">ELEMENTAL REACTIONS</div>' +
+      rxList + '</div>';
     return;
   }
   const def = TD[t.type], tier = t.tier;

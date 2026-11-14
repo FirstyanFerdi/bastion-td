@@ -179,7 +179,7 @@ function explode(p) {
     if (d <= p.splash + e.r) {
       const fall = 1 - 0.4 * clamp(d / p.splash, 0, 1);
       if (e.armor > 0 && e.shred < e.armor) e.shred = Math.min(e.armor, e.shred + p.shred);
-      if (p.acidAmp) { e.brittle = Math.max(e.brittle, p.acidAmp); e.brittleT = 3.0; }
+      if (p.acidAmp) { e.brittle = Math.max(e.brittle, p.acidAmp); e.brittleT = 3.5; e.acidT = 3.5; }
       dealDamage(e, p.dmg * fall, 'plasma', p.src);
     }
   }

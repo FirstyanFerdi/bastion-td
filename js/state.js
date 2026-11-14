@@ -95,6 +95,65 @@ function dealDamage(e, amount, type, src, opts) {
   if (hasPerk('titan_hunter') && (e.type === 'boss' || e.type === 'brute' || e.type === 'carrier')) a *= 1.30;
   if (G.mutator && G.mutator.id === 'ion_storm' && (type === 'energy' || (src && src.type === 'tesla'))) a *= 1.25;
   if (e.shield > 0 && opts.shieldMult) a *= opts.shieldMult;
+
+  // Elemental Combos & Reactions (Fase 1)
+  if (!opts.noReaction && !opts.isReaction) {
+    // 1. Thermal Shockwave (Cryo + Plasma)
+    if (type === 'plasma' && (e.slowT > 0 || e.stunT > 0)) {
+      e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
+      a *= 2.5;
+      if (e.armor > 0) e.shred = Math.min(e.armor, e.shred + e.armor * 0.5);
+      addRing(e.x, e.y, 8, 75, 0.45, '#38bdf8', 4);
+      burst(e.x, e.y, 16, '#38bdf8', 120, 0.5, 3.5, true);
+      addText(e.x, e.y - e.r - 26, 'THERMAL SHOCK', '#38bdf8', 14);
+      Sfx.play('shockwave');
+      for (const o of G.enemies) {
+        if (o.dead || o === e) continue;
+        if ((o.x - e.x) ** 2 + (o.y - e.y) ** 2 <= (75 + o.r) ** 2) {
+          dealDamage(o, a * 0.4, 'plasma', src, { isReaction: true, noReaction: true });
+        }
+      }
+    }
+
+    // 2. Electrolytic Detonation (Acid + Tesla)
+    if ((type === 'energy' || (src && src.type === 'tesla')) && e.acidT > 0) {
+      e.acidT = 0;
+      addRing(e.x, e.y, 6, 65, 0.4, '#a3e635', 3);
+      burst(e.x, e.y, 10, '#a3e635', 100, 0.4, 2.5, false);
+      addText(e.x, e.y - e.r - 26, 'ELECTROLYTIC', '#a3e635', 14);
+      Sfx.play('reaction');
+      for (const o of G.enemies) {
+        if (o.dead || o === e || !(o.acidT > 0)) continue;
+        o.acidT = 0;
+        addBolt(e.x, e.y, o.x, o.y, '#a3e635');
+        burst(o.x, o.y, 6, '#a3e635', 90, 0.35, 2.5, false);
+        addText(o.x, o.y - o.r - 16, 'CONDUCTED', '#a3e635', 12);
+        dealDamage(o, a * 1.15, 'energy', src, { isReaction: true, noReaction: true });
+      }
+    }
+
+    // 3. Thermite Incineration (Bleed + Radiation/Plasma)
+    if ((type === 'plasma' || (src && src.type === 'plasma')) && e.bleedT > 0) {
+      e.bleedT = 0;
+      e.thermiteT = 3.0;
+      e.thermiteDps = Math.max(e.thermiteDps || 0, e.maxHp * 0.035, 24);
+      burst(e.x, e.y, 14, '#f97316', 130, 0.5, 3.5, false);
+      addText(e.x, e.y - e.r - 26, 'THERMITE BURN', '#f97316', 14);
+      Sfx.play('reaction');
+    }
+
+    // 4. Superconductor Surge (Cryo + Tesla)
+    if (src && src.type === 'tesla' && (e.slowT > 0 || e.stunT > 0)) {
+      a *= 2.0;
+      opts.crit = true;
+      if (e.type !== 'boss') e.stunT = Math.max(e.stunT * 2, 1.2);
+      else e.stunT = Math.max(e.stunT, 0.4);
+      addRing(e.x, e.y, 8, 55, 0.4, '#fde047', 4);
+      burst(e.x, e.y, 10, '#fef08a', 120, 0.4, 3, true);
+      addText(e.x, e.y - e.r - 28, 'SUPERCONDUCTOR', '#fde047', 14);
+      Sfx.play('reaction');
+    }
+  }
   e.flash = 1;
   let toHp = a;
   if (e.shield > 0) {

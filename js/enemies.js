@@ -16,6 +16,7 @@ function spawnEnemy(type, n) {
     d: 0, seg: 0, x: PATH[0].x, y: PATH[0].y, ang: 0, off: 0, dead: false, flash: 0, dmgAcc: 0, dmgT: 0,
     healT: rand(0.6, 1.4), shieldCd: 4, shieldT: 0, anim: Math.random() * 10, healFx: 0,
     stealth: !!d.stealth, revealT: 0, carrierT: rand(1.5, 3.0), bleedT: 0, bleedDps: 0,
+    acidT: 0, thermiteT: 0, thermiteDps: 0,
     phase: 1, mortarCd: 7
   };
   if (type === 'swarm') { e.off = rand(-15, 15); e.d = -rand(0, 22); }
@@ -37,6 +38,13 @@ function updateEnemy(e, dt) {
     e.bleedT -= dt;
     dealDamage(e, e.bleedDps * dt, 'phys', null);
     if (e.dead) return;
+  }
+  if (e.acidT > 0) e.acidT -= dt;
+  if (e.thermiteT > 0) {
+    e.thermiteT -= dt;
+    dealDamage(e, e.thermiteDps * dt, 'energy', null, { noReaction: true });
+    if (e.dead) return;
+    if (Math.random() < 0.25) burst(e.x, e.y, 2, '#fdba74', 60, 0.25, 2, false);
   }
   if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowAmt = 0; }
   if (e.brittleT > 0) { e.brittleT -= dt; if (e.brittleT <= 0) e.brittle = 0; }

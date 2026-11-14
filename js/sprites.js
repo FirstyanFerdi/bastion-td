@@ -222,6 +222,8 @@ function drawEnemy(c, e, time) {
   if (e.armor > 0 && e.shred > 0 && e.type === 'boss') { c.strokeStyle = 'rgba(251,146,60,0.5)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r + 2, 0, TAU); c.stroke(); }
   if (e.flash > 0) { c.fillStyle = 'rgba(255,255,255,' + (e.flash * 0.55) + ')'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill(); }
   if (e.slowT > 0) { c.strokeStyle = 'rgba(96,165,250,0.75)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r + 3, 0, TAU); c.stroke(); }
+  if (e.acidT > 0) { c.strokeStyle = 'rgba(163,230,53,0.8)'; c.lineWidth = 1.8; c.beginPath(); c.arc(0, 0, r + 4, 0, TAU); c.stroke(); }
+  if (e.thermiteT > 0) { c.strokeStyle = 'rgba(249,115,22,0.85)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r + 5, 0, TAU); c.stroke(); }
   if (e.brittleT > 0) {
     c.strokeStyle = 'rgba(226,240,255,0.85)'; c.lineWidth = 1;
     c.beginPath(); c.moveTo(-r * 0.5, -r * 0.6); c.lineTo(-r * 0.1, -r * 0.1); c.lineTo(-r * 0.4, r * 0.3); c.moveTo(-r * 0.1, -r * 0.1); c.lineTo(r * 0.4, r * 0.1); c.stroke();

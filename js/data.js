@@ -107,6 +107,28 @@ const TKEYS = ['gatling', 'plasma', 'cryo', 'tesla', 'rail'];
 const PRIOS = [['first', 'First'], ['last', 'Last'], ['strongest', 'Strongest'], ['weakest', 'Weakest']];
 
 /* ============================================================
+   ELEMENTAL REACTION MATRIX (Fase 1)
+   ============================================================ */
+const ELEMENTAL_REACTIONS = {
+  thermal_shock: {
+    id: 'thermal_shock', name: 'Thermal Shockwave', combo: 'Cryo + Plasma', color: '#38bdf8',
+    desc: 'Instant 250% AoE steam burst that permanently shatters 50% enemy armor.'
+  },
+  electrolytic: {
+    id: 'electrolytic', name: 'Electrolytic Detonation', combo: 'Acid + Tesla', color: '#a3e635',
+    desc: 'Lightning violently discharges through all acid-coated units without target cap.'
+  },
+  thermite: {
+    id: 'thermite', name: 'Thermite Incineration', combo: 'Bleed + Radiation', color: '#f97316',
+    desc: 'Ignites open physical wounds with radiation, dealing 3.5% Max HP/sec.'
+  },
+  superconductor: {
+    id: 'superconductor', name: 'Superconductor Surge', combo: 'Cryo + Tesla', color: '#fde047',
+    desc: 'Electrifying chilled targets triggers an automatic Critical Strike and prolongs stun.'
+  }
+};
+
+/* ============================================================
    ROGUE-LITE TECH PERKS & SKILLS
    ============================================================ */
 const PERKS = {
