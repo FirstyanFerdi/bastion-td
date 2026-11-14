@@ -96,6 +96,20 @@ function dealDamage(e, amount, type, src, opts) {
   if (G.mutator && G.mutator.id === 'ion_storm' && (type === 'energy' || (src && src.type === 'tesla'))) a *= 1.25;
   if (e.shield > 0 && opts.shieldMult) a *= opts.shieldMult;
 
+  // Adaptive Threat: Kinetic Deflector (-50% physical damage)
+  if (e.threat === 'deflector' && type === 'phys') {
+    a *= 0.5;
+    burst(e.x, e.y, 3, '#94a3b8', 45, 0.2, 2, false);
+    if (Math.random() < 0.2) addText(e.x, e.y - e.r - 18, 'DEFLECT -50%', '#94a3b8', 11);
+  }
+
+  // Champion Affix: Anti-Projectile Dome
+  const inDome = e.affix === 'dome' || G.enemies.some(o => !o.dead && o.affix === 'dome' && (o.x - e.x) ** 2 + (o.y - e.y) ** 2 <= 40 * 40);
+  if (inDome && (type === 'phys' || (src && src.type === 'rail'))) {
+    a *= 0.6;
+    burst(e.x, e.y, 3, '#38bdf8', 50, 0.25, 2, true);
+  }
+
   // Elemental Combos & Reactions (Fase 1)
   if (!opts.noReaction && !opts.isReaction) {
     // 1. Thermal Shockwave (Cryo + Plasma)
@@ -161,6 +175,15 @@ function dealDamage(e, amount, type, src, opts) {
     else { toHp = a - e.shield; e.shield = 0; e.shieldT = 0; burst(e.x, e.y, 8, '#67e8f9', 90, 0.4, 2.5, true); }
   }
   e.hp -= toHp;
+  // Champion Affix: Phase-Shifter teleport on heavy impact
+  if (e.affix === 'phase_shifter' && a >= 80 && (!e.phaseCd || e.phaseCd <= 0) && e.hp > 0) {
+    e.phaseCd = 3.5;
+    burst(e.x, e.y, 12, '#a855f7', 120, 0.4, 3, true);
+    e.d = Math.min(PLEN - 15, e.d + 70);
+    burst(e.x, e.y, 14, '#c084fc', 140, 0.45, 3.5, true);
+    addText(e.x, e.y - e.r - 24, 'PHASE SHIFT', '#c084fc', 14);
+    Sfx.play('reaction');
+  }
   if (src && src.type === 'gatling' && hasPerk('depleted_uranium')) { e.bleedT = 2.5; e.bleedDps = 15; }
   if (src && src.type === 'tesla' && hasPerk('superconductor')) { e.brittle = Math.max(e.brittle, 0.25); e.brittleT = 2.5; }
   if (opts.crit) addText(e.x, e.y - e.r - 14, 'CRIT ' + Math.round(a), '#fde047', 17);
@@ -184,6 +207,20 @@ function killEnemy(e, src) {
     burst(e.x, e.y, e.type === 'swarm' ? 6 : 14, col, 130, 0.5, e.type === 'brute' || e.type === 'carrier' ? 4 : 3, e.type === 'swarm');
     if (e.type !== 'swarm') addText(e.x, e.y - e.r - 6, '+' + e.reward, '#fbbf24', 13);
     Sfx.play('kill');
+  }
+  // Champion Affix: Avenger trigger on nearby allies
+  for (const o of G.enemies) {
+    if (o.dead || o === e || o.affix !== 'avenger') continue;
+    if ((o.x - e.x) ** 2 + (o.y - e.y) ** 2 <= 120 * 120) {
+      if ((o.avengerStacks || 0) < 5) {
+        o.avengerStacks = (o.avengerStacks || 0) + 1;
+        o.speed *= 1.15;
+        o.armor = Math.min(0.85, o.armor + 0.10);
+        burst(o.x, o.y, 8, '#f97316', 90, 0.4, 3, false);
+        addText(o.x, o.y - o.r - 22, 'AVENGE x' + o.avengerStacks, '#f97316', 13);
+        Sfx.play('reaction');
+      }
+    }
   }
   // Perk: Cryo Shatter
   if (hasPerk('cryo_shatter') && (e.slowT > 0 || e.stunT > 0)) {

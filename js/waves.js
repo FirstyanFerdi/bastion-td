@@ -7,7 +7,7 @@
 function startWave() {
   G.wave++;
   const n = G.wave, ev = buildSpawns(n), base = G.time + 0.5;
-  for (const x of ev) G.queue.push({ at: base + x.t, type: x.type, wave: n });
+  for (const x of ev) G.queue.push({ at: base + x.t, type: x.type, wave: n, affix: x.affix, threat: x.threat });
   G.queue.sort((a, b) => a.at - b.at);
   G.state = 'active';
   G.leakedThisWave = 0;
@@ -136,7 +136,7 @@ function update(dt) {
     if (h.life <= 0) G.hazards.splice(i, 1);
   }
 
-  while (G.queue.length && G.queue[0].at <= G.time) { const q = G.queue.shift(); spawnEnemy(q.type, q.wave); }
+  while (G.queue.length && G.queue[0].at <= G.time) { const q = G.queue.shift(); spawnEnemy(q.type, q.wave, q.affix, q.threat); }
   for (let i = 0; i < G.enemies.length; i++) updateEnemy(G.enemies[i], dt);
   let w = 0;
   for (let i = 0; i < G.enemies.length; i++) { const e = G.enemies[i]; if (!e.dead) G.enemies[w++] = e; }

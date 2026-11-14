@@ -140,6 +140,29 @@ Mengacu pada cetak biru lanjutan `bastion_td_advanced_mechanics_blueprint.md`, F
 * **Sprite Debuff Indicators:** Visual debuff musuh diperkaya dengan cincin aura korosi asam hijau (`#a3e635`) dan cincin kobaran thermite (`#f97316`).
 * **Sintesis Audio Baru:** Dua instrumen suara baru `reaction` (nada arpeggio frekuensi tinggi) dan `shockwave` (dentuman rumble kompresi uap) ditambahkan ke Web Audio API tanpa aset eksternal.
 
+### 5.3 Tahap 4 — Fase 2: AI Musuh Adaptif (Adaptive Threat Director) & Elite Champion Affixes
+
+Untuk menghilangkan monotonitas jalur musuh, diimplementasikan sistem AI adaptif dan musuh elit Diablo-style:
+
+#### A. Adaptive Threat Director (Deteksi Bias Pemain)
+Threat Director menganalisis komposisi menara dan formasi grid pemain secara real-time:
+1. **Kinetic Deflector (`threat: 'deflector'`):**
+   * *Pemicu:* Pemain membangun $\ge 55\%$ menara tipe balistik fisik (Gatling / Railgun).
+   * *Dampak:* Musuh melengkapi perisai anti-kinetik yang meredam $50\%$ damage fisik. Memaksa pemain mendiversifikasi menara dengan tipe energi (Plasma, Tesla, Cryo).
+2. **Thermal Juggernaut (`threat: 'thermal_juggernaut'`):**
+   * *Pemicu:* Pemain menumpuk $\ge 2$ menara Cryo atau $\ge 30\%$ Cryo.
+   * *Dampak:* Memancarkan gelombang panas dalam radius $2.0\times\text{TILE}$ yang mencairkan efek beku (*stun*) dan lambat (*slow*) pada seluruh kawan di sekitarnya secara periodik.
+3. **Artillery Walker (`threat: 'artillery'`):**
+   * *Pemicu:* Pemain menumpuk $\ge 4$ menara terlalu rapat dalam satu kluster sempit (*killbox cluster*).
+   * *Dampak:* Musuh membombardir pusat kluster tersebut dari jarak jauh dengan proyektil EMP, melumpuhkan (*disrupt*) fungsi tembak menara selama 2.4 detik.
+
+#### B. Elite Champion Affixes (Wave 6+)
+Mulai wave 6, unit non-swarm memiliki probabilitas $25\%$ lahir sebagai varian **Champion** ($+40\%$ HP, $+40\%$ bounty reward, visual cincin rune berputar di bawah unit, dan mahkota permata di atas bar HP):
+1. **Regenerator (Aura Hijau `#22c55e`):** Memulihkan $6\%$ Max HP/detik secara otomatis jika tidak menerima serangan selama $1.2$ detik.
+2. **Phase-Shifter (Aura Ungu `#a855f7`):** Saat terkena serangan ledakan/benturan keras ($\ge 80$ damage), berteleportasi kedip $70\text{ px}$ maju di sepanjang jalur (cooldown $3.5$ detik).
+3. **Avenger (Aura Oranye `#f97316`):** Setiap ada sekutu yang gugur dalam radius $120\text{ px}$, amarahnya terpicu: kecepatan gerak bertambah $+15\%$ dan armor bertambah $+10\%$ (dapat ditumpuk hingga $5\times$ stack).
+4. **Projector Dome (Aura Cyan `#38bdf8`):** Memancarkan kubah penangkal energi (radius $40\text{ px}$) yang meredam $40\%$ kerusakan peluru dan **menghentikan tembusan balok Railgun seketika**.
+
 ---
 
 ## 6. Rincian Modifikasi Berkas Kode
@@ -149,16 +172,17 @@ Mengacu pada cetak biru lanjutan `bastion_td_advanced_mechanics_blueprint.md`, F
 | [`index.html`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/index.html) | Markup | Menambahkan kontainer `#cmdTray` (`#cmdSkills` & `#perkTray`) di atas dock. |
 | [`css/style.css`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/css/style.css) | Styling | Desain tombol ability commander, cooldown fill animation, branch selection grid di inspector, kartu modal tech draft, dan tag badge mutator. |
 | [`js/audio.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/audio.js) | Sound Synth | Menambahkan 8 instrumen sintetik audio baru: `orbital`, `overcharge`, `caltrops`, `shatter`, `perk`, `emp`, `reaction`, dan `shockwave`. |
-| [`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js) | Konfigurasi Data | Struktur `branches` (A & B) tiap tower, `PERKS` (10 kartu), `COMMANDER_SKILLS` (Q, W, E), `WAVE_MUTATORS`, musuh baru di `ED`, dan kamus `ELEMENTAL_REACTIONS`. |
-| [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) | State & Logic | Penanganan kalkulasi 4 Reaksi Elemen (*Thermal Shock, Electrolytic, Thermite, Superconductor*) di dalam `dealDamage` dengan proteksi anti-loop rekursi. |
-| [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js) | AI Musuh | Inisialisasi state `acidT`, `thermiteT`, dan `thermiteDps`, peluruhan waktu debuff asam, serta kalkulasi pembakaran berkala DoT thermite. |
-| [`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js) | Senjata & Targeting | Penambahan infusi status `acidT` pada ledakan proyektil Acid Melter. |
-| [`js/sprites.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/sprites.js) | Prosedural Canvas | Penambahan visualisasi aura cincin debuff asam korosif (`acidT`) dan cincin api thermite (`thermiteT`) pada unit musuh. |
+| [`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js) | Konfigurasi Data | Struktur `branches` (A & B) tiap tower, `PERKS` (10 kartu), `COMMANDER_SKILLS` (Q, W, E), `WAVE_MUTATORS`, musuh baru di `ED`, kamus `ELEMENTAL_REACTIONS`, kamus `CHAMPION_AFFIXES`, kamus `THREAT_VARIANTS`, fungsi analisis `getThreatDirectorAnalysis()`, dan generator wave adaptif di `buildSpawns()`. |
+| [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) | State & Logic | Penanganan kalkulasi 4 Reaksi Elemen di `dealDamage`, mitigasi $-50\%$ physical Deflector, peredam Dome, teleportasi Phase-Shifter, dan akumulasi tumpukan stack Avenger di `killEnemy`. |
+| [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js) | AI Musuh | Instansiasi unit Champion dan Threat di `spawnEnemy`, logika pemulihan HP Regenerator di `updateEnemy`, aura pencair es Thermal Juggernaut, serta mortar EMP Artillery Walker. |
+| [`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js) | Senjata & Targeting | Penambahan infusi status `acidT` pada Acid Melter, serta penghentian penetrasi Railgun saat mengenai musuh berstatus Dome. |
+| [`js/sprites.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/sprites.js) | Prosedural Canvas | Visualisasi cincin aura rune berputar Champion (hijau, ungu, oranye, cyan), aura kubah energi Dome, indikator threat, dan mahkota permata di barisan HP unit elit. |
 | [`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js) | Rendering Pipeline | Render kolam radiasi, ranjau caltrops di jalan, kabel konduit listrik overcharger, dan retikel kursor bidik ability komando. |
-| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Tampilan Tactical Inspector Field Guide yang merender resep sinergi elemen interaktif. |
-| [`tests/test_reactions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_reactions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas dan formula 4 reaksi elemen. |
+| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Tampilan Tactical Inspector Field Guide (reaksi elemen) dan tag badge indikator kemunculan ELITE CHAMPIONS serta THREAT DIRECTOR di Wave Card. |
+| [`tests/test_reactions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_reactions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas dan formula 4 reaksi elemen (Fase 1). |
+| [`tests/test_champions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_champions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas Adaptive Threat Director & 4 Champion Affixes (Fase 2). |
 | [`tests/smoke.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/smoke.js) | Otomasi Pengujian | Simulasi 20 wave standar dan 40 wave mode endless dengan bot otomatis. |
-| [`dev.bat`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/dev.bat) | Launcher Windows | Penambahan eksekusi otomatis `test_reactions.js` ke dalam opsi pengetesan dev. |
+| [`dev.bat`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/dev.bat) | Launcher Windows | Penambahan eksekusi otomatis `test_reactions.js` dan `test_champions.js` ke dalam opsi pengetesan dev. |
 
 ---
 
@@ -175,14 +199,27 @@ Pengujian simulasi otomatis secara headless dijalankan menggunakan Node.js:
      * ✔ Superconductor Surge: garansi critical strike & durasi stun ganda terverifikasi
    * **Status:** **LULUS (100% PASS)**
 
-2. **Uji Standar (20 Wave Menang):**
+2. **Uji Adaptive Threat & Champions (Unit Test Fase 2):**
+   * **Perintah:** `node tests/test_champions.js`
+   * **Hasil:**
+     * ✔ Threat Director: Kinetic Deflector terdeteksi dari bias menara fisik
+     * ✔ Threat Director: Thermal Juggernaut terdeteksi dari bias menara Cryo
+     * ✔ Threat Director: Artillery Walker terdeteksi dari penumpukan kluster menara rapat
+     * ✔ Kinetic Deflector: reduksi -50% physical, 100% energy terverifikasi
+     * ✔ Champion Regenerator: pemulihan otomatis saat keluar dari pertempuran terverifikasi
+     * ✔ Champion Phase-Shifter: teleportasi lompat 70px saat hantaman keras terverifikasi
+     * ✔ Champion Avenger: penambahan speed & armor saat sekutu gugur terverifikasi
+     * ✔ Champion Dome: peredaman 40% peluru dan pemotongan penetrasi Railgun terverifikasi
+   * **Status:** **LULUS (100% PASS)**
+
+3. **Uji Standar (20 Wave Menang):**
    * **Perintah:** `node tests/smoke.js`
-   * **Hasil:** `OK state=victory wave=20 lives=25 towers=24 score=97178 steps=18947`
+   * **Hasil:** `OK state=victory wave=20 lives=25 towers=24 score=102352 steps=18264`
    * **Status:** **LULUS (100% stabil, 0 error)**
 
-3. **Uji Endless Mode (40 Wave Ekstrem):**
+4. **Uji Endless Mode (40 Wave Ekstrem):**
    * **Perintah:** `node tests/smoke.js 40`
-   * **Hasil:** `OK state=prep wave=40 lives=25 towers=24 score=483357 steps=55414`
+   * **Hasil:** `OK state=prep wave=40 lives=25 towers=24 score=513114 steps=57440`
    * **Status:** **LULUS (100% stabil, 0 error)**
 
 ---
@@ -200,7 +237,7 @@ git add .
 git status
 
 # 3. Lakukan commit perubahan
-git commit -m "feat(fase-1): implement elemental reactions, debuff visualizers, and reaction testing"
+git commit -m "feat(fase-2): implement adaptive threat director and elite champion affixes"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git

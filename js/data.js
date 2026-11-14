@@ -170,8 +170,71 @@ const ED = {
 const hpScale = n => 1 + 0.2 * (n - 1) + 0.014 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
 
+/* ============================================================
+   CHAMPION AFFIXES & ADAPTIVE THREAT (FASE 2)
+   ============================================================ */
+const CHAMPION_AFFIXES = {
+  regenerator: {
+    id: 'regenerator', name: 'Regenerator', color: '#22c55e', auraColor: 'rgba(34,197,94,0.3)',
+    tip: 'Memulihkan 6% HP/detik jika tidak diserang selama 1.2 detik.'
+  },
+  phase_shifter: {
+    id: 'phase_shifter', name: 'Phase-Shifter', color: '#a855f7', auraColor: 'rgba(168,85,247,0.35)',
+    tip: 'Berteleportasi maju 70px saat terkena dampak kerusakan besar (>=80).'
+  },
+  avenger: {
+    id: 'avenger', name: 'Avenger', color: '#f97316', auraColor: 'rgba(249,115,22,0.35)',
+    tip: 'Kecepatan dan armor bertambah tiap kali sekutu di dekatnya gugur (maks 5x).'
+  },
+  dome: {
+    id: 'dome', name: 'Projector Dome', color: '#38bdf8', auraColor: 'rgba(56,189,248,0.3)',
+    tip: 'Memancarkan kubah penahan proyektil dan menghentikan penetrasi Railgun.'
+  }
+};
+
+const THREAT_VARIANTS = {
+  deflector: {
+    id: 'deflector', name: 'Kinetic Deflector', color: '#94a3b8',
+    tip: 'Musuh mengembangkan perisai anti-kinetik: -50% physical damage!'
+  },
+  thermal_juggernaut: {
+    id: 'thermal_juggernaut', name: 'Thermal Juggernaut', color: '#ea580c',
+    tip: 'Memancarkan gelombang panas yang mencairkan efek beku & slow sekutu sekitar!'
+  },
+  artillery: {
+    id: 'artillery', name: 'Artillery Walker', color: '#ef4444',
+    tip: 'Membombardir kluster menara terpadat dari jarak jauh dengan tembakan EMP!'
+  }
+};
+
+function getThreatDirectorAnalysis() {
+  if (typeof G === 'undefined' || !G.towers || G.towers.length < 3) return null;
+  const towers = G.towers;
+  let phys = 0, cryo = 0;
+  for (const t of towers) {
+    if (t.type === 'gatling' || t.type === 'rail') phys++;
+    else if (t.type === 'cryo') cryo++;
+  }
+  const physRatio = phys / towers.length;
+  const cryoRatio = cryo / towers.length;
+
+  let maxCluster = 0;
+  for (let i = 0; i < towers.length; i++) {
+    let cnt = 0;
+    for (let j = 0; j < towers.length; j++) {
+      if ((towers[i].x - towers[j].x) ** 2 + (towers[i].y - towers[j].y) ** 2 <= (2.6 * 40) ** 2) cnt++;
+    }
+    if (cnt > maxCluster) maxCluster = cnt;
+  }
+
+  if (physRatio >= 0.55) return THREAT_VARIANTS.deflector;
+  if (cryo >= 2 || cryoRatio >= 0.30) return THREAT_VARIANTS.thermal_juggernaut;
+  if (maxCluster >= 4 && towers.length >= 4) return THREAT_VARIANTS.artillery;
+  return null;
+}
+
 function buildSpawns(n) {
-  const ev = [], add = (t, type) => ev.push({ t, type });
+  const ev = [], add = (t, type) => ev.push({ t, type, affix: null, threat: null });
   const scouts = n === 1 ? 8 : 6 + Math.floor(n * 1.2);
   const sg = Math.max(0.24, 0.7 - n * 0.016);
   for (let i = 0; i < scouts; i++) add(i * sg, 'scout');
@@ -185,6 +248,35 @@ function buildSpawns(n) {
   if (n >= 9) { const cr = 1 + Math.floor((n - 9) / 5); for (let i = 0; i < cr; i++) add(5 + i * 4.5, 'carrier'); }
   if (n >= 11) { const br = 1 + Math.floor((n - 11) / 4); for (let i = 0; i < br; i++) add(2 + i * 3.2, 'breacher'); }
   if (n % 5 === 0) { const bc = 1 + Math.floor(n / 20); for (let i = 0; i < bc; i++) add(6 + i * 9, 'boss'); }
+
+  // Adaptive Threat Director
+  const threat = getThreatDirectorAnalysis();
+  if (n >= 5 && threat) {
+    let applied = 0;
+    for (let i = 0; i < ev.length; i++) {
+      if (ev[i].type !== 'swarm' && ev[i].type !== 'boss') {
+        ev[i].threat = threat.id;
+        applied++;
+        if (applied >= (threat.id === 'deflector' ? 3 : 1)) break;
+      }
+    }
+  }
+
+  // Elite Champion Affixes (wave >= 6, ~25% chance for non-swarm, non-boss)
+  if (n >= 6) {
+    const affixKeys = Object.keys(CHAMPION_AFFIXES);
+    for (let i = 0; i < ev.length; i++) {
+      const item = ev[i];
+      if (item.type !== 'swarm' && item.type !== 'boss') {
+        const hash = ((n * 137 + i * 43) % 100);
+        if (hash < 25) {
+          const affixIndex = (n * 3 + i * 7) % affixKeys.length;
+          item.affix = affixKeys[affixIndex];
+        }
+      }
+    }
+  }
+
   ev.sort((a, b) => a.t - b.t);
   return ev;
 }

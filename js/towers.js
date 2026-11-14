@@ -264,6 +264,12 @@ function fireRail(t, st, e) {
     } else {
       dealDamage(o, dmg, 'phys', t, { crit });
     }
+    // Anti-projectile Dome halts rail beam from piercing further
+    if (o.affix === 'dome' && !o.dead) {
+      addRing(o.x, o.y, 10, 42, 0.4, '#38bdf8', 4);
+      addText(o.x, o.y - o.r - 20, 'DOME BLOCKED', '#38bdf8', 13);
+      break;
+    }
   }
   const isBeam = t.branch === 'A';
   const f = addFx('rail', mx, my, mx + dx * len, my + dy * len, isBeam ? 0.4 : 0.3, crit ? '#fde047' : '#fb7185', crit ? 8 : (isBeam ? 9 : 6));

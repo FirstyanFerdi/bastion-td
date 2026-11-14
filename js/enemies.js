@@ -4,20 +4,25 @@
 /* ============================================================
    ENEMIES
    ============================================================ */
-function spawnEnemy(type, n) {
+function spawnEnemy(type, n, affix, threat) {
   const d = ED[type], sc = hpScale(n), hp = Math.round(d.hp * sc);
   let spd = d.speed * (1 + Math.min(0.25, n * 0.006)) * (type === 'swarm' ? rand(0.98, 1.02) : rand(0.94, 1.06));
   let armor = d.armor;
   if (G.mutator && G.mutator.id === 'heavy_plating') armor = Math.min(0.85, armor + 0.20);
+  const isChamp = !!(affix && CHAMPION_AFFIXES[affix]);
+  const finalHp = isChamp ? Math.round(hp * 1.4) : hp;
+  const finalReward = isChamp ? Math.round(d.reward * 1.4 * (1 + 0.03 * (n - 1))) : Math.max(1, Math.round(d.reward * (1 + 0.03 * (n - 1))));
   const e = {
-    type, id: ++eid, hp, maxHp: hp, dispHp: hp, shield: 0, maxShield: 0, speed: spd, curSpeed: spd, r: d.r,
+    type, id: ++eid, hp: finalHp, maxHp: finalHp, dispHp: finalHp, shield: 0, maxShield: 0, speed: spd, curSpeed: spd, r: isChamp ? Math.round(d.r * 1.15) : d.r,
     armor, shred: 0, slowAmt: 0, slowT: 0, brittle: 0, brittleT: 0, stunT: 0,
-    reward: Math.max(1, Math.round(d.reward * (1 + 0.03 * (n - 1)))), leak: d.leak,
+    reward: finalReward, leak: d.leak,
     d: 0, seg: 0, x: PATH[0].x, y: PATH[0].y, ang: 0, off: 0, dead: false, flash: 0, dmgAcc: 0, dmgT: 0,
     healT: rand(0.6, 1.4), shieldCd: 4, shieldT: 0, anim: Math.random() * 10, healFx: 0,
     stealth: !!d.stealth, revealT: 0, carrierT: rand(1.5, 3.0), bleedT: 0, bleedDps: 0,
     acidT: 0, thermiteT: 0, thermiteDps: 0,
-    phase: 1, mortarCd: 7
+    phase: 1, mortarCd: 7,
+    isChampion: isChamp, affix: affix || null, threat: threat || null,
+    noDmgT: 0, phaseCd: 0, avengerStacks: 0, thawCd: rand(1.5, 2.5), artilleryCd: rand(4.0, 7.0)
   };
   if (type === 'swarm') { e.off = rand(-15, 15); e.d = -rand(0, 22); }
   if ((type === 'scout' || type === 'brute') && n >= 8 && Math.random() < Math.min(0.5, (n - 6) * 0.05)) {
@@ -87,6 +92,66 @@ function updateEnemy(e, dt) {
           o.shield = Math.min(o.maxShield, o.shield + sh);
           burst(o.x, o.y, 4, '#38bdf8', 60, 0.35, 2.5, true);
         }
+      }
+    }
+  }
+  // Champion Affix: Regenerator
+  if (e.affix === 'regenerator' && !e.dead) {
+    if (e.dmgT <= 0) {
+      e.noDmgT += dt;
+      if (e.noDmgT >= 1.2 && e.hp < e.maxHp) {
+        const heal = e.maxHp * 0.06 * dt;
+        e.hp = Math.min(e.maxHp, e.hp + heal);
+        if (Math.random() < 0.2) burst(e.x, e.y, 2, '#22c55e', 40, 0.3, 2, true);
+      }
+    } else {
+      e.noDmgT = 0;
+    }
+  }
+  if (e.phaseCd > 0) e.phaseCd -= dt;
+
+  // Adaptive Threat: Thermal Juggernaut aura
+  if (e.threat === 'thermal_juggernaut' && e.stunT <= 0 && !e.dead && e.d > 0) {
+    e.thawCd -= dt;
+    if (e.thawCd <= 0) {
+      e.thawCd = 2.4;
+      const R = 2.0 * TILE;
+      addRing(e.x, e.y, 6, R, 0.5, '#ea580c', 3);
+      for (const o of G.enemies) {
+        if (o.dead) continue;
+        if ((o.x - e.x) ** 2 + (o.y - e.y) ** 2 <= (R + o.r) ** 2) {
+          if (o.slowT > 0 || o.stunT > 0) {
+            o.slowT = 0; o.slowAmt = 0; o.stunT = 0;
+            burst(o.x, o.y, 4, '#fdba74', 60, 0.35, 2.5, false);
+            addText(o.x, o.y - o.r - 14, 'THAWED', '#fdba74', 11);
+          }
+        }
+      }
+    }
+  }
+
+  // Adaptive Threat: Artillery Walker mortar
+  if (e.threat === 'artillery' && e.stunT <= 0 && !e.dead && e.d > 0 && G.towers.length > 0) {
+    e.artilleryCd -= dt;
+    if (e.artilleryCd <= 0) {
+      e.artilleryCd = 7.5;
+      let bestT = G.towers[0], bestCount = 0;
+      for (const t1 of G.towers) {
+        let cnt = 0;
+        for (const t2 of G.towers) if ((t1.x - t2.x) ** 2 + (t1.y - t2.y) ** 2 <= (2.6 * TILE) ** 2) cnt++;
+        if (cnt > bestCount) { bestCount = cnt; bestT = t1; }
+      }
+      if (bestT) {
+        for (const t of G.towers) {
+          if ((t.x - bestT.x) ** 2 + (t.y - bestT.y) ** 2 <= (2.2 * TILE) ** 2) {
+            t.empT = 2.4;
+            burst(t.x, t.y, 10, '#f87171', 90, 0.4, 2.5, false);
+            addText(t.x, t.y - 18, 'EMP DISRUPTED', '#f87171', 12);
+          }
+        }
+        addFx('tracer', e.x, e.y, bestT.x, bestT.y, 0.45, '#f87171', 3.5);
+        addRing(bestT.x, bestT.y, 10, 2.2 * TILE, 0.6, '#f87171', 4);
+        shake(5); Sfx.play('boom');
       }
     }
   }

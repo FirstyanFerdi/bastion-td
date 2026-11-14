@@ -130,6 +130,66 @@ function drawEnemy(c, e, time) {
   const r = e.r;
   c.save(); c.translate(e.x, e.y);
   if (e.healFx > 0) glow(c, 0, 0, r + 16, '#6ee7b7', e.healFx);
+
+  // Champion Under-Aura (Fase 2)
+  if (e.isChampion && e.affix && CHAMPION_AFFIXES[e.affix]) {
+    const af = CHAMPION_AFFIXES[e.affix];
+    c.save();
+    c.strokeStyle = af.color;
+    c.lineWidth = 2.2;
+    c.setLineDash([6, 4]);
+    c.beginPath();
+    c.arc(0, 0, r + 9, time * 2, time * 2 + TAU);
+    c.stroke();
+    c.fillStyle = af.auraColor;
+    c.beginPath();
+    c.arc(0, 0, r + 9, 0, TAU);
+    c.fill();
+    c.restore();
+  }
+
+  // Adaptive Threat Indicators
+  if (e.threat === 'deflector') {
+    c.save();
+    c.strokeStyle = 'rgba(148,163,184,0.8)';
+    c.lineWidth = 1.8;
+    c.beginPath();
+    c.arc(0, 0, r + 6, 0, TAU);
+    c.stroke();
+    c.restore();
+  } else if (e.threat === 'thermal_juggernaut') {
+    c.save();
+    c.strokeStyle = 'rgba(234,88,12,0.85)';
+    c.lineWidth = 2;
+    c.setLineDash([4, 4]);
+    c.beginPath();
+    c.arc(0, 0, r + 8, -time * 3, -time * 3 + TAU);
+    c.stroke();
+    c.restore();
+  } else if (e.threat === 'artillery') {
+    c.save();
+    c.strokeStyle = 'rgba(239,68,68,0.85)';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(0, 0, r + 7, 0, TAU);
+    c.stroke();
+    c.restore();
+  }
+
+  // Anti-Projectile Dome projection
+  if (e.affix === 'dome') {
+    c.save();
+    const domePulse = 0.5 + 0.5 * Math.sin(time * 3);
+    c.fillStyle = 'rgba(56,189,248,' + (0.08 + 0.05 * domePulse) + ')';
+    c.strokeStyle = 'rgba(56,189,248,' + (0.4 + 0.3 * domePulse) + ')';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.arc(0, 0, 40, 0, TAU);
+    c.fill();
+    c.stroke();
+    c.restore();
+  }
+
   c.save(); c.rotate(e.ang);
   switch (e.type) {
     case 'scout': {
@@ -237,13 +297,23 @@ function drawEnemy(c, e, time) {
   c.restore();
 }
 function drawBars(c, e) {
-  if (!(e.hp < e.maxHp || e.shield > 0 || e.type === 'boss')) return;
+  if (!(e.hp < e.maxHp || e.shield > 0 || e.type === 'boss' || e.isChampion)) return;
   const w = Math.max(22, e.r * 2 + 6), h = 4, x = e.x - w / 2, y = e.y - e.r - 11 - (e.shield > 0 ? 4 : 0);
   c.fillStyle = 'rgba(2,6,14,0.85)'; rr(c, x - 1, y - 1, w + 2, h + 2, 2); c.fill();
   c.fillStyle = '#e2e8f0'; c.fillRect(x, y, w * clamp(e.dispHp / e.maxHp, 0, 1), h);
   const pct = clamp(e.hp / e.maxHp, 0, 1);
   c.fillStyle = pct > 0.6 ? '#34d399' : pct > 0.3 ? '#fbbf24' : '#f43f5e'; c.fillRect(x, y, w * pct, h);
   if (e.shield > 0) { c.fillStyle = 'rgba(2,6,14,0.85)'; c.fillRect(x - 1, y + h + 1, w + 2, 4); c.fillStyle = '#22d3ee'; c.fillRect(x, y + h + 2, w * clamp(e.shield / e.maxShield, 0, 1), 2.5); }
+  if (e.isChampion && e.affix && CHAMPION_AFFIXES[e.affix]) {
+    c.fillStyle = CHAMPION_AFFIXES[e.affix].color;
+    c.beginPath();
+    c.moveTo(e.x, y - 8);
+    c.lineTo(e.x + 4, y - 4);
+    c.lineTo(e.x, y - 1);
+    c.lineTo(e.x - 4, y - 4);
+    c.closePath();
+    c.fill();
+  }
 }
 function enemyIcon(type) {
   const cv = document.createElement('canvas'); cv.width = cv.height = 52;

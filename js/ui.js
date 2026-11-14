@@ -154,6 +154,9 @@ function renderWaveCard() {
     if (cnt.healer) tags.push('<span class="tag gr">HEALERS</span>');
     if (cnt.swarm) tags.push('<span class="tag red">SWARM RUSH</span>');
     if (cnt.brute) tags.push('<span class="tag">ARMORED</span>');
+    if (ev.some(x => x.affix)) tags.push('<span class="tag purple">ELITE CHAMPIONS</span>');
+    const threat = getThreatDirectorAnalysis();
+    if (n >= 5 && threat) tags.push('<span class="tag orange">THREAT: ' + threat.name.toUpperCase() + '</span>');
     if (G.mutator) tags.push('<span class="tag ' + G.mutator.cls + '">MUTATOR: ' + G.mutator.name.toUpperCase() + '</span>');
     $('wcTags').innerHTML = tags.join('');
   }
