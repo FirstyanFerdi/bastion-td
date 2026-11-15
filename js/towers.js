@@ -22,15 +22,23 @@ function acquire(t, rangePx) {
   }
   return best;
 }
+function getTowerCost(type) {
+  const def = TD[type];
+  if (!def) return 0;
+  const mult = (typeof G !== 'undefined' && G && G.ascension >= 1) ? 1.15 : 1.0;
+  return Math.round(def.cost * mult);
+}
+
 function placeTower(col, row, type) {
   const def = TD[type];
   if (col < 0 || row < 0 || col >= COLS || row >= ROWS || pathTile[row][col] || G.grid[row][col]) return false;
-  if (G.gold < def.cost) { Sfx.play('error'); return false; }
-  G.gold -= def.cost;
+  const cost = getTowerCost(type);
+  if (G.gold < cost) { Sfx.play('error'); return false; }
+  G.gold -= cost;
   const leyline = typeof getLeylineAt === 'function' ? getLeylineAt(col, row) : null;
   const t = {
     type, c: col, r: row, x: col * TILE + TILE / 2, y: row * TILE + TILE / 2, tier: 0, branch: null, angle: -Math.PI / 2,
-    recoil: 0, flash: 0, spin: Math.random() * 6, spinV: 3, cd: 0.3, prio: 'first', invested: def.cost,
+    recoil: 0, flash: 0, spin: Math.random() * 6, spinV: 3, cd: 0.3, prio: 'first', invested: cost,
     kills: 0, dmg: 0, pulseN: 0, charge: 1, pop: 1, empT: 0, overchargeT: 0, heat: 0,
     leyline
   };
@@ -85,7 +93,10 @@ function updateTower(t, dt) {
   if (t.overchargeT > 0) rateMult *= 2.0;
   if (hasPerk('targeting_matrix')) { rangeMult *= 1.15; }
   if (G.mutator && G.mutator.id === 'emp_jam') rangeMult *= 0.88;
+  if (G.mutator && G.mutator.id === 'solar_flare') rangeMult *= 0.85;
   if (G.mutator && G.mutator.id === 'ion_storm' && t.type !== 'tesla') rateMult *= 0.85;
+  if (G.mutator && G.mutator.id === 'cryo_lockdown') rateMult *= 0.80;
+  if (G.mutator && G.mutator.id === 'overcharge_anomaly') rateMult *= 1.30;
   if (t.leyline && t.leyline.id === 'accelerator') rateMult *= 1.45;
 
   // Tesla Grid Overcharger aura check
@@ -281,8 +292,8 @@ function fireRail(t, st, e) {
     const o = hits[i].o;
     o.revealT = 3.0; // reveals stealth
     burst(o.x, o.y, 8, '#fda4af', 150, 0.4, 3, false);
-    // Executioner execution check
-    if (t.branch === 'B' && st.execThresh && o.type !== 'boss' && (o.hp / o.maxHp) <= st.execThresh) {
+    // Executioner execution check (Boss immune on Ascension 5)
+    if (t.branch === 'B' && st.execThresh && (o.type !== 'boss' || !(G.ascension >= 5)) && (o.hp / o.maxHp) <= st.execThresh) {
       o.hp = 0;
       addText(o.x, o.y - o.r - 18, 'EXECUTED', '#f43f5e', 16);
       burst(o.x, o.y, 20, '#f43f5e', 180, 0.5, 3.5, true);

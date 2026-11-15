@@ -33,10 +33,12 @@ function emptyGrid() { return Array.from({ length: ROWS }, () => Array(COLS).fil
 function hasPerk(id) { return G && G.perks && G.perks.indexOf(id) >= 0; }
 
 function newGame(keepSpeed) {
+  const asc = (typeof SAVE !== 'undefined' && SAVE.ascension) || 0;
+  const startLives = asc >= 2 ? 12 : 25;
   const speed = keepSpeed && G ? G.speed : 1;
   const startBonus = typeof getWorkshopLevel === 'function' ? getWorkshopLevel('treasury') * 50 : 0;
   G = {
-    state: 'prep', lives: 25, gold: 250 + startBonus, wave: 0, score: 0, time: 0, anim: 0, speed, paused: false,
+    state: 'prep', lives: startLives, gold: 250 + startBonus, wave: 0, score: 0, time: 0, anim: 0, speed, paused: false,
     enemies: [], towers: [], proj: [], queue: [], grid: emptyGrid(),
     sel: null, placing: null, hover: null, mouse: { x: 0, y: 0, in: false },
     prepT: 20, shake: 0, dmgFlash: 0, baseFlash: 0, banner: null, endless: false, uiDirty: true, kills: 0,
@@ -45,7 +47,8 @@ function newGame(keepSpeed) {
     fuelCells: [
       { id: 1, c: 6, r: 3, x: 6 * TILE + TILE / 2, y: 3 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false },
       { id: 2, c: 12, r: 7, x: 12 * TILE + TILE / 2, y: 7 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false }
-    ]
+    ],
+    ascension: asc
   };
   partPool.clear(); fxPool.clear(); textPool.clear();
 }
@@ -122,6 +125,7 @@ function dealDamage(e, amount, type, src, opts) {
   if (hasPerk('titan_hunter') && (e.type === 'boss' || e.type === 'brute' || e.type === 'carrier')) a *= 1.30;
   if (G.mutator && G.mutator.id === 'ion_storm' && (type === 'energy' || (src && src.type === 'tesla'))) a *= 1.25;
   if (e.shield > 0 && opts.shieldMult) a *= opts.shieldMult;
+  if (G.mutator && G.mutator.id === 'solar_flare' && (type === 'energy' || type === 'plasma' || (src && (src.type === 'tesla' || src.type === 'plasma')))) a *= 1.35;
 
   // Adaptive Threat: Kinetic Deflector (-50% physical damage)
   if (e.threat === 'deflector' && type === 'phys') {
@@ -252,6 +256,23 @@ function killEnemy(e, src) {
       }
     }
   }
+  // Special Event Mutator: Nanite Plague (spawns micro-swarms on death)
+  if (G.mutator && G.mutator.id === 'nanite_plague' && e.type !== 'swarm' && !e.isMicroSpawn && typeof spawnEnemy === 'function') {
+    for (let k = 0; k < 2; k++) {
+      spawnEnemy('swarm', G.wave, null, null, e.pathId || 0);
+      const m = G.enemies[G.enemies.length - 1];
+      if (m) {
+        m.isMicroSpawn = true;
+        m.d = Math.max(0, e.d - rand(10, 25));
+        m.x = e.x + rand(-10, 10);
+        m.y = e.y + rand(-10, 10);
+        m.hp = Math.round(m.hp * 0.7);
+        m.maxHp = m.hp;
+      }
+    }
+    burst(e.x, e.y, 8, '#c084fc', 80, 0.4, 2.5, false);
+  }
+
   // Perk: Cryo Shatter
   if (hasPerk('cryo_shatter') && (e.slowT > 0 || e.stunT > 0)) {
     burst(e.x, e.y, 16, '#93c5fd', 150, 0.5, 3.5, false);

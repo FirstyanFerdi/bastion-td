@@ -7,6 +7,7 @@
 function spawnEnemy(type, n, affix, threat, pathId) {
   const d = ED[type], sc = hpScale(n), hp = Math.round(d.hp * sc);
   let spd = d.speed * (1 + Math.min(0.25, n * 0.006)) * (type === 'swarm' ? rand(0.98, 1.02) : rand(0.94, 1.06));
+  if (type === 'swarm' && G && G.ascension >= 3) spd *= 1.15;
   let armor = d.armor;
   if (G.mutator && G.mutator.id === 'heavy_plating') armor = Math.min(0.85, armor + 0.20);
   const isChamp = !!(affix && CHAMPION_AFFIXES[affix]);
@@ -30,6 +31,9 @@ function spawnEnemy(type, n, affix, threat, pathId) {
   if (type === 'swarm') { e.off = rand(-15, 15); e.d = -rand(0, 22); }
   if ((type === 'scout' || type === 'brute') && n >= 8 && Math.random() < Math.min(0.5, (n - 6) * 0.05)) {
     e.maxShield = e.shield = Math.round(hp * (type === 'brute' ? 0.35 : 0.5));
+  }
+  if (G && G.ascension >= 4 && e.shield <= 0) {
+    e.maxShield = e.shield = Math.round(finalHp * 0.20);
   }
   if (type === 'boss') { shake(14); Sfx.play('boss'); addRing(PATH[1].x, PATH[1].y, 10, 120, 0.8, '#c084fc', 5); }
   if (pId === 1) {
@@ -182,6 +186,12 @@ function updateEnemy(e, dt) {
       shake(12); Sfx.play('boss');
       addRing(e.x, e.y, 16, 130, 0.8, '#f43f5e', 5);
       addText(e.x, e.y - e.r - 28, 'PHASE III: BERSERK', '#f43f5e', 16);
+      if (G && G.ascension >= 5) {
+        spawnEnemy('brute', G.wave, 'avenger');
+        spawnEnemy('scout', G.wave, 'phase_shifter');
+        addText(e.x, e.y - e.r - 46, 'NEMESIS ESCORTS', '#a855f7', 14);
+        burst(e.x, e.y, 18, '#a855f7', 150, 0.6, 4, true);
+      }
     }
     // Phase 1 mortar fire
     if (e.phase === 1 && e.stunT <= 0) {
@@ -210,6 +220,8 @@ function updateEnemy(e, dt) {
   }
   let sp = e.speed;
   if (G.mutator && G.mutator.id === 'frenzy' && e.hp < e.maxHp * 0.4) sp *= 1.35;
+  if (G.mutator && G.mutator.id === 'cryo_lockdown') sp *= 0.80;
+  if (G.mutator && G.mutator.id === 'overcharge_anomaly') sp *= 1.25;
   if (e.stunT > 0) sp = 0; else if (e.slowT > 0) sp *= 1 - e.slowAmt;
   e.curSpeed = sp;
   e.d += sp * dt;

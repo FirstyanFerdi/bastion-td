@@ -52,11 +52,12 @@ function onWaveClear() {
   const isVC = hasPerk('venture_capital');
   const intRate = isVC ? 0.14 : 0.08, intCap = isVC ? 260 : 150;
   const interest = Math.min(intCap, Math.floor(G.gold * intRate));
-  G.gold += bonus + interest; G.score += n * 100 + bonus + interest;
+  const ascScoreMult = 1 + (G.ascension || 0) * 0.20;
+  G.gold += bonus + interest; G.score += Math.round((n * 100 + bonus + interest) * ascScoreMult);
   addText(W / 2, 90, 'WAVE ' + n + ' CLEARED  +' + bonus, '#6ee7b7', 22);
   if (interest > 0) addText(W / 2, 118, 'interest +' + interest + (isVC ? ' (Venture Capital)' : ''), '#fbbf24', 16);
-  addCores(1);
-  addText(W / 2, 142, '+1 Nanite Core', '#38bdf8', 14);
+  const earnedCores = addCores(1);
+  addText(W / 2, 142, '+' + earnedCores + ' Nanite Core' + (earnedCores > 1 ? 's' : ''), '#38bdf8', 14);
   Sfx.play('coin');
   saveBest();
 
@@ -95,7 +96,11 @@ function saveBest() {
   if (G.wave > SAVE.bestWave) { SAVE.bestWave = G.wave; Store.set('nb_bestWave', SAVE.bestWave); }
 }
 function endGame(won) {
-  if (won) G.score += G.lives * 50;
+  if (won) {
+    G.score += G.lives * 50;
+    if (typeof unlockNextAscension === 'function') unlockNextAscension(G.ascension || 0);
+    addCores(15 + (G.ascension || 0) * 5);
+  }
   saveBest();
   G.state = won ? 'victory' : 'over';
   G.placing = null; G.casting = null; G.drafting = null;

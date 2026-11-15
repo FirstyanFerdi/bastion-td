@@ -52,8 +52,9 @@ function buildDock() {
     const d = TD[k], el = document.createElement('div');
     el.className = 'shop'; el.dataset.type = k; el.style.setProperty('--tc', d.color);
     const s = d.tiers[0];
+    const cost = typeof getTowerCost === 'function' ? getTowerCost(k) : d.cost;
     const stats = statRows(k, 0).slice(0, 4).map(r => '<span><em>' + r[0] + '</em> ' + r[1] + '</span>').join('');
-    el.innerHTML = '<span class="key">' + d.key + '</span><canvas width="56" height="56"></canvas><div class="meta"><div class="nm">' + d.name + '</div><div class="cost"><i class="coin"></i>' + d.cost + '</div><div class="role">' + d.role + '</div></div>' +
+    el.innerHTML = '<span class="key">' + d.key + '</span><canvas width="56" height="56"></canvas><div class="meta"><div class="nm">' + d.name + '</div><div class="cost"><i class="coin"></i>' + cost + '</div><div class="role">' + d.role + '</div></div>' +
       '<div class="tip"><b>' + d.name + '</b>' + d.tip + '<div class="st">' + stats + '</div></div>';
     dock.appendChild(el);
     const ic = el.querySelector('canvas').getContext('2d');
@@ -65,7 +66,8 @@ function selectShop(type) {
   if (!G || (G.state !== 'prep' && G.state !== 'active')) return;
   if (G.placing === type) { G.placing = null; Sfx.play('click'); return; }
   G.placing = type; G.sel = null; G.casting = null; G.uiDirty = true; Sfx.play('click');
-  if (G.gold < TD[type].cost) {
+  const cost = typeof getTowerCost === 'function' ? getTowerCost(type) : TD[type].cost;
+  if (G.gold < cost) {
     const el = document.querySelector('.shop[data-type="' + type + '"]');
     if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
   }
@@ -76,7 +78,8 @@ function renderInspector() {
   if (!t) {
     if (G.placing) {
       const d = TD[G.placing];
-      box.innerHTML = '<h3>PLACING</h3><div class="insp-name"><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>' + d.role.toUpperCase() + '</small></div></div>' +
+      const cost = typeof getTowerCost === 'function' ? getTowerCost(G.placing) : d.cost;
+      box.innerHTML = '<h3>PLACING</h3><div class="insp-name"><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>' + d.role.toUpperCase() + ' · <i class="coin"></i>' + cost + '</small></div></div>' +
         statRows(G.placing, 0).map(r => '<div class="srow"><span>' + r[0] + '</span><span class="sv">' + r[1] + '</span></div>').join('') +
         '<div class="note">Click a free tile to build (hold Shift to keep building). Esc / right-click cancels.</div>';
       return;
@@ -164,6 +167,8 @@ function renderWaveCard() {
     $('wcBadges').innerHTML = ['scout', 'swarm', 'brute', 'healer', 'stealth', 'carrier', 'breacher', 'boss'].filter(k => cnt[k]).map(k =>
       '<div class="badge' + (k === 'boss' ? ' boss' : '') + '" title="' + ED[k].name + '"><img src="' + enemyIcons[k] + '" alt="' + ED[k].name + '">×' + cnt[k] + '</div>').join('');
     const tags = [];
+    const ascData = (typeof getAscensionData === 'function' && G && G.ascension > 0) ? getAscensionData(G.ascension) : null;
+    if (ascData && ascData.level > 0) tags.push('<span class="tag" style="background:' + ascData.color + '22;border:1px solid ' + ascData.color + ';color:' + ascData.color + '">' + ascData.badge + '</span>');
     if (n % 5 === 0) tags.push('<span class="tag red">BOSS WAVE</span>');
     if (G.endless && n > WIN_WAVE) tags.push('<span class="tag">ENDLESS</span>');
     if (n >= 8) tags.push('<span class="tag cy">SHIELDED UNITS</span>');
@@ -255,7 +260,31 @@ function showOverlay(kind) {
   if (!kind) { ov.classList.remove('show'); ov.innerHTML = ''; return; }
   let h = '';
   if (kind === 'menu') {
+    const curAsc = (typeof SAVE !== 'undefined' && SAVE.ascension) || 0;
+    const maxUnlocked = Math.min(5, Math.max(1, (typeof SAVE !== 'undefined' && SAVE.maxAscension || 0) + 1));
+    const asc = typeof getAscensionData === 'function' ? getAscensionData(curAsc) : { name: 'Standard', desc: '', badge: 'NORMAL', color: '#94a3b8', pacts: [] };
+    const pactsHtml = asc.pacts && asc.pacts.length > 0 ?
+      '<div class="asc-pacts">' + asc.pacts.map(p => '<div>• ' + p + '</div>').join('') + '</div>' :
+      '<div class="asc-pacts" style="color:#64748b;text-align:center">No active penalty pacts (Standard difficulty).</div>';
+
+    const bonusText = curAsc > 0 ?
+      '<span style="color:#38bdf8">+' + (curAsc * 25) + '% Cores</span> · <span style="color:#fbbf24">+' + (curAsc * 20) + '% Score</span>' :
+      '<span style="color:#94a3b8">Base Rewards (1.0x)</span>';
+
+    const ascSelectorHtml =
+      '<div class="asc-box">' +
+      '<div class="asc-bar">' +
+      '<button class="asc-nav" data-ov="asc_prev"' + (curAsc <= 0 ? ' disabled' : '') + '>◀</button>' +
+      '<div class="asc-title" style="color:' + asc.color + '">Pact of Punishment: ' + asc.badge + '</div>' +
+      '<button class="asc-nav" data-ov="asc_next"' + (curAsc >= maxUnlocked ? ' disabled' : '') + '>▶</button>' +
+      '</div>' +
+      '<div class="asc-desc"><b>' + asc.name + ':</b> ' + asc.desc + '</div>' +
+      pactsHtml +
+      '<div style="margin-top:6px;font-size:11px;font-weight:700">' + bonusText + '</div>' +
+      '</div>';
+
     h = '<div class="ov-box"><h1>' + LOGO + 'BASTION</h1><div class="sub">Hold the grid. Survive 20 waves, then push into Endless Mode.</div>' +
+      ascSelectorHtml +
       '<div class="how"><div><kbd>1</kbd>-<kbd>5</kbd> select tower</div><div><kbd>Q</kbd>/<kbd>W</kbd>/<kbd>E</kbd>/<kbd>R</kbd> commander powers</div><div><kbd>B</kbd> workshop HQ</div><div><kbd>Space</kbd> call wave / pause</div><div><kbd>Click</kbd> build / inspect</div><div><kbd>Esc</kbd> cancel / deselect</div><div><kbd>U</kbd> upgrade / <kbd>X</kbd> sell</div><div><kbd>P</kbd> pause / <kbd>F</kbd> speed / <kbd>M</kbd> mute</div></div>' +
       '<div class="ov-stats"><div><label>BEST WAVE</label><b>' + SAVE.bestWave + '</b></div><div><label>HIGH SCORE</label><b>' + SAVE.bestScore + '</b></div><div><label>NANITE CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div></div>' +
       '<div class="ov-btns"><button class="primary big" data-ov="start" tabindex="-1">' + svg('play') + 'Deploy</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
@@ -308,7 +337,13 @@ function showOverlay(kind) {
       '<div class="ov-stats"><div><label>WAVE REACHED</label><b>' + G.wave + '</b></div><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>NANITE CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
       '<div class="ov-btns"><button class="primary big" data-ov="again" tabindex="-1">' + svg('redo') + 'Play again</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
   } else if (kind === 'win') {
-    h = '<div class="ov-box"><h2 style="color:#6ee7b7">BASTION HELD!</h2><div class="sub">All 20 waves destroyed. The grid is safe, for now.</div>' +
+    const curAsc = (G && G.ascension) || 0;
+    const asc = typeof getAscensionData === 'function' ? getAscensionData(curAsc) : { badge: 'NORMAL', color: '#6ee7b7' };
+    const winTitle = curAsc > 0 ? 'ASCENSION ' + asc.badge + ' CONQUERED!' : 'BASTION HELD!';
+    const winSub = curAsc > 0 ?
+      'The Pact of Punishment was shattered! Next Ascension Protocol unlocked.' :
+      'All 20 waves destroyed. The grid is safe, for now.';
+    h = '<div class="ov-box"><h2 style="color:' + (curAsc > 0 ? asc.color : '#6ee7b7') + '">' + winTitle + '</h2><div class="sub">' + winSub + '</div>' +
       '<div class="ov-stats"><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>BEST SCORE</label><b>' + SAVE.bestScore + '</b></div><div><label>NANITE CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
       '<div class="ov-btns"><button class="primary big" data-ov="endless" tabindex="-1">' + svg('inf') + 'Endless mode</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button><button class="ghost" data-ov="again" tabindex="-1">New Game</button></div></div>';
   }

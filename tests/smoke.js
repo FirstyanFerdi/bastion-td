@@ -46,7 +46,7 @@ function bot() {
   }
   while (next < spots.length && (next < 12 || G.gold >= 160)) {
     const ty = types[next % types.length], [c, r] = spots[next];
-    if (G.gold < nb.TD[ty].cost) break;
+    if (G.gold < (typeof nb.getTowerCost === 'function' ? nb.getTowerCost(ty) : nb.TD[ty].cost)) break;
     const t = nb.placeTower(c, r, ty); next++;
     if (t) t.prio = ['first', 'strongest', 'last', 'weakest'][next % 4];
   }
@@ -59,7 +59,8 @@ function bot() {
   }
   while (next < spots.length) {
     const ty = types[next % types.length], [c, r] = spots[next];
-    if (G.gold < nb.TD[ty].cost + 30) break;
+    const cost = typeof nb.getTowerCost === 'function' ? nb.getTowerCost(ty) : nb.TD[ty].cost;
+    if (G.gold < cost + 30) break;
     const t = nb.placeTower(c, r, ty); next++;
     if (t) t.prio = ['first', 'strongest', 'last', 'weakest'][next % 4];
   }

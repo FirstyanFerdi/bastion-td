@@ -75,6 +75,17 @@ function init() {
     const b = e.target.closest('button'); if (!b) return;
     Sfx.init(); Sfx.resume();
     const a = b.dataset.ov;
+    if (a === 'asc_prev') {
+      setAscension((SAVE.ascension || 0) - 1);
+      showOverlay('menu');
+      Sfx.play('click');
+      return;
+    } else if (a === 'asc_next') {
+      setAscension((SAVE.ascension || 0) + 1);
+      showOverlay('menu');
+      Sfx.play('click');
+      return;
+    }
     if (a === 'start' || a === 'again') { begin(); Sfx.play('click'); }
     else if (a === 'endless') { showOverlay(null); G.endless = true; G.state = 'prep'; G.prepT = 15; G.uiDirty = true; wcWave = -1; Sfx.play('click'); }
     else if (a === 'open_workshop') { showOverlay('workshop'); Sfx.play('click'); }
@@ -86,4 +97,4 @@ function init() {
 init();
 
 // Small debug/test hook (harmless in production)
-window.__nb = { get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH };
+window.__nb = { get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension };

@@ -244,8 +244,28 @@ const WAVE_MUTATORS = {
   ion_storm: { id: 'ion_storm', name: 'Ion Storm', desc: '+25% Energy Damage, -15% Ballistic Rate', cls: 'purple' },
   heavy_plating: { id: 'heavy_plating', name: 'Heavy Plating', desc: '+20% Enemy Armor', cls: 'orange' },
   frenzy: { id: 'frenzy', name: 'Frenzy Surge', desc: 'Enemies sprint below 40% HP', cls: 'orange' },
-  emp_jam: { id: 'emp_jam', name: 'EMP Interference', desc: '-10% Tower Range', cls: 'purple' }
+  emp_jam: { id: 'emp_jam', name: 'EMP Interference', desc: '-10% Tower Range', cls: 'purple' },
+  solar_flare: { id: 'solar_flare', name: 'Solar Flare', desc: '+35% Energy Damage, -15% Tower Range', cls: 'orange' },
+  nanite_plague: { id: 'nanite_plague', name: 'Nanite Plague', desc: 'Fallen hostiles release micro-swarms', cls: 'purple' },
+  cryo_lockdown: { id: 'cryo_lockdown', name: 'Cryo Lockdown', desc: '-20% Enemy Speed, -20% Tower Attack Rate', cls: 'cyan' },
+  overcharge_anomaly: { id: 'overcharge_anomaly', name: 'Overcharge Surge', desc: '+30% Tower Rate, +25% Enemy Speed', cls: 'yellow' }
 };
+
+/* ============================================================
+   ASCENSION PROTOCOLS (FASE 5)
+   ============================================================ */
+const ASCENSION_MODIFIERS = [
+  { level: 0, id: 'standard', name: 'Standard Mode', desc: 'Sistem pertahanan reguler tanpa protokol hukuman.', badge: 'NORMAL', color: '#94a3b8', pacts: [] },
+  { level: 1, id: 'inflation', name: 'Hyper-Inflation', desc: 'Biaya logistik material meningkat: Harga menara naik +15%.', badge: 'ASC I', color: '#f59e0b', pacts: ['Harga pembangunan menara +15%'] },
+  { level: 2, id: 'fragile', name: 'Fragile Perimeter', desc: 'Integritas perimeter rapuh: Nyawa awal markas hanya 12 Lives.', badge: 'ASC II', color: '#f97316', pacts: ['Harga menara +15%', 'Nyawa awal berkurang menjadi 12'] },
+  { level: 3, id: 'swarm_influx', name: 'Swarm Influx', desc: 'Infestasi swarm masif: Jumlah swarm +50% dan bergerak +15% lebih cepat.', badge: 'ASC III', color: '#ef4444', pacts: ['Harga menara +15%', 'Nyawa awal 12', 'Jumlah swarm +50% & speed +15%'] },
+  { level: 4, id: 'shield_protocol', name: 'Shield Protocol', desc: 'Protokol perisai pertahanan musuh: Seluruh musuh memiliki perisai 20% HP.', badge: 'ASC IV', color: '#38bdf8', pacts: ['Harga menara +15%', 'Nyawa 12', 'Swarm +50%', 'Semua musuh memiliki perisai 20% HP'] },
+  { level: 5, id: 'nemesis', name: 'Nemesis Awakening', desc: 'Kebangkitan Nemesis: Boss kebal eksekusi Railgun & memanggil Champion Escort saat Berserk.', badge: 'ASC V', color: '#a855f7', pacts: ['Harga menara +15%', 'Nyawa 12', 'Swarm +50%', 'Perisai musuh 20%', 'Boss kebal eksekusi & panggil 2 Champion saat Berserk'] }
+];
+
+function getAscensionData(lv) {
+  return ASCENSION_MODIFIERS[clamp(lv || 0, 0, ASCENSION_MODIFIERS.length - 1)];
+}
 
 const ED = {
   scout: { name: 'Scout', hp: 34, speed: 112, r: 10, armor: 0, reward: 4, leak: 1 },
@@ -329,7 +349,8 @@ function buildSpawns(n) {
   const sg = Math.max(0.24, 0.7 - n * 0.016);
   for (let i = 0; i < scouts; i++) add(i * sg, 'scout');
   if (n >= 3 && n % 2 === 1) {
-    const per = 8 + (n % 5), cl = 1 + Math.floor(n / 8);
+    const ascSwarmMult = (typeof G !== 'undefined' && G && G.ascension >= 3) ? 1.5 : 1.0;
+    const per = Math.round((8 + (n % 5)) * ascSwarmMult), cl = 1 + Math.floor(n / 8);
     for (let k = 0; k < cl; k++) for (let i = 0; i < per; i++) add(2.5 + k * 5 + i * 0.06, 'swarm');
   }
   if (n >= 4) { const b = 1 + Math.floor((n - 4) / 2); for (let i = 0; i < b; i++) add(1.5 + i * 1.8, 'brute'); }

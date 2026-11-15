@@ -41,14 +41,34 @@ const SAVE = {
   bestWave: Store.get('nb_bestWave', 0),
   muted: Store.get('nb_muted', false),
   cores: Store.get('nb_cores', 0),
-  workshop: Store.get('nb_workshop', {})
+  workshop: Store.get('nb_workshop', {}),
+  ascension: Number(Store.get('nb_ascension', 0)),
+  maxAscension: Number(Store.get('nb_maxAscension', 0))
 };
 
 function addCores(n) {
-  SAVE.cores = (SAVE.cores || 0) + n;
+  const mult = (typeof G !== 'undefined' && G && G.ascension > 0) ? (1 + G.ascension * 0.25) : 1;
+  const finalCores = Math.round(n * mult);
+  SAVE.cores = (SAVE.cores || 0) + finalCores;
   Store.set('nb_cores', SAVE.cores);
   const el = typeof $ === 'function' ? $('vCores') : null;
   if (el) el.textContent = String(SAVE.cores);
+  return finalCores;
+}
+
+function setAscension(lv) {
+  const max = Math.min(5, Math.max(1, (SAVE.maxAscension || 0) + 1));
+  SAVE.ascension = clamp(lv, 0, max);
+  Store.set('nb_ascension', SAVE.ascension);
+  if (typeof G !== 'undefined' && G && G.state === 'menu') G.ascension = SAVE.ascension;
+  if (typeof refreshUI === 'function') refreshUI();
+}
+
+function unlockNextAscension(beatenLevel) {
+  if (beatenLevel >= (SAVE.maxAscension || 0)) {
+    SAVE.maxAscension = Math.min(5, beatenLevel + 1);
+    Store.set('nb_maxAscension', SAVE.maxAscension);
+  }
 }
 
 function getWorkshopLevel(id) {
