@@ -7,7 +7,7 @@
 function startWave() {
   G.wave++;
   const n = G.wave, ev = buildSpawns(n), base = G.time + 0.5;
-  for (const x of ev) G.queue.push({ at: base + x.t, type: x.type, wave: n, affix: x.affix, threat: x.threat });
+  for (const x of ev) G.queue.push({ at: base + x.t, type: x.type, wave: n, affix: x.affix, threat: x.threat, pathId: x.pathId || 0 });
   G.queue.sort((a, b) => a.at - b.at);
   G.state = 'active';
   G.leakedThisWave = 0;
@@ -21,7 +21,13 @@ function startWave() {
   }
   let sub = boss ? 'Heavy hostile signature detected' : '';
   if (G.mutator) sub = (sub ? sub + ' · ' : '') + 'MUTATOR: ' + G.mutator.name;
-  G.banner = { text: boss ? 'BOSS WAVE ' + n : 'WAVE ' + n, sub, t: 0, max: 2.6, color: boss ? '#d9534f' : (G.mutator ? '#f59e0b' : '#e2a72e') };
+  if (n === 8) {
+    shake(12);
+    Sfx.play('boss');
+    G.banner = { text: 'STRUCTURAL BREACH!', sub: 'Hostiles flanking from North Route!', t: 0, max: 3.5, color: '#ef4444' };
+  } else {
+    G.banner = { text: boss ? 'BOSS WAVE ' + n : 'WAVE ' + n, sub, t: 0, max: 2.6, color: boss ? '#d9534f' : (G.mutator ? '#f59e0b' : '#e2a72e') };
+  }
   if (boss) shake(8);
   Sfx.play('wave');
   G.uiDirty = true;
@@ -161,7 +167,7 @@ function update(dt) {
     if (h.life <= 0) G.hazards.splice(i, 1);
   }
 
-  while (G.queue.length && G.queue[0].at <= G.time) { const q = G.queue.shift(); spawnEnemy(q.type, q.wave, q.affix, q.threat); }
+  while (G.queue.length && G.queue[0].at <= G.time) { const q = G.queue.shift(); spawnEnemy(q.type, q.wave, q.affix, q.threat, q.pathId); }
   for (let i = 0; i < G.enemies.length; i++) updateEnemy(G.enemies[i], dt);
   let w = 0;
   for (let i = 0; i < G.enemies.length; i++) { const e = G.enemies[i]; if (!e.dead) G.enemies[w++] = e; }

@@ -41,9 +41,35 @@ function newGame(keepSpeed) {
     sel: null, placing: null, hover: null, mouse: { x: 0, y: 0, in: false },
     prepT: 20, shake: 0, dmgFlash: 0, baseFlash: 0, banner: null, endless: false, uiDirty: true, kills: 0,
     perks: [], skills: { orbital: { cd: 0 }, overcharge: { cd: 0 }, caltrops: { cd: 0 }, emp_nuke: { cd: 0 } },
-    hazards: [], casting: null, mutator: null, drafting: null, leakedThisWave: 0, citadelCd: 0
+    hazards: [], casting: null, mutator: null, drafting: null, leakedThisWave: 0, citadelCd: 0,
+    fuelCells: [
+      { id: 1, c: 6, r: 3, x: 6 * TILE + TILE / 2, y: 3 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false },
+      { id: 2, c: 12, r: 7, x: 12 * TILE + TILE / 2, y: 7 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false }
+    ]
   };
   partPool.clear(); fxPool.clear(); textPool.clear();
+}
+
+function detonateFuelCell(fc) {
+  if (!fc || fc.dead) return;
+  fc.dead = true;
+  fc.hp = 0;
+  const R = 110;
+  addRing(fc.x, fc.y, 12, R, 0.7, '#f97316', 5);
+  burst(fc.x, fc.y, 45, '#f97316', 220, 0.85, 4.5, true);
+  burst(fc.x, fc.y, 25, '#fff7ed', 150, 0.5, 3, true);
+  shake(14);
+  Sfx.play('boom');
+  addText(fc.x, fc.y - 28, 'FUEL CELL DETONATION!', '#f97316', 17);
+  G.hazards.push({ type: 'radiation', x: fc.x, y: fc.y, r: 90, life: 4.5, max: 4.5, dps: 42, shred: 0.35, src: null });
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    const d = Math.hypot(e.x - fc.x, e.y - fc.y);
+    if (d <= R + e.r) {
+      if (e.armor > 0) e.shred = e.armor; // 100% armor shred
+      dealDamage(e, 450, 'plasma', null);
+    }
+  }
 }
 
 /* ============================================================
@@ -180,7 +206,8 @@ function dealDamage(e, amount, type, src, opts) {
   if (e.affix === 'phase_shifter' && a >= 80 && (!e.phaseCd || e.phaseCd <= 0) && e.hp > 0) {
     e.phaseCd = 3.5;
     burst(e.x, e.y, 12, '#a855f7', 120, 0.4, 3, true);
-    e.d = Math.min(PLEN - 15, e.d + 70);
+    const pLen = e.pathId === 1 ? PLEN_BREACH : PLEN;
+    e.d = Math.min(pLen - 15, e.d + 70);
     burst(e.x, e.y, 14, '#c084fc', 140, 0.45, 3.5, true);
     addText(e.x, e.y - e.r - 24, 'PHASE SHIFT', '#c084fc', 14);
     Sfx.play('reaction');

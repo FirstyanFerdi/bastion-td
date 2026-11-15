@@ -20,10 +20,29 @@ for (let i = 0; i < PATH.length - 1; i++) {
   SEG.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, len, start: PLEN, ang: Math.atan2(b.y - a.y, b.x - a.x) });
   PLEN += len;
 }
-function posAt(d, hint) {
+
+/* Dynamic North Breach Route (Wave >= 8) */
+const WP_BREACH = [[7, 0], [7, 1], [11, 1], [11, 3], [11, 8], [14, 8], [14, 2], [15, 2]];
+for (let i = 0; i < WP_BREACH.length - 1; i++) {
+  const [c1, r1] = WP_BREACH[i], [c2, r2] = WP_BREACH[i + 1];
+  const dc = Math.sign(c2 - c1), dr = Math.sign(r2 - r1);
+  let c = c1, r = r1; pathTile[r][c] = true;
+  while (c !== c2 || r !== r2) { c += dc; r += dr; pathTile[r][c] = true; }
+}
+const PATH_BREACH = [{ x: 7 * TILE + TILE / 2, y: -TILE * 0.6 }];
+for (const [c, r] of WP_BREACH) PATH_BREACH.push({ x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 });
+const SEG_BREACH = []; let PLEN_BREACH = 0;
+for (let i = 0; i < PATH_BREACH.length - 1; i++) {
+  const a = PATH_BREACH[i], b = PATH_BREACH[i + 1], len = Math.hypot(b.x - a.x, b.y - a.y);
+  SEG_BREACH.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, len, start: PLEN_BREACH, ang: Math.atan2(b.y - a.y, b.x - a.x) });
+  PLEN_BREACH += len;
+}
+
+function posAt(d, hint, pathId) {
+  const segs = pathId === 1 ? SEG_BREACH : SEG;
   let i = hint || 0; if (d < 0) d = 0;
-  while (i < SEG.length - 1 && d >= SEG[i].start + SEG[i].len) i++;
-  const s = SEG[i], t = clamp((d - s.start) / s.len, 0, 1);
+  while (i < segs.length - 1 && d >= segs[i].start + segs[i].len) i++;
+  const s = segs[i], t = clamp((d - s.start) / s.len, 0, 1);
   return { x: s.x1 + (s.x2 - s.x1) * t, y: s.y1 + (s.y2 - s.y1) * t, ang: s.ang, seg: i };
 }
 const BASE_PT = PATH[PATH.length - 1];
@@ -193,6 +212,34 @@ const WORKSHOP_UPGRADES = {
   }
 };
 
+/* ============================================================
+   LEYLINE CONDUIT NODES (FASE 4)
+   ============================================================ */
+const LEYLINE_NODES = {
+  accelerator: {
+    id: 'accelerator', name: 'Hyper-Accelerator', c: 6, r: 2,
+    color: '#fbbf24', aura: 'rgba(251,191,36,0.22)',
+    desc: '+45% Attack Speed to tower deployed here.'
+  },
+  sensor: {
+    id: 'sensor', name: 'Sensor Relay', c: 10, r: 5,
+    color: '#38bdf8', aura: 'rgba(56,189,248,0.22)',
+    desc: '+2.5 Range and permanent Stealth true-sight.'
+  },
+  catalyst: {
+    id: 'catalyst', name: 'Catalyst Node', c: 7, r: 5,
+    color: '#c084fc', aura: 'rgba(192,132,252,0.22)',
+    desc: '+50% debuff potency and doubled effect durations.'
+  }
+};
+function getLeylineAt(c, r) {
+  for (const k in LEYLINE_NODES) {
+    const node = LEYLINE_NODES[k];
+    if (node.c === c && node.r === r) return node;
+  }
+  return null;
+}
+
 const WAVE_MUTATORS = {
   ion_storm: { id: 'ion_storm', name: 'Ion Storm', desc: '+25% Energy Damage, -15% Ballistic Rate', cls: 'purple' },
   heavy_plating: { id: 'heavy_plating', name: 'Heavy Plating', desc: '+20% Enemy Armor', cls: 'orange' },
@@ -277,7 +324,7 @@ function getThreatDirectorAnalysis() {
 }
 
 function buildSpawns(n) {
-  const ev = [], add = (t, type) => ev.push({ t, type, affix: null, threat: null });
+  const ev = [], add = (t, type) => ev.push({ t, type, affix: null, threat: null, pathId: 0 });
   const scouts = n === 1 ? 8 : 6 + Math.floor(n * 1.2);
   const sg = Math.max(0.24, 0.7 - n * 0.016);
   for (let i = 0; i < scouts; i++) add(i * sg, 'scout');
@@ -316,6 +363,16 @@ function buildSpawns(n) {
           const affixIndex = (n * 3 + i * 7) % affixKeys.length;
           item.affix = affixKeys[affixIndex];
         }
+      }
+    }
+  }
+
+  // Dynamic North Breach Route (Wave >= 8, flanking ~35% non-boss, non-swarm enemies)
+  if (n >= 8) {
+    for (let i = 0; i < ev.length; i++) {
+      const item = ev[i];
+      if (item.type !== 'boss' && item.type !== 'swarm' && ((i + n) % 3 === 0)) {
+        item.pathId = 1;
       }
     }
   }

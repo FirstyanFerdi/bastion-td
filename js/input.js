@@ -111,6 +111,19 @@ function onPointerDown(e) {
     }
   }
 
+  // Interactive Fuel Cell Detonation
+  if (G.fuelCells && !G.casting) {
+    const p = canvasPos(e);
+    for (const fc of G.fuelCells) {
+      if (!fc.dead && Math.hypot(p.x - fc.x, p.y - fc.y) <= fc.r + 8) {
+        detonateFuelCell(fc);
+        G.placing = null;
+        G.uiDirty = true;
+        return;
+      }
+    }
+  }
+
   if (!G.hover) return;
   const { c, r } = G.hover;
   if (G.placing) {

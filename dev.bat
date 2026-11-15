@@ -74,6 +74,9 @@ echo.
 echo [TEST] Menjalankan workshop HQ & meta-progression test (Fase 3)...
 node tests\test_workshop.js
 echo.
+echo [TEST] Menjalankan dynamic map & leyline nodes test (Fase 4)...
+node tests\test_map_dynamics.js
+echo.
 echo [TEST] Menjalankan automated smoke test (Wave 20)...
 node tests\smoke.js
 echo.
@@ -81,7 +84,7 @@ pause
 goto menu
 
 :run_test_arg
-node tests\test_reactions.js && node tests\test_champions.js && node tests\test_workshop.js && node tests\smoke.js
+node tests\test_reactions.js && node tests\test_champions.js && node tests\test_workshop.js && node tests\test_map_dynamics.js && node tests\smoke.js
 exit /b %errorlevel%
 
 :run_endless

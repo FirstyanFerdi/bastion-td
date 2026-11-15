@@ -89,9 +89,92 @@ function drawFlow(c) {
     c.save(); c.translate(p.x, p.y); c.rotate(p.ang);
     c.beginPath(); c.moveTo(6, 0); c.lineTo(-3, -6); c.lineTo(-1, 0); c.lineTo(-3, 6); c.closePath(); c.fill(); c.restore();
   }
+  if (G.wave >= 8) {
+    c.fillStyle = 'rgba(239,68,68,0.3)';
+    for (let d = sp; d < PLEN_BREACH; d += 60) {
+      const p = posAt(d, 0, 1);
+      c.save(); c.translate(p.x, p.y); c.rotate(p.ang);
+      c.beginPath(); c.moveTo(6, 0); c.lineTo(-3, -6); c.lineTo(-1, 0); c.lineTo(-3, 6); c.closePath(); c.fill(); c.restore();
+    }
+  }
+}
+function drawLeylineNodes(c, time) {
+  if (typeof LEYLINE_NODES === 'undefined') return;
+  for (const k in LEYLINE_NODES) {
+    const node = LEYLINE_NODES[k];
+    const cx = node.c * TILE + TILE / 2, cy = node.r * TILE + TILE / 2;
+    const pulse = Math.sin(time * 3 + node.c) * 0.2 + 0.8;
+    c.save();
+    c.fillStyle = node.color + '1a';
+    c.fillRect(node.c * TILE + 2, node.r * TILE + 2, TILE - 4, TILE - 4);
+    c.strokeStyle = node.color;
+    c.lineWidth = 1.5;
+    c.globalAlpha = 0.5 * pulse;
+    c.strokeRect(node.c * TILE + 3, node.r * TILE + 3, TILE - 6, TILE - 6);
+
+    c.globalAlpha = 0.7 * pulse;
+    c.beginPath();
+    c.arc(cx, cy, 14 + Math.sin(time * 4) * 2, 0, TAU);
+    c.strokeStyle = node.color;
+    c.lineWidth = 2;
+    c.stroke();
+
+    c.fillStyle = node.color;
+    c.font = '700 12px ' + FONT;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(node.icon, cx, cy);
+    c.restore();
+  }
+}
+function drawFuelCells(c, time) {
+  if (!G.fuelCells) return;
+  for (const fc of G.fuelCells) {
+    if (fc.dead) {
+      c.save();
+      c.fillStyle = 'rgba(28,25,23,0.7)';
+      c.beginPath(); c.arc(fc.x, fc.y, fc.r + 3, 0, TAU); c.fill();
+      c.strokeStyle = '#431407'; c.lineWidth = 2; c.stroke();
+      c.restore();
+      continue;
+    }
+    c.save();
+    c.translate(fc.x, fc.y);
+    const pulse = Math.sin(time * 5) * 0.15 + 0.85;
+    c.fillStyle = 'rgba(249,115,22,0.18)';
+    c.beginPath(); c.arc(0, 0, (fc.r + 5) * pulse, 0, TAU); c.fill();
+    c.fillStyle = '#7c2d12';
+    c.beginPath(); c.arc(0, 0, fc.r, 0, TAU); c.fill();
+    c.fillStyle = '#ea580c';
+    c.beginPath(); c.arc(0, 0, fc.r - 2.5, 0, TAU); c.fill();
+    c.fillStyle = '#ffedd5';
+    c.beginPath(); c.arc(0, 0, 5, 0, TAU); c.fill();
+    c.fillStyle = '#1c1917';
+    c.font = '800 9px ' + FONT;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('TNT', 0, 0);
+    c.strokeStyle = '#fbbf24';
+    c.lineWidth = 1.5;
+    c.beginPath(); c.arc(0, 0, fc.r, 0, TAU); c.stroke();
+    c.fillStyle = '#fed7aa';
+    c.font = '700 8px ' + FONT;
+    c.fillText('[CLICK]', 0, fc.r + 8);
+    c.restore();
+  }
 }
 function drawSpawnBase(c) {
   const t = G.anim;
+  if (G.wave >= 8) {
+    c.save();
+    c.translate(7 * TILE + TILE / 2, 8);
+    c.fillStyle = Math.sin(t * 6) > 0 ? 'rgba(239,68,68,0.85)' : 'rgba(185,28,28,0.85)';
+    c.fillRect(-22, -6, 44, 12);
+    c.strokeStyle = '#fca5a5'; c.lineWidth = 1; c.strokeRect(-22, -6, 44, 12);
+    c.fillStyle = '#fff'; c.font = '800 8px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('! BREACH !', 0, 0);
+    c.restore();
+  }
   c.save(); c.translate(0, SPAWN_PT.y);
   const gx = 3, gw = 13, gh = TILE - 6;
   c.fillStyle = '#0b0f12'; c.fillRect(gx - 2, -gh / 2 - 2, gw + 4, gh + 4);
@@ -213,8 +296,11 @@ function render() {
   c.save();
   if (G.shake > 0.2) c.translate(rand(-1, 1) * G.shake, rand(-1, 1) * G.shake);
   c.drawImage(mapCanvas, 0, 0, W, H);
-  drawFlow(c); drawSpawnBase(c);
   const time = G.anim;
+  drawFlow(c);
+  drawLeylineNodes(c, time);
+  drawFuelCells(c, time);
+  drawSpawnBase(c);
   drawHazards(c, time);
 
   // Tesla Overcharger conduits

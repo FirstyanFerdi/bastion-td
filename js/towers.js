@@ -8,7 +8,7 @@ function acquire(t, rangePx) {
   let best = null, bv = 0;
   for (const e of G.enemies) {
     if (e.dead || e.x < 2) continue;
-    if (e.stealth && e.revealT <= 0) continue; // Unrevealed stealth cannot be locked
+    if (e.stealth && e.revealT <= 0 && !(t.leyline && t.leyline.id === 'sensor')) continue; // Unrevealed stealth cannot be locked unless on Sensor Leyline
     const dx = e.x - t.x, dy = e.y - t.y, rr2 = rangePx + e.r;
     if (dx * dx + dy * dy > rr2 * rr2) continue;
     let v;
@@ -27,14 +27,20 @@ function placeTower(col, row, type) {
   if (col < 0 || row < 0 || col >= COLS || row >= ROWS || pathTile[row][col] || G.grid[row][col]) return false;
   if (G.gold < def.cost) { Sfx.play('error'); return false; }
   G.gold -= def.cost;
+  const leyline = typeof getLeylineAt === 'function' ? getLeylineAt(col, row) : null;
   const t = {
     type, c: col, r: row, x: col * TILE + TILE / 2, y: row * TILE + TILE / 2, tier: 0, branch: null, angle: -Math.PI / 2,
     recoil: 0, flash: 0, spin: Math.random() * 6, spinV: 3, cd: 0.3, prio: 'first', invested: def.cost,
-    kills: 0, dmg: 0, pulseN: 0, charge: 1, pop: 1, empT: 0, overchargeT: 0, heat: 0
+    kills: 0, dmg: 0, pulseN: 0, charge: 1, pop: 1, empT: 0, overchargeT: 0, heat: 0,
+    leyline
   };
   G.towers.push(t); G.grid[row][col] = t;
   burst(t.x, t.y, 14, def.color, 110, 0.5, 3, false);
   addRing(t.x, t.y, 6, 36, 0.35, def.color, 3);
+  if (t.leyline) {
+    burst(t.x, t.y, 18, t.leyline.color, 130, 0.55, 3.5, true);
+    addText(t.x, t.y - 24, t.leyline.name.toUpperCase(), t.leyline.color, 12);
+  }
   Sfx.play('place');
   return t;
 }
@@ -80,6 +86,7 @@ function updateTower(t, dt) {
   if (hasPerk('targeting_matrix')) { rangeMult *= 1.15; }
   if (G.mutator && G.mutator.id === 'emp_jam') rangeMult *= 0.88;
   if (G.mutator && G.mutator.id === 'ion_storm' && t.type !== 'tesla') rateMult *= 0.85;
+  if (t.leyline && t.leyline.id === 'accelerator') rateMult *= 1.45;
 
   // Tesla Grid Overcharger aura check
   for (const o of G.towers) {
@@ -93,7 +100,8 @@ function updateTower(t, dt) {
     effRate = lerp(st.rate, st.maxRate, t.heat || 0) * rateMult;
   }
   t.charge = clamp(1 - t.cd * effRate, 0, 1);
-  const rangePx = st.range * rangeMult * TILE;
+  const sensorRangeBonus = (t.leyline && t.leyline.id === 'sensor') ? 2.5 * TILE : 0;
+  const rangePx = st.range * rangeMult * TILE + sensorRangeBonus;
 
   if (t.type === 'cryo') {
     t.spin += dt * 0.9;
@@ -155,10 +163,14 @@ function firePlasma(t, st, e) {
   const dist = Math.hypot(e.x - mx, e.y - my), tt = dist / PLASMA_SPD;
   let tx = e.x, ty = e.y;
   if (e.curSpeed > 0 && e.d >= 0) {
-    const p = posAt(Math.min(PLEN, e.d + e.curSpeed * tt), e.seg);
+    const p = posAt(Math.min(PLEN, e.d + e.curSpeed * tt), e.seg, e.pathId);
     tx = p.x - Math.sin(p.ang) * e.off; ty = p.y + Math.cos(p.ang) * e.off;
   }
-  G.proj.push({ x: mx, y: my, tx, ty, dmg: st.dmg, splash: st.splash * TILE, shred: st.shred, src: t, trail: 0, branch: t.branch, radDur: st.radDur, radDps: st.radDps, acidAmp: st.acidAmp });
+  G.proj.push({
+    x: mx, y: my, tx, ty, dmg: st.dmg, splash: st.splash * TILE, shred: st.shred, src: t, trail: 0,
+    branch: t.branch, radDur: st.radDur, radDps: st.radDps, acidAmp: st.acidAmp,
+    catalyst: !!(t.leyline && t.leyline.id === 'catalyst')
+  });
   t.recoil = 1; t.flash = 1;
   burst(mx, my, 6, '#fdba74', 90, 0.3, 3, true);
   Sfx.play('plasma');
@@ -171,15 +183,23 @@ function explode(p) {
   shake(2.2); Sfx.play('boom');
   // Nova Mortar leaves radiation puddle
   if (p.branch === 'A' && p.radDur) {
-    G.hazards.push({ type: 'radiation', x: p.x, y: p.y, r: p.splash * 1.1, life: p.radDur, max: p.radDur, dps: p.radDps, shred: p.shred, src: p.src });
+    const dur = p.catalyst ? p.radDur * 1.5 : p.radDur;
+    G.hazards.push({ type: 'radiation', x: p.x, y: p.y, r: p.splash * 1.1, life: dur, max: dur, dps: p.radDps, shred: p.shred, src: p.src });
   }
   for (const e of G.enemies) {
     if (e.dead) continue;
     const d = Math.hypot(e.x - p.x, e.y - p.y);
     if (d <= p.splash + e.r) {
       const fall = 1 - 0.4 * clamp(d / p.splash, 0, 1);
-      if (e.armor > 0 && e.shred < e.armor) e.shred = Math.min(e.armor, e.shred + p.shred);
-      if (p.acidAmp) { e.brittle = Math.max(e.brittle, p.acidAmp); e.brittleT = 3.5; e.acidT = 3.5; }
+      const shredVal = p.catalyst ? p.shred * 1.5 : p.shred;
+      if (e.armor > 0 && e.shred < e.armor) e.shred = Math.min(e.armor, e.shred + shredVal);
+      if (p.acidAmp) {
+        const acidAmpVal = p.catalyst ? p.acidAmp * 1.5 : p.acidAmp;
+        const acidDur = p.catalyst ? 5.5 : 3.5;
+        e.brittle = Math.max(e.brittle, acidAmpVal);
+        e.brittleT = acidDur;
+        e.acidT = acidDur;
+      }
       dealDamage(e, p.dmg * fall, 'plasma', p.src);
     }
   }
@@ -187,6 +207,7 @@ function explode(p) {
 function cryoPulse(t, st, rangePx, effRate) {
   t.cd = 1 / effRate; t.pulseN++; t.flash = 1;
   const isAbsZero = t.branch === 'A', isVortex = t.branch === 'B';
+  const isCat = !!(t.leyline && t.leyline.id === 'catalyst');
   const freeze = (isAbsZero) || (st.freeze && t.pulseN % 4 === 0);
   addRing(t.x, t.y, 10, rangePx, 0.55, isAbsZero ? '#93c5fd' : (isVortex ? '#3b82f6' : 'rgba(147,197,253,0.9)'), isAbsZero ? 5 : 4);
   addRing(t.x, t.y, 4, rangePx * 0.75, 0.45, 'rgba(219,234,254,0.6)', 2);
@@ -195,15 +216,19 @@ function cryoPulse(t, st, rangePx, effRate) {
     if (e.dead || e.x < 2) continue;
     if ((e.x - t.x) ** 2 + (e.y - t.y) ** 2 > (rangePx + e.r) ** 2) continue;
     e.revealT = 3.0; // reveals stealth units!
-    e.slowAmt = Math.max(e.slowT > 0 ? e.slowAmt : 0, st.slow); e.slowT = 1.8;
-    e.brittle = Math.max(e.brittleT > 0 ? e.brittle : 0, st.brittle); e.brittleT = 2.5;
+    const slowAmt = isCat ? Math.min(0.85, st.slow * 1.35) : st.slow;
+    const slowT = isCat ? 3.0 : 1.8;
+    const brittle = isCat ? st.brittle * 1.4 : st.brittle;
+    const brittleT = isCat ? 4.5 : 2.5;
+    e.slowAmt = Math.max(e.slowT > 0 ? e.slowAmt : 0, slowAmt); e.slowT = slowT;
+    e.brittle = Math.max(e.brittleT > 0 ? e.brittle : 0, brittle); e.brittleT = brittleT;
     burst(e.x, e.y, 3, '#bfdbfe', 50, 0.5, 2.5, false);
     if (isVortex && st.pullDist) {
       e.d = Math.max(0, e.d - st.pullDist);
       burst(e.x, e.y, 6, '#60a5fa', 80, 0.4, 2, true);
     }
     if (freeze && e.type !== 'boss') {
-      e.stunT = isAbsZero ? st.freezeDur : 0.9;
+      e.stunT = (isAbsZero ? st.freezeDur : 0.9) * (isCat ? 1.5 : 1);
       addText(e.x, e.y - e.r - 14, 'FROZEN', '#e0f2fe', 12);
     }
     dealDamage(e, st.dmg, 'energy', t);
@@ -224,11 +249,12 @@ function fireTesla(t, st, e) {
   t.flash = 1;
   let px = t.x, py = t.y - 4;
   const isEmp = t.branch === 'B';
+  const isCat = !!(t.leyline && t.leyline.id === 'catalyst');
   hit.forEach((h, i) => {
     h.revealT = 2.5; // reveals stealth
     if (isEmp) {
       if (h.shield > 0) { h.shield = 0; h.shieldT = 0; burst(h.x, h.y, 8, '#22d3ee', 100, 0.4, 3, true); }
-      if (h.type !== 'boss') h.stunT = Math.max(h.stunT, st.empStun);
+      if (h.type !== 'boss') h.stunT = Math.max(h.stunT, st.empStun * (isCat ? 1.5 : 1));
     }
     addBolt(px, py, h.x, h.y, isEmp ? '#38bdf8' : '#fde047');
     burst(h.x, h.y, 4, isEmp ? '#7dd3fc' : '#fef08a', 100, 0.3, 2.5, false);

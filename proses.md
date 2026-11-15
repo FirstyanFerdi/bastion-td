@@ -183,6 +183,36 @@ Pemain dapat mengakses antarmuka **Workshop HQ** kapan saja melalui tombol `HQ` 
 4. **Command Protocol [R] (Maks Lv 1):** Membuka slot kemampuan aktif keempat pemain:
    * **`[R]` Tactical EMP Nuke:** Memicu ledakan pulsa elektromagnetik global yang merontokkan semua perisai musuh di peta seketika, melumpuhkan (*stun*) seluruh musuh di layar selama 3 detik, dan menghapus ancaman proyektil lawan.
 
+### 5.5 Tahap 4 — Fase 4: Peta Dinamis & Leyline Conduit Nodes
+
+Untuk mengeliminasi formasi penempatan menara statis ("solved meta") dan memberikan dinamika taktis di medan pertempuran, diimplementasikan mekanisme peta dinamis:
+
+#### A. Node Konduit Leyline (`LEYLINE_NODES`)
+Peta medan tempur memiliki tiga titik simpul energi purba dengan koordinat unik yang memberikan buff pasif masif pada menara yang didirikan di atasnya:
+1. **Accelerator Node (Tile `[6, 2]` - Oranye Emas `#fbbf24`):**
+   * Memberikan peningkatan kecepatan tembak $+45\%$ attack rate (`effRate *= 1.45`).
+   * Cocok untuk menara bertipe dps cepat seperti Gatling atau Railgun.
+2. **Sensor Node (Tile `[10, 5]` - Cyan `#38bdf8`):**
+   * Memberikan jangkauan tembak ekstra $+2.5\times\text{TILE}$ radius serta **kemampuan deteksi permanen unit siluman (`revealsStealth = true`)**.
+   * Menara yang ditempatkan di node ini dapat mengunci target *Stealth Infiltrator* tanpa perlu membuka kamuflasenya terlebih dahulu.
+3. **Catalyst Node (Tile `[7, 5]` - Ungu `#c084fc`):**
+   * Menggandakan dan mengamplifikasi efektivitas status debuff elemen:
+     * Efek slow Cryo bertambah $+35\%$ dan durasinya diperpanjang dari $1.8\text{s}$ menjadi $3.0\text{s}$.
+     * Efek Brittle diperpanjang dari $2.5\text{s}$ menjadi $4.5\text{s}$.
+     * Efek stun beku es diperpanjang $1.5\times$.
+     * Korosi armor Plasma ditingkatkan $1.5\times$ dan durasi radiasi diperpanjang $1.5\times$.
+
+#### B. Dynamic North Breach Route (Jalur Flanking Utara - Wave 8+)
+* Mulai wave 8, pertahanan perimeter utara mengalami keruntuhan struktural (*Structural Breach*).
+* Muncul rute baru `PATH_BREACH` dari arah utara `[7, 0]` menembus ke persimpangan timur `[13, 2]` sebelum bergabung ke jalur utama menuju base.
+* Sekitar $35\%$ musuh non-boss di wave $\ge 8$ dialihkan menyerbu melalui jalur flanking ini (`pathId: 1`), memaksa pemain memperluas jangkauan pertahanan dan tidak hanya menumpuk menara di jalur barat.
+* Banner darurat merah `STRUCTURAL BREACH!` dan panah aliran arah merah diaktifkan di kanvas.
+
+#### C. Interactive Explosive Fuel Cells
+* Tersebar di dua titik taktis: `[6, 3]` dan `[12, 7]`.
+* Barel bahan bakar bertekanan tinggi yang dapat diledakkan pemain dengan mengklik langsung (*manual click*) drum hazard tersebut.
+* **Efek Ledakan:** Menghasilkan $450$ plasma AoE damage dalam radius $110\text{ px}$, melucuti **100% Armor** musuh yang terkena dampak (`shred = armor`), serta meninggalkan genangan radiasi selama $4.5$ detik.
+
 ---
 
 ## 6. Rincian Modifikasi Berkas Kode
@@ -193,20 +223,21 @@ Pemain dapat mengakses antarmuka **Workshop HQ** kapan saja melalui tombol `HQ` 
 | [`css/style.css`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/css/style.css) | Styling | Desain tombol ability commander, cooldown fill animation, branch selection grid di inspector, kartu modal tech draft, dan tag badge mutator. |
 | [`js/core.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/core.js) | Core Persistence | Integrasi state `cores` dan `workshop` ke `SAVE`, fungsi `addCores()`, `getWorkshopLevel()`, `getUpgradeCost()`, dan `upgradeWorkshop()`. |
 | [`js/audio.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/audio.js) | Sound Synth | Menambahkan 8 instrumen sintetik audio baru: `orbital`, `overcharge`, `caltrops`, `shatter`, `perk`, `emp`, `reaction`, dan `shockwave`. |
-| [`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js) | Konfigurasi Data | Struktur `branches` (A & B) tiap tower, `PERKS` (10 kartu), `COMMANDER_SKILLS` (Q, W, E, R), `WAVE_MUTATORS`, musuh baru di `ED`, kamus `ELEMENTAL_REACTIONS`, kamus `CHAMPION_AFFIXES`, kamus `THREAT_VARIANTS`, fungsi analisis `getThreatDirectorAnalysis()`, generator wave adaptif di `buildSpawns()`, dan pohon riset `WORKSHOP_UPGRADES`. |
-| [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) | State & Logic | Penanganan kalkulasi 4 Reaksi Elemen di `dealDamage`, mitigasi $-50\%$ physical Deflector, peredam Dome, teleportasi Phase-Shifter, akumulasi tumpukan stack Avenger di `killEnemy`, pemberian +10 Cores saat Boss tewas, dan modal emas awal dari riset Treasury. |
-| [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js) | AI Musuh | Instansiasi unit Champion dan Threat di `spawnEnemy`, logika pemulihan HP Regenerator di `updateEnemy`, aura pencair es Thermal Juggernaut, serta mortar EMP Artillery Walker. |
-| [`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js) | Senjata & Targeting | Penambahan infusi status `acidT` pada Acid Melter, penghentian penetrasi Railgun pada unit Dome, dan penerapan diskon Logistics Network pada biaya upgrade menara. |
-| [`js/sprites.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/sprites.js) | Prosedural Canvas | Visualisasi cincin aura rune berputar Champion (hijau, ungu, oranye, cyan), aura kubah energi Dome, indikator threat, dan mahkota permata di barisan HP unit elit. |
-| [`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js) | Rendering Pipeline | Render kolam radiasi, ranjau caltrops di jalan, kabel konduit listrik overcharger, retikel kursor bidik ability komando, dan visual meriam otomatis pertahanan pada markas inti (Citadel Auto-Turret). |
-| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Tampilan Tactical Inspector Field Guide (reaksi elemen), badge ELITE CHAMPIONS & THREAT DIRECTOR di Wave Card, tampilan dinamis skill ke-4 [R] Tactical EMP Nuke, pembaruan chip saldo `vCores`, serta modal interaktif `BASTION WORKSHOP HQ`. |
-| [`js/input.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/input.js) | Kontrol & Input | Dukungan eksekusi global instan skill [R] Tactical EMP Nuke, hotkey tombol `R` dan tombol `B` untuk membuka/menutup Workshop HQ. |
-| [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js) | Inisialisasi & Harness | Event listener untuk tombol HQ di top bar dan kartu riset workshop di overlay, serta ekspor fungsi workshop ke `window.__nb`. |
+| [`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js) | Konfigurasi Data | Struktur `WP_BREACH`, `PATH_BREACH`, `SEG_BREACH`, `PLEN_BREACH`, koordinat `LEYLINE_NODES`, helper `getLeylineAt()`, `posAt()` multi-rute, struktur `branches` menara, `PERKS`, `COMMANDER_SKILLS`, `WAVE_MUTATORS`, kamus `ELEMENTAL_REACTIONS`, `CHAMPION_AFFIXES`, `THREAT_VARIANTS`, `WORKSHOP_UPGRADES`, dan pembagian $35\%$ jalur flanking di `buildSpawns()`. |
+| [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) | State & Logic | Penanganan kalkulasi 4 Reaksi Elemen di `dealDamage`, mitigasi Deflector & Dome, teleportasi Phase-Shifter multi-path, inisialisasi `fuelCells` di `newGame()`, serta fungsi `detonateFuelCell()` dengan $450$ AoE & $100\%$ shred. |
+| [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js) | AI Musuh | Dukungan parameter `pathId` pada `spawnEnemy()`, navigasi koordinat titik awal jalur breach utara, dan penyesuaian `posAt(e.d, e.seg, e.pathId)` pada `updateEnemy()`. |
+| [`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js) | Senjata & Targeting | Pemasangan node `leyline` pada `placeTower()`, buff $+45\%$ attack rate Accelerator, $+2.5\times\text{TILE}$ jangkauan & pendeteksi stealth Sensor, serta pelipatan durasi/efek debuff Catalyst. |
+| [`js/waves.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/waves.js) | Wave Controller | Peringatan darurat wave 8 `STRUCTURAL BREACH!`, pengaliran `pathId` ke antrian musuh, dan pemanggilan `spawnEnemy()` dengan `pathId`. |
+| [`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js) | Rendering Pipeline | Visualisasi glowing runes `drawLeylineNodes()`, drum interaktif `drawFuelCells()` berserta crater ledakan, aliran panah merah jalur flanking, dan penanda darurat `! BREACH !` di perimeter utara. |
+| [`js/input.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/input.js) | Kontrol & Input | Deteksi klik interaktif langsung untuk meledakkan Fuel Cells di medan pertempuran. |
+| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Kartu informasi node Leyline di Tactical Inspector saat menara dipilih, serta daftar panduan Leyline saat inspektur idle. |
+| [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js) | Inisialisasi & Harness | Ekspor `detonateFuelCell`, `LEYLINE_NODES`, `getLeylineAt`, `PLEN_BREACH`, dan `PATH_BREACH` ke `window.__nb`. |
 | [`tests/test_reactions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_reactions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas dan formula 4 reaksi elemen (Fase 1). |
 | [`tests/test_champions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_champions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas Adaptive Threat Director & 4 Champion Affixes (Fase 2). |
 | [`tests/test_workshop.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_workshop.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas perolehan Cores, sistem riset workshop, diskon logistik, citadel turret, dan EMP Nuke (Fase 3). |
+| [`tests/test_map_dynamics.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_map_dynamics.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas node Leyline (Accelerator, Sensor, Catalyst), rute flanking breach, dan ledakan interaktif Fuel Cells (Fase 4). |
 | [`tests/smoke.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/smoke.js) | Otomasi Pengujian | Simulasi 20 wave standar dan 40 wave mode endless dengan bot otomatis. |
-| [`dev.bat`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/dev.bat) | Launcher Windows | Penambahan eksekusi otomatis `test_reactions.js`, `test_champions.js`, dan `test_workshop.js` ke dalam opsi pengetesan dev. |
+| [`dev.bat`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/dev.bat) | Launcher Windows | Penambahan eksekusi otomatis `test_map_dynamics.js` ke dalam opsi pengetesan dev. |
 
 ---
 
@@ -247,14 +278,24 @@ Pengujian simulasi otomatis secara headless dijalankan menggunakan Node.js:
      * ✔ Command Protocol [R]: pelucutan perisai & stun global 3 detik Tactical EMP Nuke terverifikasi
    * **Status:** **LULUS (100% PASS)**
 
-4. **Uji Standar (20 Wave Menang):**
+4. **Uji Dynamic Map & Leyline Nodes (Unit Test Fase 4):**
+   * **Perintah:** `node tests/test_map_dynamics.js`
+   * **Hasil:**
+     * ✔ Leyline Accelerator: peningkatan kecepatan tembak $+45\%$ terverifikasi
+     * ✔ Leyline Sensor: bonus jangkauan $+2.5\times\text{TILE}$ & deteksi musuh stealth terverifikasi
+     * ✔ Leyline Catalyst: pelipatan durasi/potensi debuff Slow, Brittle, Freeze, dan Acid terverifikasi
+     * ✔ Dynamic North Breach Route: kemunculan musuh flanking jalur utara wave $\ge 8$ terverifikasi
+     * ✔ Interactive Fuel Cells: klik manual peledakan barel, $450$ AoE damage, $100\%$ shred, dan kolam radiasi terverifikasi
+   * **Status:** **LULUS (100% PASS)**
+
+5. **Uji Standar (20 Wave Menang):**
    * **Perintah:** `node tests/smoke.js`
-   * **Hasil:** `OK state=victory wave=20 lives=25 towers=24 score=102347 steps=18155`
+   * **Hasil:** `OK state=victory wave=20 lives=23 towers=24 score=101536 steps=20705`
    * **Status:** **LULUS (100% stabil, 0 error)**
 
-5. **Uji Endless Mode (40 Wave Ekstrem):**
+6. **Uji Endless Mode (40 Wave Ekstrem):**
    * **Perintah:** `node tests/smoke.js 40`
-   * **Hasil:** `OK state=prep wave=40 lives=25 towers=24 score=515315 steps=55592`
+   * **Hasil:** `OK state=prep wave=40 lives=21 towers=24 score=512601 steps=56677`
    * **Status:** **LULUS (100% stabil, 0 error)**
 
 ---
@@ -272,14 +313,7 @@ git add .
 git status
 
 # 3. Lakukan commit perubahan
-git commit -m "feat(fase-3): implement workshop hq permanent research, nanite cores, and command protocol"
-
-# 4. Hubungkan ke repository GitHub Anda (jika belum)
-git remote add origin https://github.com/USERNAME/REPO_NAME.git
-
-# 5. Unggah ke branch main
-git push -u origin main
-```
+git commit -m "feat(fase-4): implement dynamic north breach route, leyline conduit nodes, and interactive fuel cells"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git

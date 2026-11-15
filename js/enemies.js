@@ -4,7 +4,7 @@
 /* ============================================================
    ENEMIES
    ============================================================ */
-function spawnEnemy(type, n, affix, threat) {
+function spawnEnemy(type, n, affix, threat, pathId) {
   const d = ED[type], sc = hpScale(n), hp = Math.round(d.hp * sc);
   let spd = d.speed * (1 + Math.min(0.25, n * 0.006)) * (type === 'swarm' ? rand(0.98, 1.02) : rand(0.94, 1.06));
   let armor = d.armor;
@@ -12,24 +12,33 @@ function spawnEnemy(type, n, affix, threat) {
   const isChamp = !!(affix && CHAMPION_AFFIXES[affix]);
   const finalHp = isChamp ? Math.round(hp * 1.4) : hp;
   const finalReward = isChamp ? Math.round(d.reward * 1.4 * (1 + 0.03 * (n - 1))) : Math.max(1, Math.round(d.reward * (1 + 0.03 * (n - 1))));
+  const pId = pathId || 0;
+  const startPt = pId === 1 ? PATH_BREACH[0] : PATH[0];
   const e = {
     type, id: ++eid, hp: finalHp, maxHp: finalHp, dispHp: finalHp, shield: 0, maxShield: 0, speed: spd, curSpeed: spd, r: isChamp ? Math.round(d.r * 1.15) : d.r,
     armor, shred: 0, slowAmt: 0, slowT: 0, brittle: 0, brittleT: 0, stunT: 0,
     reward: finalReward, leak: d.leak,
-    d: 0, seg: 0, x: PATH[0].x, y: PATH[0].y, ang: 0, off: 0, dead: false, flash: 0, dmgAcc: 0, dmgT: 0,
+    d: 0, seg: 0, x: startPt.x, y: startPt.y, ang: 0, off: 0, dead: false, flash: 0, dmgAcc: 0, dmgT: 0,
     healT: rand(0.6, 1.4), shieldCd: 4, shieldT: 0, anim: Math.random() * 10, healFx: 0,
     stealth: !!d.stealth, revealT: 0, carrierT: rand(1.5, 3.0), bleedT: 0, bleedDps: 0,
     acidT: 0, thermiteT: 0, thermiteDps: 0,
     phase: 1, mortarCd: 7,
     isChampion: isChamp, affix: affix || null, threat: threat || null,
-    noDmgT: 0, phaseCd: 0, avengerStacks: 0, thawCd: rand(1.5, 2.5), artilleryCd: rand(4.0, 7.0)
+    noDmgT: 0, phaseCd: 0, avengerStacks: 0, thawCd: rand(1.5, 2.5), artilleryCd: rand(4.0, 7.0),
+    pathId: pId
   };
   if (type === 'swarm') { e.off = rand(-15, 15); e.d = -rand(0, 22); }
   if ((type === 'scout' || type === 'brute') && n >= 8 && Math.random() < Math.min(0.5, (n - 6) * 0.05)) {
     e.maxShield = e.shield = Math.round(hp * (type === 'brute' ? 0.35 : 0.5));
   }
   if (type === 'boss') { shake(14); Sfx.play('boss'); addRing(PATH[1].x, PATH[1].y, 10, 120, 0.8, '#c084fc', 5); }
-  e.x = PATH[0].x + e.d; e.y = PATH[0].y + e.off;
+  if (pId === 1) {
+    e.x = startPt.x + e.off;
+    e.y = startPt.y + e.d;
+  } else {
+    e.x = startPt.x + e.d;
+    e.y = startPt.y + e.off;
+  }
   G.enemies.push(e);
 }
 
@@ -204,7 +213,8 @@ function updateEnemy(e, dt) {
   if (e.stunT > 0) sp = 0; else if (e.slowT > 0) sp *= 1 - e.slowAmt;
   e.curSpeed = sp;
   e.d += sp * dt;
-  if (e.d >= PLEN) {
+  const plen = e.pathId === 1 ? PLEN_BREACH : PLEN;
+  if (e.d >= plen) {
     e.dead = true;
     // Perk: Emergency Forcefield
     if (hasPerk('energy_shield') && G.leakedThisWave < 2) {
@@ -222,9 +232,17 @@ function updateEnemy(e, dt) {
     if (G.lives <= 0) { G.lives = 0; endGame(false); }
     return;
   }
-  if (e.d < 0) { e.x = PATH[0].x + e.d; e.y = PATH[0].y + e.off; }
-  else {
-    const p = posAt(e.d, e.seg); e.seg = p.seg;
+  if (e.d < 0) {
+    const startPt = e.pathId === 1 ? PATH_BREACH[0] : PATH[0];
+    if (e.pathId === 1) {
+      e.x = startPt.x + e.off;
+      e.y = startPt.y + e.d;
+    } else {
+      e.x = startPt.x + e.d;
+      e.y = startPt.y + e.off;
+    }
+  } else {
+    const p = posAt(e.d, e.seg, e.pathId); e.seg = p.seg;
     e.ang += angDiff(e.ang, p.ang) * Math.min(1, dt * 10);
     e.x = p.x - Math.sin(p.ang) * e.off; e.y = p.y + Math.cos(p.ang) * e.off;
   }

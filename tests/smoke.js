@@ -37,10 +37,23 @@ function bot() {
   if (G.drafting && G.drafting.cards && G.drafting.cards.length > 0) {
     nb.selectPerk(G.drafting.cards[0]);
   }
+  if (G.fuelCells) {
+    for (const fc of G.fuelCells) {
+      if (!fc.dead && G.enemies.some(e => Math.hypot(e.x - fc.x, e.y - fc.y) <= 85)) {
+        nb.detonateFuelCell(fc);
+      }
+    }
+  }
+  while (next < spots.length && (next < 12 || G.gold >= 160)) {
+    const ty = types[next % types.length], [c, r] = spots[next];
+    if (G.gold < nb.TD[ty].cost) break;
+    const t = nb.placeTower(c, r, ty); next++;
+    if (t) t.prio = ['first', 'strongest', 'last', 'weakest'][next % 4];
+  }
   for (const t of G.towers) {
-    if (t.tier === 0 && G.gold >= nb.TD[t.type].tiers[1].upg + 50) {
+    if (t.tier === 0 && G.gold >= nb.TD[t.type].tiers[1].upg + 40) {
       nb.upgradeTower(t);
-    } else if (t.tier === 1 && G.gold >= nb.TD[t.type].branches.A.upg + 50) {
+    } else if (t.tier === 1 && G.gold >= nb.TD[t.type].branches.A.upg + 40) {
       nb.upgradeTower(t, (t.c + t.r) % 2 === 0 ? 'A' : 'B');
     }
   }

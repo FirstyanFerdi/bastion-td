@@ -87,13 +87,22 @@ function renderInspector() {
       '</div>'
     ).join('');
 
+    const lnList = (typeof LEYLINE_NODES !== 'undefined' ? Object.values(LEYLINE_NODES) : []).map(ln =>
+      '<div style="border-left:3px solid ' + ln.color + ';padding-left:6px;margin-top:4px">' +
+      '<div style="font-weight:700;color:' + ln.color + ';font-size:11px">' + ln.name.toUpperCase() + '</div>' +
+      '<div style="font-size:11px;color:#cbd5e1;line-height:1.25;margin-top:1px">' + ln.tip + '</div>' +
+      '</div>'
+    ).join('');
+
     box.innerHTML = '<h3>TACTICAL INSPECTOR</h3><div class="legend">' +
       '<div>Select a tower on the grid to upgrade, specialize or change its <b>targeting priority</b>.</div>' +
       '<div><span class="kbd">1</span>-<span class="kbd">5</span> build &nbsp; <span class="kbd">Q</span>/<span class="kbd">W</span>/<span class="kbd">E</span> commander powers</div>' +
       '<div><span class="kbd">U</span> upgrade &nbsp; <span class="kbd">X</span> sell &nbsp; <span class="kbd">Space</span> wave / pause</div>' +
       '<div><span class="kbd">P</span> pause &nbsp; <span class="kbd">F</span> speed &nbsp; <span class="kbd">M</span> mute</div>' +
       '<div style="margin-top:8px;font-weight:700;color:#f8fafc;letter-spacing:0.4px">ELEMENTAL REACTIONS</div>' +
-      rxList + '</div>';
+      rxList +
+      '<div style="margin-top:8px;font-weight:700;color:#f8fafc;letter-spacing:0.4px">LEYLINE CONDUIT NODES</div>' +
+      lnList + '</div>';
     return;
   }
   const def = TD[t.type], tier = t.tier;
@@ -102,6 +111,13 @@ function renderInspector() {
   const sell = Math.floor(t.invested * 0.75);
   const isCryo = t.type === 'cryo';
   const tierTitle = t.tier === 0 ? 'TIER I' : (t.tier === 1 ? 'TIER II' : 'SPEC: ' + (t.branch ? def.branches[t.branch].name.toUpperCase() : 'TIER III'));
+
+  let leylineHtml = '';
+  if (t.leyline) {
+    leylineHtml = '<div style="margin:6px 0 8px 0;padding:5px 8px;background:' + t.leyline.color + '22;border-left:3px solid ' + t.leyline.color + ';border-radius:3px;font-size:11px;color:#f8fafc">' +
+      '<span style="color:' + t.leyline.color + ';font-weight:700">LEYLINE: ' + t.leyline.name.toUpperCase() + '</span><br>' +
+      '<span style="color:#cbd5e1">' + t.leyline.tip + '</span></div>';
+  }
 
   let upgHtml = '';
   if (t.tier === 0) {
@@ -120,6 +136,7 @@ function renderInspector() {
 
   box.innerHTML = '<h3>SELECTED TOWER</h3>' +
     '<div class="insp-name"><canvas id="inspIcon" width="56" height="56"></canvas><div><h4 style="color:' + (t.branch ? def.branches[t.branch].color : def.color) + '">' + (t.branch ? def.branches[t.branch].name : def.name) + '</h4><small>' + tierTitle + ' / ' + t.kills + ' KILLS</small></div></div>' +
+    leylineHtml +
     rows +
     '<div class="prio' + (isCryo ? ' off' : '') + '" id="prioBox">' + PRIOS.map(p => '<button tabindex="-1" data-act="prio" data-prio="' + p[0] + '" class="' + (t.prio === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') + '</div>' +
     (isCryo ? '<div class="note" style="margin-top:-4px;margin-bottom:6px">Cryo pulses hit every enemy in range, no targeting needed.</div>' : '') +
