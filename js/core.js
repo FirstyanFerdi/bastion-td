@@ -57,7 +57,7 @@ function addCores(n) {
 }
 
 function setAscension(lv) {
-  const max = Math.min(5, Math.max(1, (SAVE.maxAscension || 0) + 1));
+  const max = Math.min(5, Math.max(1, SAVE.maxAscension || 1));
   SAVE.ascension = clamp(lv, 0, max);
   Store.set('nb_ascension', SAVE.ascension);
   if (typeof G !== 'undefined' && G && G.state === 'menu') G.ascension = SAVE.ascension;
@@ -65,8 +65,9 @@ function setAscension(lv) {
 }
 
 function unlockNextAscension(beatenLevel) {
-  if (beatenLevel >= (SAVE.maxAscension || 0)) {
-    SAVE.maxAscension = Math.min(5, beatenLevel + 1);
+  const nextUnlocked = Math.min(5, (beatenLevel || 0) + 1);
+  if (nextUnlocked > (SAVE.maxAscension || 1)) {
+    SAVE.maxAscension = nextUnlocked;
     Store.set('nb_maxAscension', SAVE.maxAscension);
   }
 }

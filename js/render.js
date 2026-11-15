@@ -321,7 +321,11 @@ function render() {
   } else if (G.hover) {
     const { c: hc, r: hr } = G.hover, x = hc * TILE, y = hr * TILE;
     if (G.placing) {
-      const def = TD[G.placing], ok = !pathTile[hr][hc] && !G.grid[hr][hc], afford = G.gold >= def.cost, good = ok && afford;
+      const def = TD[G.placing];
+      const cost = typeof getTowerCost === 'function' ? getTowerCost(G.placing) : def.cost;
+      const fuelCellBlocked = G.fuelCells && G.fuelCells.some(fc => !fc.dead && fc.c === hc && fc.row === hr);
+      const ok = !pathTile[hr][hc] && !G.grid[hr][hc] && !fuelCellBlocked;
+      const afford = G.gold >= cost, good = ok && afford;
       c.fillStyle = good ? 'rgba(52,211,153,0.16)' : 'rgba(244,63,94,0.2)'; c.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
       c.strokeStyle = good ? '#34d399' : '#f43f5e'; c.lineWidth = 2; c.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
       const rg = def.tiers[0].range * (hasPerk('targeting_matrix') ? 1.15 : 1) * TILE, cx = x + TILE / 2, cy = y + TILE / 2;

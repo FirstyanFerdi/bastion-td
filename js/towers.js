@@ -32,6 +32,7 @@ function getTowerCost(type) {
 function placeTower(col, row, type) {
   const def = TD[type];
   if (col < 0 || row < 0 || col >= COLS || row >= ROWS || pathTile[row][col] || G.grid[row][col]) return false;
+  if (G.fuelCells && G.fuelCells.some(fc => !fc.dead && fc.c === col && fc.row === row)) return false;
   const cost = getTowerCost(type);
   if (G.gold < cost) { Sfx.play('error'); return false; }
   G.gold -= cost;

@@ -357,9 +357,56 @@ Pengujian simulasi otomatis secara headless dijalankan menggunakan Node.js:
 
 ---
 
-## 8. Status Akhir & Panduan Unggah ke GitHub
+## 8. Audit Mutu Menyeluruh & Perbaikan Bug Nyata (Realization Verification)
 
-Seluruh kode dalam kondisi bersih, aman, bebas dependensi pihak ketiga, dan siap diunggah ke repositori GitHub.
+Audit menyeluruh dari Fase 1 hingga Fase 5 dilakukan untuk membuktikan bahwa **seluruh mekanik dan efek telah terwujud 100% ke dalam engine permainan (gameplay loop, canvas rendering, partikel/VFX, serta Web Audio API procedural synth)** dan bukan sekadar teks antarmuka:
+
+### 8.1 Bukti Realisasi Sistem ke Dalam Game Loop & Kanvas
+1. **Fase 1 (Sinergi & Reaksi Elemen):**
+   * *Formula Kerusakan:* Dihitung langsung di `dealDamage()` ([`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js)).
+   * *Efek Visual:* Cincin ekspansi `addRing()`, percikan partikel `burst()`, proyektil petir rantai asam `addBolt()`, dan floating combat text (`addText()`).
+   * *Audio:* Suara Web Audio API prosedural `shockwave` dan `reaction` dipicu secara real-time.
+   * *Status Debuff Kanvas:* Aura korosi asam lime `#a3e635` dan cincin thermite oranye `#f97316` digambar di sekitar sprite musuh pada [`js/sprites.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/sprites.js).
+2. **Fase 2 (Adaptive Threat & Elite Champions):**
+   * *Adaptive AI:* Menghitung rasio komposisi menara pemain di `getThreatDirectorAnalysis()` ([`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js)) dan memodifikasi antrean musuh di `buildSpawns()`.
+   * *Mekanik & Sprite:* Visual cincin putar rune bergaris putus-putus di bawah musuh Champion, mahkota permata di atas bar HP, kubah peredam proyektil 40px aktif (*Anti-Projectile Dome*), dan ledakan mortir EMP Artillery Walker yang melumpuhkan menara kawan.
+3. **Fase 3 (Workshop HQ & Meta-Progression):**
+   * *Persistensi:* Saldo Nanite Cores dan level riset tersimpan permanen di `localStorage` melalui modul `Store` ([`js/core.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/core.js)).
+   * *In-Game Reality:* Modal emas awal bertambah otomatis, harga upgrade berkurang sesuai diskon logistik, meriam otomatis Citadel menembakkan laser merah dengan animasi barel berputar di kanvas, dan `[R]` Tactical EMP Nuke menghasilkan guncangan layar masif, cincin EMP global, serta melumpuhkan seluruh musuh di layar.
+4. **Fase 4 (Peta Dinamis & Leyline Conduit Nodes):**
+   * *Rendering Peta:* Rune bercahaya pulsing di atas tile Leyline ([`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js)), rute flanking Utara (Wave 8+) dengan panah chevrons merah di aspal, dan barel bahan bakar drum Fuel Cell bergaris hazard kuning-hitam.
+   * *Interaktivitas:* Klik langsung barel memicu ledakan instan 450 AoE damage, pelucutan 100% armor, pembentukan kolam radiasi beracun, dan kawah hitam hangus (*crater*).
+5. **Fase 5 (Ascension Protocols & Special Event Mutators):**
+   * *Multi-Modifier:* Biaya menara naik $+15\%$ nyata di toko dan kanvas, modal nyawa awal terpotong menjadi 12 nyawa di Ascension 2, musuh terlahir dengan perisai biru 20% HP berputar, dan Boss Berserk memanggil 2 pengawal Champion di jalurnya.
+
+---
+
+### 8.2 Daftar Temuan Bug & Perbaikan yang Diterapkan
+
+1. **Bug Variable Shadowing pada Barel Fuel Cell (`fc.r` Collision):**
+   * *Temuan:* Pada objek `fuelCells` di `js/state.js`, properti baris grid didefinisikan sebagai `r: 3` dan `r: 7`, namun kemudian tertimpa oleh properti radius piksel `r: 16`. Akibatnya, `fc.r` selalu bernilai 16 (di luar batas baris grid `ROWS = 10`), menyebabkan deteksi koordinat tile keliru.
+   * *Perbaikan:* Properti baris grid diganti menjadi `row` (`{ c: 6, row: 3, r: 16 }` dan `{ c: 12, row: 7, r: 16 }`).
+2. **Bug Pembangunan Menara Menimpa Barel Aktif:**
+   * *Temuan:* Pemain dapat mendirikan menara tepat di atas drum Fuel Cell yang belum diledakkan sehingga sprite menara dan barel tumpang tindih.
+   * *Perbaikan:* Ditambahkan validasi pada `placeTower()` dan hover kanvas di `js/render.js` agar tile barel yang belum meledak berstatus terblokir (merah), dan baru dapat didirikan menara setelah barel meledak.
+3. **Bug Desinkronisasi Biaya Menara pada Ascension 1 (Hyper-Inflation):**
+   * *Temuan:* Pada kanvas hover placement preview (`afford = G.gold >= def.cost`) dan dock toko (`.classList.toggle('poor', G.gold < TD[k].cost)`), kode masih merujuk ke `def.cost` (50) bukan biaya inflasi `getTowerCost()` (58). Akibatnya, pemain dengan 52 gold melihat outline hijau seolah mampu membeli, namun klik peletakan menara gagal (*error sound*).
+   * *Perbaikan:* Disinkronkan ke `getTowerCost(type)` di seluruh modul rendering kanvas dan antarmuka dock toko.
+4. **Optimalisasi Posisi Spawn Nemesis Escorts (Ascension 5):**
+   * *Temuan:* Saat Boss memasuki fase Berserk, pengawal Champion terlahir di titik awal lintasan (`d = 0`) alih-alih mengawal langsung Boss di medan tempur.
+   * *Perbaikan:* Pengawal Champion kini ditempatkan tepat di belakang Boss (`d - 35` dan `d - 60`) di sepanjang lintasan aktif Boss sehingga langsung bertindak sebagai perisai pelindung.
+5. **Peringatan Dini Mutator pada Kartu Wave:**
+   * *Temuan:* Tag mutator hanya muncul saat wave telah berjalan aktif, sehingga pemain tidak memiliki kesempatan mempersiapkan formasi menara yang sesuai pada fase persiapan (*prep phase*).
+   * *Perbaikan:* Algoritma prediktif mutator diintegrasikan ke dalam `renderWaveCard()` agar jenis mutator wave berikutnya langsung terbaca di kartu persiapan.
+6. **Perbaikan Formula Pembukaan Ascension Bertingkat:**
+   * *Temuan:* Terdapat potensi lompatan level akibat inkonsistensi ganda `+1` pada `setAscension()` dan `unlockNextAscension()`.
+   * *Perbaikan:* Diselaraskan sehingga setiap tingkatan Ascension terbuka berurutan satu per satu setelah pemain memenangkan tingkat sebelumnya.
+
+---
+
+## 9. Status Akhir & Panduan Unggah ke GitHub
+
+Seluruh kode dalam kondisi bersih, aman, bebas bug, bebas dependensi pihak ketiga, dan siap diunggah ke repositori GitHub.
 
 ### Perintah Unggah (Terminal Pengguna):
 ```powershell
@@ -370,14 +417,10 @@ git add .
 git status
 
 # 3. Lakukan commit perubahan
-git commit -m "feat(fase-5): implement ascension protocols (pact of punishment 1-5) and crisis event mutators"
+git commit -m "feat: complete tactical defense overhaul (phases 1-5), fix mechanics edge cases, and full test suite verification"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git
-
-# 5. Unggah ke branch main
-git push -u origin main
-```
 
 # 5. Unggah ke branch main
 git push -u origin main

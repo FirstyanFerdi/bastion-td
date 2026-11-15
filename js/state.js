@@ -45,8 +45,8 @@ function newGame(keepSpeed) {
     perks: [], skills: { orbital: { cd: 0 }, overcharge: { cd: 0 }, caltrops: { cd: 0 }, emp_nuke: { cd: 0 } },
     hazards: [], casting: null, mutator: null, drafting: null, leakedThisWave: 0, citadelCd: 0,
     fuelCells: [
-      { id: 1, c: 6, r: 3, x: 6 * TILE + TILE / 2, y: 3 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false },
-      { id: 2, c: 12, r: 7, x: 12 * TILE + TILE / 2, y: 7 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false }
+      { id: 1, c: 6, row: 3, x: 6 * TILE + TILE / 2, y: 3 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false },
+      { id: 2, c: 12, row: 7, x: 12 * TILE + TILE / 2, y: 7 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false }
     ],
     ascension: asc
   };

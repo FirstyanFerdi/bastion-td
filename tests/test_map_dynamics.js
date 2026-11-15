@@ -153,6 +153,15 @@ console.log('Testing Fase 4: Peta Dinamis & Leyline Conduit Nodes...');
   const radHazard = G.hazards.find(h => h.type === 'radiation' && Math.hypot(h.x - fc.x, h.y - fc.y) < 5);
   if (!radHazard) throw new Error('Expected radiation puddle hazard after fuel cell detonation');
 
+  // Verify fuel cell blocks building while intact, but allows after detonation
+  G.gold = 500;
+  const fc2 = G.fuelCells[1];
+  const builtOnIntact = nb.placeTower(fc2.c, fc2.row, 'gatling');
+  if (builtOnIntact) throw new Error('Should not be able to build tower on intact fuel cell');
+  nb.detonateFuelCell(fc2);
+  const builtOnDead = nb.placeTower(fc2.c, fc2.row, 'gatling');
+  if (!builtOnDead) throw new Error('Should be able to build on cleared crater tile after fuel cell detonation');
+
   console.log('✔ Interactive Fuel Cells: manual detonation, 450 AoE damage, 100% shred, & radiation verified');
 }
 

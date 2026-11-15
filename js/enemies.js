@@ -187,8 +187,12 @@ function updateEnemy(e, dt) {
       addRing(e.x, e.y, 16, 130, 0.8, '#f43f5e', 5);
       addText(e.x, e.y - e.r - 28, 'PHASE III: BERSERK', '#f43f5e', 16);
       if (G && G.ascension >= 5) {
-        spawnEnemy('brute', G.wave, 'avenger');
-        spawnEnemy('scout', G.wave, 'phase_shifter');
+        spawnEnemy('brute', G.wave, 'avenger', null, e.pathId || 0);
+        spawnEnemy('scout', G.wave, 'phase_shifter', null, e.pathId || 0);
+        const b1 = G.enemies[G.enemies.length - 2];
+        const b2 = G.enemies[G.enemies.length - 1];
+        if (b1) { b1.d = Math.max(0, e.d - 35); b1.pathId = e.pathId || 0; }
+        if (b2) { b2.d = Math.max(0, e.d - 60); b2.pathId = e.pathId || 0; }
         addText(e.x, e.y - e.r - 46, 'NEMESIS ESCORTS', '#a855f7', 14);
         burst(e.x, e.y, 18, '#a855f7', 150, 0.6, 4, true);
       }

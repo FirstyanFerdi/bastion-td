@@ -181,7 +181,8 @@ function renderWaveCard() {
     if (ev.some(x => x.affix)) tags.push('<span class="tag purple">ELITE CHAMPIONS</span>');
     const threat = getThreatDirectorAnalysis();
     if (n >= 5 && threat) tags.push('<span class="tag orange">THREAT: ' + threat.name.toUpperCase() + '</span>');
-    if (G.mutator) tags.push('<span class="tag ' + G.mutator.cls + '">MUTATOR: ' + G.mutator.name.toUpperCase() + '</span>');
+    const waveMutator = (n >= 7 && (n % 2 === 1 || n % 5 === 0) && typeof WAVE_MUTATORS !== 'undefined') ? WAVE_MUTATORS[Object.keys(WAVE_MUTATORS)[(n * 3) % Object.keys(WAVE_MUTATORS).length]] : null;
+    if (waveMutator) tags.push('<span class="tag ' + waveMutator.cls + '">MUTATOR: ' + waveMutator.name.toUpperCase() + '</span>');
     $('wcTags').innerHTML = tags.join('');
   }
   const btn = $('btnCall');
@@ -236,7 +237,8 @@ function refreshUI() {
   document.querySelectorAll('#speedSeg button').forEach(b => b.classList.toggle('on', Number(b.dataset.speed) === G.speed));
   document.querySelectorAll('.shop').forEach(el => {
     const k = el.dataset.type;
-    el.classList.toggle('poor', G.gold < TD[k].cost);
+    const cost = typeof getTowerCost === 'function' ? getTowerCost(k) : TD[k].cost;
+    el.classList.toggle('poor', G.gold < cost);
     el.classList.toggle('sel', G.placing === k);
   });
   if (G.uiDirty) { G.uiDirty = false; renderInspector(); }
@@ -261,7 +263,7 @@ function showOverlay(kind) {
   let h = '';
   if (kind === 'menu') {
     const curAsc = (typeof SAVE !== 'undefined' && SAVE.ascension) || 0;
-    const maxUnlocked = Math.min(5, Math.max(1, (typeof SAVE !== 'undefined' && SAVE.maxAscension || 0) + 1));
+    const maxUnlocked = Math.min(5, Math.max(1, (typeof SAVE !== 'undefined' && SAVE.maxAscension) || 1));
     const asc = typeof getAscensionData === 'function' ? getAscensionData(curAsc) : { name: 'Standard', desc: '', badge: 'NORMAL', color: '#94a3b8', pacts: [] };
     const pactsHtml = asc.pacts && asc.pacts.length > 0 ?
       '<div class="asc-pacts">' + asc.pacts.map(p => '<div>• ' + p + '</div>').join('') + '</div>' :

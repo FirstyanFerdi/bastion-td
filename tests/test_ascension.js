@@ -186,4 +186,22 @@ console.log('Testing Fase 5: Ascension Protocols & Special Event Mutators...');
   console.log('✔ Special Mutator: Overcharge Surge (+25% speed) verified');
 }
 
+// 9. Ascension Unlock Progression & Validation
+{
+  nb.SAVE.maxAscension = 1;
+  nb.SAVE.ascension = 0;
+  nb.setAscension(1);
+  if (nb.SAVE.ascension !== 1) throw new Error('Should be able to set ascension to 1 when maxAscension is 1');
+  nb.setAscension(3);
+  if (nb.SAVE.ascension > 1) throw new Error('Should not be able to set locked ascension');
+
+  nb.unlockNextAscension(1);
+  if (nb.SAVE.maxAscension !== 2) throw new Error('Beating ascension 1 should unlock ascension 2, got: ' + nb.SAVE.maxAscension);
+
+  nb.unlockNextAscension(2);
+  if (nb.SAVE.maxAscension !== 3) throw new Error('Beating ascension 2 should unlock ascension 3, got: ' + nb.SAVE.maxAscension);
+
+  console.log('✔ Ascension sequential unlock progression verified');
+}
+
 console.log('\n🎉 ALL FASE 5 ASCENSION & SPECIAL EVENT MUTATORS TESTS PASSED!');
