@@ -34,13 +34,14 @@ function hasPerk(id) { return G && G.perks && G.perks.indexOf(id) >= 0; }
 
 function newGame(keepSpeed) {
   const speed = keepSpeed && G ? G.speed : 1;
+  const startBonus = typeof getWorkshopLevel === 'function' ? getWorkshopLevel('treasury') * 50 : 0;
   G = {
-    state: 'prep', lives: 25, gold: 250, wave: 0, score: 0, time: 0, anim: 0, speed, paused: false,
+    state: 'prep', lives: 25, gold: 250 + startBonus, wave: 0, score: 0, time: 0, anim: 0, speed, paused: false,
     enemies: [], towers: [], proj: [], queue: [], grid: emptyGrid(),
     sel: null, placing: null, hover: null, mouse: { x: 0, y: 0, in: false },
     prepT: 20, shake: 0, dmgFlash: 0, baseFlash: 0, banner: null, endless: false, uiDirty: true, kills: 0,
-    perks: [], skills: { orbital: { cd: 0 }, overcharge: { cd: 0 }, caltrops: { cd: 0 } },
-    hazards: [], casting: null, mutator: null, drafting: null, leakedThisWave: 0
+    perks: [], skills: { orbital: { cd: 0 }, overcharge: { cd: 0 }, caltrops: { cd: 0 }, emp_nuke: { cd: 0 } },
+    hazards: [], casting: null, mutator: null, drafting: null, leakedThisWave: 0, citadelCd: 0
   };
   partPool.clear(); fxPool.clear(); textPool.clear();
 }
@@ -203,6 +204,8 @@ function killEnemy(e, src) {
     burst(e.x, e.y, 70, col, 260, 1.1, 5, false); burst(e.x, e.y, 40, '#fff', 200, 0.7, 3, true);
     addRing(e.x, e.y, 10, 130, 0.7, '#c084fc', 5); shake(12); Sfx.play('boom');
     addText(e.x, e.y - 30, '+' + e.reward, '#fbbf24', 22);
+    addCores(10);
+    addText(e.x, e.y - 56, '+10 NANITE CORES', '#38bdf8', 16);
   } else {
     burst(e.x, e.y, e.type === 'swarm' ? 6 : 14, col, 130, 0.5, e.type === 'brute' || e.type === 'carrier' ? 4 : 3, e.type === 'swarm');
     if (e.type !== 'swarm') addText(e.x, e.y - e.r - 6, '+' + e.reward, '#fbbf24', 13);

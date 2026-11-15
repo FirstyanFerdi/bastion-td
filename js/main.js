@@ -57,14 +57,28 @@ function init() {
     else if (act === 'sell') sellTower(G.sel);
     else if (act === 'prio') { G.sel.prio = b.dataset.prio; G.uiDirty = true; Sfx.play('click'); }
   });
+  if ($('btnWorkshop')) {
+    $('btnWorkshop').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('workshop');
+    });
+  }
   $('overlay').addEventListener('click', e => {
     const card = e.target.closest('[data-perk]');
     if (card && G.drafting) { selectPerk(card.dataset.perk); return; }
+    const upgBtn = e.target.closest('[data-ov="hq_upg"]');
+    if (upgBtn && upgBtn.dataset.upg) {
+      upgradeWorkshop(upgBtn.dataset.upg);
+      showOverlay('workshop');
+      return;
+    }
     const b = e.target.closest('button'); if (!b) return;
     Sfx.init(); Sfx.resume();
     const a = b.dataset.ov;
     if (a === 'start' || a === 'again') { begin(); Sfx.play('click'); }
     else if (a === 'endless') { showOverlay(null); G.endless = true; G.state = 'prep'; G.prepT = 15; G.uiDirty = true; wcWave = -1; Sfx.play('click'); }
+    else if (a === 'open_workshop') { showOverlay('workshop'); Sfx.play('click'); }
+    else if (a === 'close_workshop') { showOverlay(G && G.state === 'menu' ? 'menu' : null); Sfx.play('click'); }
   });
   last = performance.now();
   requestAnimationFrame(frame);
@@ -72,4 +86,4 @@ function init() {
 init();
 
 // Small debug/test hook (harmless in production)
-window.__nb = { get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData };
+window.__nb = { get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay };

@@ -105,13 +105,14 @@ function renderInspector() {
 
   let upgHtml = '';
   if (t.tier === 0) {
-    const cost = def.tiers[1].upg;
+    const cost = getUpgradeCost(def.tiers[1].upg);
     upgHtml = '<button class="primary" id="btnUpg" tabindex="-1" data-act="upgrade" data-cost="' + cost + '">' + svg('up') + 'Upgrade Tier II <i class="coin"></i>' + cost + '</button>';
   } else if (t.tier === 1) {
     const bA = def.branches.A, bB = def.branches.B;
+    const cA = getUpgradeCost(bA.upg), cB = getUpgradeCost(bB.upg);
     upgHtml = '<div class="branch-grid">' +
-      '<button class="branch-btn" tabindex="-1" data-act="upgrade" data-branch="A" data-cost="' + bA.upg + '" style="--bc:' + bA.color + '"><div class="bh">' + bA.name + '</div><div class="br">' + bA.role + '</div><div class="bc"><i class="coin"></i>' + bA.upg + '</div></button>' +
-      '<button class="branch-btn" tabindex="-1" data-act="upgrade" data-branch="B" data-cost="' + bB.upg + '" style="--bc:' + bB.color + '"><div class="bh">' + bB.name + '</div><div class="br">' + bB.role + '</div><div class="bc"><i class="coin"></i>' + bB.upg + '</div></button>' +
+      '<button class="branch-btn" tabindex="-1" data-act="upgrade" data-branch="A" data-cost="' + cA + '" style="--bc:' + bA.color + '"><div class="bh">' + bA.name + '</div><div class="br">' + bA.role + '</div><div class="bc"><i class="coin"></i>' + cA + '</div></button>' +
+      '<button class="branch-btn" tabindex="-1" data-act="upgrade" data-branch="B" data-cost="' + cB + '" style="--bc:' + bB.color + '"><div class="bh">' + bB.name + '</div><div class="br">' + bB.role + '</div><div class="bc"><i class="coin"></i>' + cB + '</div></button>' +
       '</div>';
   } else {
     upgHtml = '<button class="primary" id="btnUpg" tabindex="-1" disabled>MAX SPECIALIZATION</button>';
@@ -127,7 +128,7 @@ function renderInspector() {
     '<div class="note">Sell refunds 75% of everything invested.</div>';
   const ic = $('inspIcon').getContext('2d');
   drawTowerSprite(ic, t.type, t.tier, { x: 28, y: 28, angle: -Math.PI / 4, spin: 0.6, charge: 1, branch: t.branch }, 1);
-  if (t.tier === 0 && $('btnUpg')) $('btnUpg').disabled = G.gold < def.tiers[1].upg;
+  if (t.tier === 0 && $('btnUpg')) $('btnUpg').disabled = G.gold < getUpgradeCost(def.tiers[1].upg);
   if (t.tier === 1) {
     document.querySelectorAll('.branch-btn').forEach(b => {
       b.disabled = G.gold < Number(b.dataset.cost);
@@ -176,7 +177,9 @@ function renderSkillsAndPerks() {
   const skBox = $('cmdSkills'), pkBox = $('perkTray');
   if (!skBox || !pkBox || !G) return;
   // Commander skills
-  const skillsHtml = Object.keys(COMMANDER_SKILLS).map(k => {
+  const hasNuke = typeof getWorkshopLevel === 'function' && getWorkshopLevel('command_protocol') > 0;
+  const skillKeys = Object.keys(COMMANDER_SKILLS).filter(k => k !== 'emp_nuke' || hasNuke);
+  const skillsHtml = skillKeys.map(k => {
     const sk = COMMANDER_SKILLS[k], state = G.skills[k] || { cd: 0 };
     const onCd = state.cd > 0, isActive = G.casting === k;
     const cdRatio = onCd ? clamp(state.cd / sk.cd, 0, 1) : 0;
@@ -216,13 +219,14 @@ function refreshUI() {
   if (G.uiDirty) { G.uiDirty = false; renderInspector(); }
   else if (G.sel) {
     const u = $('btnUpg');
-    if (u && G.sel.tier === 0) u.disabled = G.gold < TD[G.sel.type].tiers[1].upg;
+    if (u && G.sel.tier === 0) u.disabled = G.gold < getUpgradeCost(TD[G.sel.type].tiers[1].upg);
     if (G.sel.tier === 1) {
       document.querySelectorAll('.branch-btn').forEach(b => {
         b.disabled = G.gold < Number(b.dataset.cost);
       });
     }
   }
+  if ($('vCores')) $('vCores').textContent = String((SAVE && SAVE.cores) || 0);
   renderWaveCard();
   renderSkillsAndPerks();
 }
@@ -234,9 +238,41 @@ function showOverlay(kind) {
   let h = '';
   if (kind === 'menu') {
     h = '<div class="ov-box"><h1>' + LOGO + 'BASTION</h1><div class="sub">Hold the grid. Survive 20 waves, then push into Endless Mode.</div>' +
-      '<div class="how"><div><kbd>1</kbd>-<kbd>5</kbd> select tower</div><div><kbd>Q</kbd>/<kbd>W</kbd>/<kbd>E</kbd> commander powers</div><div><kbd>Space</kbd> call wave / pause</div><div><kbd>Click</kbd> build / inspect</div><div><kbd>Esc</kbd> cancel / deselect</div><div><kbd>U</kbd> upgrade / <kbd>X</kbd> sell</div><div><kbd>P</kbd> pause / <kbd>F</kbd> speed / <kbd>M</kbd> mute</div></div>' +
-      '<div class="ov-stats"><div><label>BEST WAVE</label><b>' + SAVE.bestWave + '</b></div><div><label>HIGH SCORE</label><b>' + SAVE.bestScore + '</b></div></div>' +
-      '<div class="ov-btns"><button class="primary big" data-ov="start" tabindex="-1">' + svg('play') + 'Deploy</button></div></div>';
+      '<div class="how"><div><kbd>1</kbd>-<kbd>5</kbd> select tower</div><div><kbd>Q</kbd>/<kbd>W</kbd>/<kbd>E</kbd>/<kbd>R</kbd> commander powers</div><div><kbd>B</kbd> workshop HQ</div><div><kbd>Space</kbd> call wave / pause</div><div><kbd>Click</kbd> build / inspect</div><div><kbd>Esc</kbd> cancel / deselect</div><div><kbd>U</kbd> upgrade / <kbd>X</kbd> sell</div><div><kbd>P</kbd> pause / <kbd>F</kbd> speed / <kbd>M</kbd> mute</div></div>' +
+      '<div class="ov-stats"><div><label>BEST WAVE</label><b>' + SAVE.bestWave + '</b></div><div><label>HIGH SCORE</label><b>' + SAVE.bestScore + '</b></div><div><label>NANITE CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div></div>' +
+      '<div class="ov-btns"><button class="primary big" data-ov="start" tabindex="-1">' + svg('play') + 'Deploy</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
+  } else if (kind === 'workshop') {
+    const cards = Object.values(WORKSHOP_UPGRADES).map(u => {
+      const lv = getWorkshopLevel(u.id);
+      const isMax = lv >= u.maxLv;
+      const cost = isMax ? 0 : u.costs[lv];
+      const canAfford = !isMax && (SAVE.cores || 0) >= cost;
+      let stars = '';
+      for (let s = 1; s <= u.maxLv; s++) stars += s <= lv ? '★' : '☆';
+      const btn = isMax ?
+        '<button class="draft-btn" disabled>MAX RESEARCHED</button>' :
+        '<button class="draft-btn' + (canAfford ? ' primary' : '') + '" data-ov="hq_upg" data-upg="' + u.id + '"' + (!canAfford ? ' disabled' : '') + '>Research (' + cost + ' Cores)</button>';
+      return '<div class="draft-card" style="border-top-color:#38bdf8">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+        '<span class="draft-tag" style="background:#0c4a6e;color:#38bdf8">' + stars + ' LV ' + lv + '/' + u.maxLv + '</span>' +
+        '<span style="font-size:11px;color:#94a3b8">' + u.effectText(lv) + '</span>' +
+        '</div>' +
+        '<div class="draft-name">' + u.name + '</div>' +
+        '<div class="draft-desc">' + u.desc + '</div>' +
+        btn +
+        '</div>';
+    }).join('');
+
+    h = '<div class="draft-box" style="border-top-color:#38bdf8;max-width:820px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+      '<h2 style="margin:0;color:#38bdf8;letter-spacing:.15em">' + svg('spark') + ' BASTION WORKSHOP HQ</h2>' +
+      '<div class="chip" style="background:#0b192c;border:1px solid #0284c7;padding:6px 12px;display:flex;align-items:center;gap:8px"><span class="ic" data-ico="spark"></span><div><label style="color:#94a3b8;font-size:10px">NANITE CORES</label><b style="color:#38bdf8;font-size:16px">' + (SAVE.cores || 0) + '</b></div></div>' +
+      '</div>' +
+      '<div class="sub">Permanent Meta-Progression. Nanite Cores persist across all runs.</div>' +
+      '<div class="draft-grid" style="grid-template-columns:1fr 1fr;margin-bottom:20px">' + cards + '</div>' +
+      '<div style="display:flex;justify-content:center;gap:12px">' +
+      '<button class="primary big" data-ov="close_workshop" tabindex="-1">Resume Operation</button>' +
+      '</div></div>';
   } else if (kind === 'draft' && G.drafting) {
     const cards = G.drafting.cards.map(id => {
       const p = PERKS[id];
@@ -251,12 +287,12 @@ function showOverlay(kind) {
       '<div class="draft-grid">' + cards + '</div></div>';
   } else if (kind === 'over') {
     h = '<div class="ov-box"><h2 style="color:#fb7185">BASE OVERRUN</h2><div class="sub">The Bastion has fallen. Regroup and try a new layout.</div>' +
-      '<div class="ov-stats"><div><label>WAVE REACHED</label><b>' + G.wave + '</b></div><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>BEST SCORE</label><b>' + SAVE.bestScore + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
-      '<div class="ov-btns"><button class="primary big" data-ov="again" tabindex="-1">' + svg('redo') + 'Play again</button></div></div>';
+      '<div class="ov-stats"><div><label>WAVE REACHED</label><b>' + G.wave + '</b></div><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>NANITE CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
+      '<div class="ov-btns"><button class="primary big" data-ov="again" tabindex="-1">' + svg('redo') + 'Play again</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
   } else if (kind === 'win') {
     h = '<div class="ov-box"><h2 style="color:#6ee7b7">BASTION HELD!</h2><div class="sub">All 20 waves destroyed. The grid is safe, for now.</div>' +
-      '<div class="ov-stats"><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>BEST SCORE</label><b>' + SAVE.bestScore + '</b></div><div><label>LIVES LEFT</label><b>' + G.lives + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
-      '<div class="ov-btns"><button class="primary big" data-ov="endless" tabindex="-1">' + svg('inf') + 'Endless mode</button><button class="ghost" data-ov="again" tabindex="-1">New Game</button></div></div>';
+      '<div class="ov-stats"><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>BEST SCORE</label><b>' + SAVE.bestScore + '</b></div><div><label>NANITE CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
+      '<div class="ov-btns"><button class="primary big" data-ov="endless" tabindex="-1">' + svg('inf') + 'Endless mode</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button><button class="ghost" data-ov="again" tabindex="-1">New Game</button></div></div>';
   }
   ov.innerHTML = h; ov.classList.add('show');
 }

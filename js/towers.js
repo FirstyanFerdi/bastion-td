@@ -43,13 +43,13 @@ function upgradeTower(t, branch) {
   const def = TD[t.type];
   let cost = 0;
   if (t.tier === 0) {
-    cost = def.tiers[1].upg;
+    cost = getUpgradeCost(def.tiers[1].upg);
     if (G.gold < cost) { Sfx.play('error'); return; }
     G.gold -= cost; t.tier = 1; t.invested += cost; t.pop = 1;
   } else if (t.tier === 1) {
     branch = branch || 'A';
     const bDef = def.branches[branch];
-    cost = bDef.upg;
+    cost = getUpgradeCost(bDef.upg);
     if (G.gold < cost) { Sfx.play('error'); return; }
     G.gold -= cost; t.tier = 2; t.branch = branch; t.invested += cost; t.pop = 1;
   }

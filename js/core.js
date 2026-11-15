@@ -36,4 +36,45 @@ const Store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
 };
-const SAVE = { bestScore: Store.get('nb_bestScore', 0), bestWave: Store.get('nb_bestWave', 0), muted: Store.get('nb_muted', false) };
+const SAVE = {
+  bestScore: Store.get('nb_bestScore', 0),
+  bestWave: Store.get('nb_bestWave', 0),
+  muted: Store.get('nb_muted', false),
+  cores: Store.get('nb_cores', 0),
+  workshop: Store.get('nb_workshop', {})
+};
+
+function addCores(n) {
+  SAVE.cores = (SAVE.cores || 0) + n;
+  Store.set('nb_cores', SAVE.cores);
+  const el = typeof $ === 'function' ? $('vCores') : null;
+  if (el) el.textContent = String(SAVE.cores);
+}
+
+function getWorkshopLevel(id) {
+  return (SAVE.workshop && SAVE.workshop[id]) || 0;
+}
+
+function getUpgradeCost(baseCost) {
+  const logLv = getWorkshopLevel('logistics');
+  const discount = logLv === 1 ? 0.10 : (logLv === 2 ? 0.18 : 0);
+  return Math.round(baseCost * (1 - discount));
+}
+
+function upgradeWorkshop(id) {
+  if (typeof WORKSHOP_UPGRADES === 'undefined') return false;
+  const upg = WORKSHOP_UPGRADES[id];
+  if (!upg) return false;
+  const cur = getWorkshopLevel(id);
+  if (cur >= upg.maxLv) return false;
+  const cost = upg.costs[cur];
+  if ((SAVE.cores || 0) < cost) return false;
+  SAVE.cores -= cost;
+  SAVE.workshop = SAVE.workshop || {};
+  SAVE.workshop[id] = cur + 1;
+  Store.set('nb_cores', SAVE.cores);
+  Store.set('nb_workshop', SAVE.workshop);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('perk');
+  if (typeof refreshUI === 'function') refreshUI();
+  return true;
+}

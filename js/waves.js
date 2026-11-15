@@ -11,7 +11,7 @@ function startWave() {
   G.queue.sort((a, b) => a.at - b.at);
   G.state = 'active';
   G.leakedThisWave = 0;
-  if (n > SAVE.bestWave) { SAVE.bestWave = n; Store.set('nb_bestWave', n); }
+  if (n > SAVE.bestWave) { SAVE.bestWave = n; Store.set('nb_bestWave', n); addCores(3); }
   const boss = n % 5 === 0;
   if (n >= 7 && (n % 2 === 1 || boss)) {
     const mKeys = Object.keys(WAVE_MUTATORS);
@@ -49,6 +49,8 @@ function onWaveClear() {
   G.gold += bonus + interest; G.score += n * 100 + bonus + interest;
   addText(W / 2, 90, 'WAVE ' + n + ' CLEARED  +' + bonus, '#6ee7b7', 22);
   if (interest > 0) addText(W / 2, 118, 'interest +' + interest + (isVC ? ' (Venture Capital)' : ''), '#fbbf24', 16);
+  addCores(1);
+  addText(W / 2, 142, '+1 Nanite Core', '#38bdf8', 14);
   Sfx.play('coin');
   saveBest();
 
@@ -103,10 +105,33 @@ function update(dt) {
   G.time += dt; G.anim += dt;
 
   // Commander skills cooldown
-  for (const k of ['orbital', 'overcharge', 'caltrops']) {
+  for (const k of ['orbital', 'overcharge', 'caltrops', 'emp_nuke']) {
     if (G.skills[k] && G.skills[k].cd > 0) {
       const cdRate = hasPerk('orbital_salvo') && k === 'orbital' ? 1.5 : 1;
       G.skills[k].cd = Math.max(0, G.skills[k].cd - dt * cdRate);
+    }
+  }
+
+  // Workshop HQ: Citadel Auto-Turret
+  const citLv = typeof getWorkshopLevel === 'function' ? getWorkshopLevel('citadel_turret') : 0;
+  if (citLv > 0 && G.state === 'active') {
+    G.citadelCd = (G.citadelCd || 0) - dt;
+    if (G.citadelCd <= 0) {
+      const R = 2.5 * TILE;
+      let target = null, bd = R * R;
+      for (const e of G.enemies) {
+        if (e.dead || e.d < 0) continue;
+        const d = (e.x - BASE_PT.x) ** 2 + (e.y - BASE_PT.y) ** 2;
+        if (d <= bd) { bd = d; target = e; }
+      }
+      if (target) {
+        G.citadelCd = citLv === 1 ? 0.45 : 0.32;
+        const dmg = citLv === 1 ? 28 : 48;
+        addFx('tracer', BASE_PT.x, BASE_PT.y, target.x, target.y, 0.1, '#f43f5e', 2.5);
+        burst(target.x, target.y, 4, '#f43f5e', 70, 0.25, 2, false);
+        dealDamage(target, dmg, 'energy', null);
+        Sfx.play('hit');
+      }
     }
   }
 

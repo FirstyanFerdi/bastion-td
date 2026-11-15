@@ -30,6 +30,24 @@ function triggerSkill(id) {
   if (!G || (G.state !== 'prep' && G.state !== 'active') || G.drafting) return;
   const sk = G.skills[id];
   if (!sk || sk.cd > 0) { Sfx.play('error'); return; }
+  if (id === 'emp_nuke') {
+    sk.cd = COMMANDER_SKILLS.emp_nuke.cd;
+    addRing(W / 2, H / 2, 20, Math.max(W, H), 0.85, '#38bdf8', 6);
+    shake(16);
+    Sfx.play('emp');
+    addText(W / 2, 90, 'TACTICAL EMP DETONATED', '#38bdf8', 22);
+    for (const en of G.enemies) {
+      if (en.dead) continue;
+      en.shield = 0; en.shieldT = 0;
+      if (en.type !== 'boss') en.stunT = Math.max(en.stunT, 3.0);
+      else en.stunT = Math.max(en.stunT, 1.2);
+      burst(en.x, en.y, 8, '#38bdf8', 90, 0.45, 2.5, true);
+      addText(en.x, en.y - en.r - 20, 'EMP SHUTDOWN', '#38bdf8', 13);
+    }
+    G.casting = null;
+    G.uiDirty = true;
+    return;
+  }
   if (G.casting === id) { G.casting = null; G.uiDirty = true; Sfx.play('click'); return; }
   G.casting = id; G.placing = null; G.sel = null; G.uiDirty = true;
   Sfx.play('click');
@@ -125,6 +143,17 @@ function onKey(e) {
     case 'q': case 'Q': triggerSkill('orbital'); break;
     case 'w': case 'W': triggerSkill('overcharge'); break;
     case 'e': case 'E': triggerSkill('caltrops'); break;
+    case 'r': case 'R':
+      if (typeof getWorkshopLevel === 'function' && getWorkshopLevel('command_protocol') > 0) {
+        triggerSkill('emp_nuke');
+      }
+      break;
+    case 'b': case 'B': {
+      const ov = $('overlay');
+      const isOpen = ov && ov.classList.contains('show') && ov.innerHTML.includes('WORKSHOP');
+      showOverlay(isOpen ? (G && G.state === 'menu' ? 'menu' : null) : 'workshop');
+      break;
+    }
     case 'Escape': G.placing = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
     case 'p': case 'P': togglePause(); break;
     case 'm': case 'M': toggleMute(); break;

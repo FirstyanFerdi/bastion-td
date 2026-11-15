@@ -163,26 +163,50 @@ Mulai wave 6, unit non-swarm memiliki probabilitas $25\%$ lahir sebagai varian *
 3. **Avenger (Aura Oranye `#f97316`):** Setiap ada sekutu yang gugur dalam radius $120\text{ px}$, amarahnya terpicu: kecepatan gerak bertambah $+15\%$ dan armor bertambah $+10\%$ (dapat ditumpuk hingga $5\times$ stack).
 4. **Projector Dome (Aura Cyan `#38bdf8`):** Memancarkan kubah penangkal energi (radius $40\text{ px}$) yang meredam $40\%$ kerusakan peluru dan **menghentikan tembusan balok Railgun seketika**.
 
+### 5.4 Tahap 4 — Fase 3: Sistem Riset Permanen (Workshop HQ & Meta-Progression)
+
+Untuk menghadirkan putaran permainan roguelite yang adiktif (*meta-progression loop*) antar-sesi run, diimplementasikan sistem markas riset permanen:
+
+#### A. Mata Uang Permanen (`Nanite Cores`)
+* **Perolehan Cores:**
+  * Mengeliminasi Boss: $+10$ Nanite Cores.
+  * Menyelesaikan setiap Wave: $+1$ Nanite Core.
+  * Memecahkan rekor wave tertinggi baru: $+3$ Nanite Cores.
+* **Penyimpanan Aman:** Tersimpan persisten di `localStorage` melalui modul `Store` (`nb_cores` dan `nb_workshop`) sehingga progres tidak hilang saat browser dimuat ulang.
+* **Tampilan HUD:** Indikator saldo Cores dengan ikon percikan cyan interaktif ditampilkan di barisan chip status atas (`vCores`).
+
+#### B. Pohon Riset Workshop HQ (`WORKSHOP_UPGRADES`)
+Pemain dapat mengakses antarmuka **Workshop HQ** kapan saja melalui tombol `HQ` di top bar, tombol di layar menu/kalah/menang, atau tombol pintas keyboard `[B]`:
+1. **Starting Treasury (Maks Lv 3):** Memberikan cadangan modal emas tambahan $+50$ (Lv 1), $+100$ (Lv 2), dan $+150$ (Lv 3) saat memulai babak baru.
+2. **Reinforced Citadel (Maks Lv 2):** Markas pertahanan (*Base*) dilengkapi meriam otomatis cadangan yang menembak musuh yang mendekati radius $2.5\times\text{TILE}$ markas (visual barel meriam berputar dan lingkar jangkauan perimeter di atas citadel).
+3. **Logistics Network (Maks Lv 2):** Memberikan diskon biaya material $-10\%$ (Lv 1) dan $-18\%$ (Lv 2) untuk seluruh upgrade menara di medan tempur.
+4. **Command Protocol [R] (Maks Lv 1):** Membuka slot kemampuan aktif keempat pemain:
+   * **`[R]` Tactical EMP Nuke:** Memicu ledakan pulsa elektromagnetik global yang merontokkan semua perisai musuh di peta seketika, melumpuhkan (*stun*) seluruh musuh di layar selama 3 detik, dan menghapus ancaman proyektil lawan.
+
 ---
 
 ## 6. Rincian Modifikasi Berkas Kode
 
 | Berkas | Jenis Perubahan | Detail Modifikasi |
 |---|---|---|
-| [`index.html`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/index.html) | Markup | Menambahkan kontainer `#cmdTray` (`#cmdSkills` & `#perkTray`) di atas dock. |
+| [`index.html`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/index.html) | Markup | Menambahkan chip status `CORES` (`#vCores`) dan tombol pintas `HQ` (`#btnWorkshop`) pada bilah atas. |
 | [`css/style.css`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/css/style.css) | Styling | Desain tombol ability commander, cooldown fill animation, branch selection grid di inspector, kartu modal tech draft, dan tag badge mutator. |
+| [`js/core.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/core.js) | Core Persistence | Integrasi state `cores` dan `workshop` ke `SAVE`, fungsi `addCores()`, `getWorkshopLevel()`, `getUpgradeCost()`, dan `upgradeWorkshop()`. |
 | [`js/audio.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/audio.js) | Sound Synth | Menambahkan 8 instrumen sintetik audio baru: `orbital`, `overcharge`, `caltrops`, `shatter`, `perk`, `emp`, `reaction`, dan `shockwave`. |
-| [`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js) | Konfigurasi Data | Struktur `branches` (A & B) tiap tower, `PERKS` (10 kartu), `COMMANDER_SKILLS` (Q, W, E), `WAVE_MUTATORS`, musuh baru di `ED`, kamus `ELEMENTAL_REACTIONS`, kamus `CHAMPION_AFFIXES`, kamus `THREAT_VARIANTS`, fungsi analisis `getThreatDirectorAnalysis()`, dan generator wave adaptif di `buildSpawns()`. |
-| [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) | State & Logic | Penanganan kalkulasi 4 Reaksi Elemen di `dealDamage`, mitigasi $-50\%$ physical Deflector, peredam Dome, teleportasi Phase-Shifter, dan akumulasi tumpukan stack Avenger di `killEnemy`. |
+| [`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js) | Konfigurasi Data | Struktur `branches` (A & B) tiap tower, `PERKS` (10 kartu), `COMMANDER_SKILLS` (Q, W, E, R), `WAVE_MUTATORS`, musuh baru di `ED`, kamus `ELEMENTAL_REACTIONS`, kamus `CHAMPION_AFFIXES`, kamus `THREAT_VARIANTS`, fungsi analisis `getThreatDirectorAnalysis()`, generator wave adaptif di `buildSpawns()`, dan pohon riset `WORKSHOP_UPGRADES`. |
+| [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) | State & Logic | Penanganan kalkulasi 4 Reaksi Elemen di `dealDamage`, mitigasi $-50\%$ physical Deflector, peredam Dome, teleportasi Phase-Shifter, akumulasi tumpukan stack Avenger di `killEnemy`, pemberian +10 Cores saat Boss tewas, dan modal emas awal dari riset Treasury. |
 | [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js) | AI Musuh | Instansiasi unit Champion dan Threat di `spawnEnemy`, logika pemulihan HP Regenerator di `updateEnemy`, aura pencair es Thermal Juggernaut, serta mortar EMP Artillery Walker. |
-| [`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js) | Senjata & Targeting | Penambahan infusi status `acidT` pada Acid Melter, serta penghentian penetrasi Railgun saat mengenai musuh berstatus Dome. |
+| [`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js) | Senjata & Targeting | Penambahan infusi status `acidT` pada Acid Melter, penghentian penetrasi Railgun pada unit Dome, dan penerapan diskon Logistics Network pada biaya upgrade menara. |
 | [`js/sprites.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/sprites.js) | Prosedural Canvas | Visualisasi cincin aura rune berputar Champion (hijau, ungu, oranye, cyan), aura kubah energi Dome, indikator threat, dan mahkota permata di barisan HP unit elit. |
-| [`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js) | Rendering Pipeline | Render kolam radiasi, ranjau caltrops di jalan, kabel konduit listrik overcharger, dan retikel kursor bidik ability komando. |
-| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Tampilan Tactical Inspector Field Guide (reaksi elemen) dan tag badge indikator kemunculan ELITE CHAMPIONS serta THREAT DIRECTOR di Wave Card. |
+| [`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js) | Rendering Pipeline | Render kolam radiasi, ranjau caltrops di jalan, kabel konduit listrik overcharger, retikel kursor bidik ability komando, dan visual meriam otomatis pertahanan pada markas inti (Citadel Auto-Turret). |
+| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Tampilan Tactical Inspector Field Guide (reaksi elemen), badge ELITE CHAMPIONS & THREAT DIRECTOR di Wave Card, tampilan dinamis skill ke-4 [R] Tactical EMP Nuke, pembaruan chip saldo `vCores`, serta modal interaktif `BASTION WORKSHOP HQ`. |
+| [`js/input.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/input.js) | Kontrol & Input | Dukungan eksekusi global instan skill [R] Tactical EMP Nuke, hotkey tombol `R` dan tombol `B` untuk membuka/menutup Workshop HQ. |
+| [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js) | Inisialisasi & Harness | Event listener untuk tombol HQ di top bar dan kartu riset workshop di overlay, serta ekspor fungsi workshop ke `window.__nb`. |
 | [`tests/test_reactions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_reactions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas dan formula 4 reaksi elemen (Fase 1). |
 | [`tests/test_champions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_champions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas Adaptive Threat Director & 4 Champion Affixes (Fase 2). |
+| [`tests/test_workshop.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_workshop.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas perolehan Cores, sistem riset workshop, diskon logistik, citadel turret, dan EMP Nuke (Fase 3). |
 | [`tests/smoke.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/smoke.js) | Otomasi Pengujian | Simulasi 20 wave standar dan 40 wave mode endless dengan bot otomatis. |
-| [`dev.bat`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/dev.bat) | Launcher Windows | Penambahan eksekusi otomatis `test_reactions.js` dan `test_champions.js` ke dalam opsi pengetesan dev. |
+| [`dev.bat`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/dev.bat) | Launcher Windows | Penambahan eksekusi otomatis `test_reactions.js`, `test_champions.js`, dan `test_workshop.js` ke dalam opsi pengetesan dev. |
 
 ---
 
@@ -212,14 +236,25 @@ Pengujian simulasi otomatis secara headless dijalankan menggunakan Node.js:
      * ✔ Champion Dome: peredaman 40% peluru dan pemotongan penetrasi Railgun terverifikasi
    * **Status:** **LULUS (100% PASS)**
 
-3. **Uji Standar (20 Wave Menang):**
+3. **Uji Workshop HQ & Meta-Progression (Unit Test Fase 3):**
+   * **Perintah:** `node tests/test_workshop.js`
+   * **Hasil:**
+     * ✔ Nanite Cores: perolehan & persistensi penyimpanan terverifikasi
+     * ✔ Workshop Research: deduksi biaya cores & validasi limit level terverifikasi
+     * ✔ Starting Treasury: bonus emas awal terverifikasi
+     * ✔ Logistics Network: diskon upgrade menara -10% (Lv 1) dan -18% (Lv 2) terverifikasi
+     * ✔ Citadel Auto-Turret: penembakan otomatis hostiles di perimeter base terverifikasi
+     * ✔ Command Protocol [R]: pelucutan perisai & stun global 3 detik Tactical EMP Nuke terverifikasi
+   * **Status:** **LULUS (100% PASS)**
+
+4. **Uji Standar (20 Wave Menang):**
    * **Perintah:** `node tests/smoke.js`
-   * **Hasil:** `OK state=victory wave=20 lives=25 towers=24 score=102352 steps=18264`
+   * **Hasil:** `OK state=victory wave=20 lives=25 towers=24 score=102347 steps=18155`
    * **Status:** **LULUS (100% stabil, 0 error)**
 
-4. **Uji Endless Mode (40 Wave Ekstrem):**
+5. **Uji Endless Mode (40 Wave Ekstrem):**
    * **Perintah:** `node tests/smoke.js 40`
-   * **Hasil:** `OK state=prep wave=40 lives=25 towers=24 score=513114 steps=57440`
+   * **Hasil:** `OK state=prep wave=40 lives=25 towers=24 score=515315 steps=55592`
    * **Status:** **LULUS (100% stabil, 0 error)**
 
 ---
@@ -237,7 +272,14 @@ git add .
 git status
 
 # 3. Lakukan commit perubahan
-git commit -m "feat(fase-2): implement adaptive threat director and elite champion affixes"
+git commit -m "feat(fase-3): implement workshop hq permanent research, nanite cores, and command protocol"
+
+# 4. Hubungkan ke repository GitHub Anda (jika belum)
+git remote add origin https://github.com/USERNAME/REPO_NAME.git
+
+# 5. Unggah ke branch main
+git push -u origin main
+```
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git

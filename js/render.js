@@ -111,6 +111,17 @@ function drawSpawnBase(c) {
   c.save(); c.rotate(-t * 0.5); c.strokeStyle = '#5d6b74'; c.lineWidth = 2; c.setLineDash([6, 6]); c.beginPath(); c.arc(0, 0, 15, 0, TAU); c.stroke(); c.restore();
   c.fillStyle = hit ? '#d9534f' : '#6dbf8b'; c.beginPath(); c.arc(0, 0, 7, 0, TAU); c.fill();
   c.fillStyle = '#0b0f12'; c.beginPath(); c.arc(0, 0, 3, 0, TAU); c.fill();
+  const citLv = typeof getWorkshopLevel === 'function' ? getWorkshopLevel('citadel_turret') : 0;
+  if (citLv > 0) {
+    c.save();
+    c.rotate(t * 2.5);
+    c.fillStyle = '#f43f5e';
+    c.fillRect(0, -2, 11, 4);
+    c.fillStyle = '#e2e8f0';
+    c.beginPath(); c.arc(0, 0, 4.5, 0, TAU); c.fill();
+    c.restore();
+    c.strokeStyle = 'rgba(244,63,94,0.25)'; c.lineWidth = 1; c.beginPath(); c.arc(0, 0, 2.5 * TILE, 0, TAU); c.stroke();
+  }
   c.fillStyle = '#7e8d97'; c.font = '700 9px ' + FONT; c.textAlign = 'center'; c.fillText('BASE', 0, 41);
   c.restore();
 }

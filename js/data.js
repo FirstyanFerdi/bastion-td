@@ -147,7 +147,50 @@ const PERKS = {
 const COMMANDER_SKILLS = {
   orbital: { id: 'orbital', name: 'Orbital Strike', key: 'Q', cd: 32, icon: 'target', desc: 'Call down a devastating kinetic strike on target area.' },
   overcharge: { id: 'overcharge', name: 'Overcharge', key: 'W', cd: 25, icon: 'ff', desc: 'Supercharge a tower for 7s (+100% fire rate).' },
-  caltrops: { id: 'caltrops', name: 'Nanite Caltrops', key: 'E', cd: 18, icon: 'shield', desc: 'Deploy spike hazard on road (slows 60% and shreds).' }
+  caltrops: { id: 'caltrops', name: 'Nanite Caltrops', key: 'E', cd: 18, icon: 'shield', desc: 'Deploy spike hazard on road (slows 60% and shreds).' },
+  emp_nuke: { id: 'emp_nuke', name: 'Tactical EMP Nuke', key: 'R', cd: 40, icon: 'spark', desc: 'Global EMP wave: clears enemy shields, stuns all enemies on screen for 3.0s.' }
+};
+
+/* ============================================================
+   WORKSHOP HQ (META-PROGRESSION - FASE 3)
+   ============================================================ */
+const WORKSHOP_UPGRADES = {
+  treasury: {
+    id: 'treasury',
+    name: 'Starting Treasury',
+    icon: 'coin',
+    desc: 'Cadangan modal awal tambahan saat memulai setiap babak pertahanan baru.',
+    maxLv: 3,
+    costs: [10, 25, 45],
+    effectText: lv => (lv === 0 ? '+0 Gold' : '+' + (lv * 50) + ' Gold awal')
+  },
+  citadel_turret: {
+    id: 'citadel_turret',
+    name: 'Reinforced Citadel',
+    icon: 'shield',
+    desc: 'Markas pusat dilengkapi meriam pertahanan otomatis saat musuh mendekati radius 2.5 tile.',
+    maxLv: 2,
+    costs: [20, 50],
+    effectText: lv => (lv === 0 ? 'Nonaktif' : 'Meriam otomatis aktif (Lv ' + lv + ')')
+  },
+  logistics: {
+    id: 'logistics',
+    name: 'Logistics Network',
+    icon: 'up',
+    desc: 'Efisiensi logistik material memberikan diskon permanen untuk biaya peningkatan semua menara.',
+    maxLv: 2,
+    costs: [15, 35],
+    effectText: lv => (lv === 0 ? '0% Diskon' : lv === 1 ? '-10% Biaya Upgrade' : '-18% Biaya Upgrade')
+  },
+  command_protocol: {
+    id: 'command_protocol',
+    name: 'Command Protocol [R]',
+    icon: 'spark',
+    desc: 'Membuka slot kemampuan taktis keempat [R]: Tactical EMP Nuke untuk situasi darurat.',
+    maxLv: 1,
+    costs: [30],
+    effectText: lv => (lv === 0 ? 'Terkunci' : 'Skill [R] Tactical EMP Nuke Aktif')
+  }
 };
 
 const WAVE_MUTATORS = {
