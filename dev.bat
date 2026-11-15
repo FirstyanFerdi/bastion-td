@@ -65,6 +65,9 @@ exit /b 0
 
 :run_test
 echo.
+echo [TEST] Menjalankan browser init & DOM rendering test...
+node tests\test_browser_init.js
+echo.
 echo [TEST] Menjalankan elemental reactions test (Fase 1)...
 node tests\test_reactions.js
 echo.
@@ -84,7 +87,7 @@ pause
 goto menu
 
 :run_test_arg
-node tests\test_reactions.js && node tests\test_champions.js && node tests\test_workshop.js && node tests\test_map_dynamics.js && node tests\smoke.js
+node tests\test_browser_init.js && node tests\test_reactions.js && node tests\test_champions.js && node tests\test_workshop.js && node tests\test_map_dynamics.js && node tests\smoke.js
 exit /b %errorlevel%
 
 :run_endless

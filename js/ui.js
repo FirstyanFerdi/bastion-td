@@ -21,10 +21,11 @@ const ICONS = {
   arrow: ['<path d="M4 12h15M13 6l6 6-6 6"/>', 0],
   redo: ['<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>', 0],
   inf: ['<path d="M12 12c-2-2.6-3.7-4-5.7-4a4 4 0 0 0 0 8c2 0 3.7-1.4 5.7-4s3.7-4 5.7-4a4 4 0 0 1 0 8c-2 0-3.7-1.4-5.7-4z"/>', 0],
-  tag: ['<path d="M3.5 12.5L12 4h8v8l-8.5 8.5z"/><circle cx="16" cy="8" r="1.3"/>', 0]
+  tag: ['<path d="M3.5 12.5L12 4h8v8l-8.5 8.5z"/><circle cx="16" cy="8" r="1.3"/>', 0],
+  spark: ['<path d="M12 2.5L14.5 9.5L21.5 12L14.5 14.5L12 21.5L9.5 14.5L2.5 12L9.5 9.5z"/>', 1]
 };
 function svg(n, cls) {
-  const i = ICONS[n];
+  const i = ICONS[n] || ['<circle cx="12" cy="12" r="6"/>', 0];
   return '<svg class="ico' + (i[1] ? ' f' : '') + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + i[0] + '</svg>';
 }
 const LOGO = '<svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5l11.5 6.5v14L16 29.5 4.5 23V9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 20.5l6-8.5 6 8.5" fill="none" stroke="#e2a72e" stroke-width="2.6" stroke-linejoin="round"/></svg>';

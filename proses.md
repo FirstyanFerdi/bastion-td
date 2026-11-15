@@ -230,7 +230,8 @@ Peta medan tempur memiliki tiga titik simpul energi purba dengan koordinat unik 
 | [`js/waves.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/waves.js) | Wave Controller | Peringatan darurat wave 8 `STRUCTURAL BREACH!`, pengaliran `pathId` ke antrian musuh, dan pemanggilan `spawnEnemy()` dengan `pathId`. |
 | [`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js) | Rendering Pipeline | Visualisasi glowing runes `drawLeylineNodes()`, drum interaktif `drawFuelCells()` berserta crater ledakan, aliran panah merah jalur flanking, dan penanda darurat `! BREACH !` di perimeter utara. |
 | [`js/input.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/input.js) | Kontrol & Input | Deteksi klik interaktif langsung untuk meledakkan Fuel Cells di medan pertempuran. |
-| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Kartu informasi node Leyline di Tactical Inspector saat menara dipilih, serta daftar panduan Leyline saat inspektur idle. |
+| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Kartu informasi node Leyline di Tactical Inspector saat menara dipilih, penambahan ikon vektor `spark` pada kamus `ICONS`, serta mekanisme fallback aman pada fungsi `svg()`. |
+| [`tests/test_browser_init.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_browser_init.js) | DOM Regression Testing | Verifikasi inisialisasi lingkungan browser DOM nyata, parsing `data-ico`, inisialisasi canvas, dan eksekusi frame pertama. |
 | [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js) | Inisialisasi & Harness | Ekspor `detonateFuelCell`, `LEYLINE_NODES`, `getLeylineAt`, `PLEN_BREACH`, dan `PATH_BREACH` ke `window.__nb`. |
 | [`tests/test_reactions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_reactions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas dan formula 4 reaksi elemen (Fase 1). |
 | [`tests/test_champions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_champions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas Adaptive Threat Director & 4 Champion Affixes (Fase 2). |
@@ -288,12 +289,20 @@ Pengujian simulasi otomatis secara headless dijalankan menggunakan Node.js:
      * ✔ Interactive Fuel Cells: klik manual peledakan barel, $450$ AoE damage, $100\%$ shred, dan kolam radiasi terverifikasi
    * **Status:** **LULUS (100% PASS)**
 
-5. **Uji Standar (20 Wave Menang):**
+5. **Uji Inisialisasi DOM & Browser (Regression Test):**
+   * **Perintah:** `node tests/test_browser_init.js`
+   * **Hasil:**
+     * ✔ SVG Icon Dictionary: icon `spark` terdaftar dan fallback safe `svg()` aktif
+     * ✔ Inisialisasi DOM & Icon parsing `data-ico`: 100% tanpa exception
+     * ✔ Inisialisasi Game Loop & Canvas context: Frame 1 render sukses
+   * **Status:** **LULUS (100% PASS)**
+
+6. **Uji Standar (20 Wave Menang):**
    * **Perintah:** `node tests/smoke.js`
    * **Hasil:** `OK state=victory wave=20 lives=23 towers=24 score=101536 steps=20705`
    * **Status:** **LULUS (100% stabil, 0 error)**
 
-6. **Uji Endless Mode (40 Wave Ekstrem):**
+7. **Uji Endless Mode (40 Wave Ekstrem):**
    * **Perintah:** `node tests/smoke.js 40`
    * **Hasil:** `OK state=prep wave=40 lives=21 towers=24 score=512601 steps=56677`
    * **Status:** **LULUS (100% stabil, 0 error)**
