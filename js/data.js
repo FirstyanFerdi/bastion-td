@@ -53,63 +53,75 @@ const SPAWN_PT = { x: TILE * 0.5, y: PATH[0].y };
    ============================================================ */
 const TD = {
   gatling: {
-    id: 'gatling', name: 'Gatling Turret', color: '#22d3ee', cost: 50, key: '1', role: 'Rapid fire / Physical',
+    id: 'gatling', name: 'Gatling Turret', color: '#22d3ee', cost: 50, key: '1', role: 'Rapid fire / Physical', power: [2, 3, 4],
     tip: 'Cheap, relentless single-target fire. Armor blunts physical damage, pair with Plasma (shreds armor) and Cryo (brittle = +damage taken).',
     tiers: [
-      { dmg: 8, rate: 6, range: 2.8, upg: 0 },
-      { dmg: 14, rate: 8.5, range: 3.1, upg: 65 }
+      { dmg: 8, rate: 6, range: 2.8, upg: 0, power: 2 },
+      { dmg: 14, rate: 8.5, range: 3.1, upg: 65, power: 3 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Overdrive Minigun', role: 'Accelerating Fire', color: '#38bdf8', dmg: 16, rate: 11, maxRate: 22, range: 3.3, upg: 135, tip: 'Heat ramps rate up to 22/s on focused targets.' },
-      B: { branch: 'B', name: 'Flak Cannon', role: 'Burst Shrapnel AoE', color: '#0ea5e9', dmg: 36, rate: 3.2, range: 3.5, flakRadius: 1.3, shrapnel: 4, upg: 135, tip: 'Proximity flak bursts tear into clusters of light enemies.' }
+      A: { branch: 'A', name: 'Overdrive Minigun', role: 'Accelerating Fire', color: '#38bdf8', dmg: 16, rate: 11, maxRate: 22, range: 3.3, upg: 135, power: 4, tip: 'Heat ramps rate up to 22/s on focused targets.' },
+      B: { branch: 'B', name: 'Flak Cannon', role: 'Burst Shrapnel AoE', color: '#0ea5e9', dmg: 36, rate: 3.2, range: 3.5, flakRadius: 1.3, shrapnel: 4, upg: 135, power: 4, tip: 'Proximity flak bursts tear into clusters of light enemies.' }
     }
   },
   plasma: {
-    id: 'plasma', name: 'Plasma Cannon', color: '#fb923c', cost: 110, key: '2', role: 'Splash / Armor shred',
+    id: 'plasma', name: 'Plasma Cannon', color: '#fb923c', cost: 110, key: '2', role: 'Splash / Armor shred', power: [5, 7, 9],
     tip: 'Slow AoE shells ignore armor and permanently shred it, so Gatlings and Railguns hit Brutes far harder afterward. Crushes Swarms.',
     tiers: [
-      { dmg: 42, rate: 0.8, range: 2.7, splash: 1.1, shred: 0.12, upg: 0 },
-      { dmg: 75, rate: 0.9, range: 3.0, splash: 1.3, shred: 0.18, upg: 100 }
+      { dmg: 42, rate: 0.8, range: 2.7, splash: 1.1, shred: 0.12, upg: 0, power: 5 },
+      { dmg: 75, rate: 0.9, range: 3.0, splash: 1.3, shred: 0.18, upg: 100, power: 7 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Nova Mortar', role: 'Nuclear Radiation', color: '#f97316', dmg: 140, rate: 0.55, range: 3.6, splash: 1.7, shred: 0.25, radDur: 4.5, radDps: 26, upg: 185, tip: 'Nuclear blast leaves radioactive pool burning and shredding enemies.' },
-      B: { branch: 'B', name: 'Acid Melter', role: 'Corrosive Beam', color: '#ea580c', dmg: 20, rate: 4.5, range: 3.2, splash: 0.7, shred: 0.35, acidAmp: 0.25, upg: 175, tip: 'Rapid acid spray melts armor to 0 and amplifies all damage taken.' }
+      A: { branch: 'A', name: 'Nova Mortar', role: 'Nuclear Radiation', color: '#f97316', dmg: 140, rate: 0.55, range: 3.6, splash: 1.7, shred: 0.25, radDur: 4.5, radDps: 26, upg: 185, power: 9, tip: 'Nuclear blast leaves radioactive pool burning and shredding enemies.' },
+      B: { branch: 'B', name: 'Acid Melter', role: 'Corrosive Beam', color: '#ea580c', dmg: 20, rate: 4.5, range: 3.2, splash: 0.7, shred: 0.35, acidAmp: 0.25, upg: 175, power: 9, tip: 'Rapid acid spray melts armor to 0 and amplifies all damage taken.' }
     }
   },
   cryo: {
-    id: 'cryo', name: 'Cryo Emitter', color: '#60a5fa', cost: 80, key: '3', role: 'Slow / Brittle',
+    id: 'cryo', name: 'Cryo Emitter', color: '#60a5fa', cost: 80, key: '3', role: 'Slow / Brittle', power: [4, 5, 7],
     tip: 'Pulses slow enemies 40% and make them brittle (+20% damage from everything). Tier III pulses periodically freeze enemies (bosses are immune).',
     tiers: [
-      { dmg: 3, rate: 0.8, range: 2.4, slow: 0.4, brittle: 0.2, freeze: 0, upg: 0 },
-      { dmg: 6, rate: 1.0, range: 2.7, slow: 0.45, brittle: 0.25, freeze: 0, upg: 75 }
+      { dmg: 3, rate: 0.8, range: 2.4, slow: 0.4, brittle: 0.2, freeze: 0, upg: 0, power: 4 },
+      { dmg: 6, rate: 1.0, range: 2.7, slow: 0.45, brittle: 0.25, freeze: 0, upg: 75, power: 5 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Absolute Zero', role: 'Deep Freeze Shatter', color: '#93c5fd', dmg: 14, rate: 0.75, range: 3.1, slow: 0.55, brittle: 0.35, freezeDur: 2.2, shatter: true, upg: 140, tip: 'Radial blast freezes all targets solid. Frozen units shatter on death.' },
-      B: { branch: 'B', name: 'Vortex Siphon', role: 'Gravity Anomaly', color: '#3b82f6', dmg: 16, rate: 1.3, range: 2.9, slow: 0.45, brittle: 0.25, pullDist: 26, upg: 140, tip: 'Gravitational pulse pulls enemies backwards toward the center.' }
+      A: { branch: 'A', name: 'Absolute Zero', role: 'Deep Freeze Shatter', color: '#93c5fd', dmg: 14, rate: 0.75, range: 3.1, slow: 0.55, brittle: 0.35, freezeDur: 2.2, shatter: true, upg: 140, power: 7, tip: 'Radial blast freezes all targets solid. Frozen units shatter on death.' },
+      B: { branch: 'B', name: 'Vortex Siphon', role: 'Gravity Anomaly', color: '#3b82f6', dmg: 16, rate: 1.3, range: 2.9, slow: 0.45, brittle: 0.25, pullDist: 26, upg: 140, power: 7, tip: 'Gravitational pulse pulls enemies backwards toward the center.' }
     }
   },
   tesla: {
-    id: 'tesla', name: 'Tesla Coil', color: '#facc15', cost: 130, key: '4', role: 'Chain lightning / Energy',
+    id: 'tesla', name: 'Tesla Coil', color: '#facc15', cost: 130, key: '4', role: 'Chain lightning / Energy', power: [6, 8, 10],
     tip: 'Lightning chains across up to 4 enemies. Energy damage ignores armor and deals bonus damage to shields, the answer to shielded waves and bosses.',
     tiers: [
-      { dmg: 16, rate: 1.4, range: 2.5, targets: 2, sm: 1.75, upg: 0 },
-      { dmg: 28, rate: 1.6, range: 2.8, targets: 3, sm: 2.0, upg: 110 }
+      { dmg: 16, rate: 1.4, range: 2.5, targets: 2, sm: 1.75, upg: 0, power: 6 },
+      { dmg: 28, rate: 1.6, range: 2.8, targets: 3, sm: 2.0, upg: 110, power: 8 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Grid Overcharger', role: 'Pylon Buff Conduit', color: '#eab308', dmg: 38, rate: 1.8, range: 3.2, targets: 4, sm: 2.2, buffAura: 0.35, upg: 195, tip: 'Chains lightning and grants +35% attack speed to adjacent friendly towers.' },
-      B: { branch: 'B', name: 'EMP Disrupter', role: 'Shield Stripper / Stun', color: '#ca8a04', dmg: 52, rate: 1.25, range: 3.0, targets: 3, sm: 3.5, empStun: 1.6, stripShield: true, upg: 195, tip: 'Instantly overloads enemy shields and disables healer/boss abilities.' }
+      A: { branch: 'A', name: 'Grid Overcharger', role: 'Pylon Buff Conduit', color: '#eab308', dmg: 38, rate: 1.8, range: 3.2, targets: 4, sm: 2.2, buffAura: 0.35, upg: 195, power: 10, tip: 'Chains lightning and grants +35% attack speed to adjacent friendly towers.' },
+      B: { branch: 'B', name: 'EMP Disrupter', role: 'Shield Stripper / Stun', color: '#ca8a04', dmg: 52, rate: 1.25, range: 3.0, targets: 3, sm: 3.5, empStun: 1.6, stripShield: true, upg: 195, power: 10, tip: 'Instantly overloads enemy shields and disables healer/boss abilities.' }
     }
   },
   rail: {
-    id: 'rail', name: 'Railgun Sniper', color: '#e11d48', cost: 180, key: '5', role: 'Pierce / Crit / Long range',
+    id: 'rail', name: 'Railgun Sniper', color: '#e11d48', cost: 180, key: '5', role: 'Pierce / Crit / Long range', power: [8, 11, 14],
     tip: 'Enormous range and critical hits; the slug pierces every enemy in a straight line. Place it on long straights to rake whole columns of Brutes.',
     tiers: [
-      { dmg: 100, rate: 0.4, range: 5.5, crit: 0.2, cm: 2.5, pierce: 3, upg: 0 },
-      { dmg: 180, rate: 0.45, range: 6.5, crit: 0.25, cm: 2.5, pierce: 5, upg: 155 }
+      { dmg: 100, rate: 0.4, range: 5.5, crit: 0.2, cm: 2.5, pierce: 3, upg: 0, power: 8 },
+      { dmg: 180, rate: 0.45, range: 6.5, crit: 0.25, cm: 2.5, pierce: 5, upg: 155, power: 11 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Orbital Lance', role: 'Continuous Thermal Beam', color: '#f43f5e', dmg: 95, rate: 3.0, range: 8.0, pierce: 99, beam: true, crit: 0.2, cm: 2.0, upg: 270, tip: 'Sustained thermal laser cuts through entire columns continuously.' },
-      B: { branch: 'B', name: 'Executioner', role: 'Anti-Boss Heavy Slug', color: '#be123c', dmg: 360, rate: 0.35, range: 8.5, crit: 0.35, cm: 3.5, pierce: 4, execThresh: 0.18, upg: 270, tip: 'Hyper-kinetic round executes non-boss enemies under 18% HP instantly.' }
+      A: { branch: 'A', name: 'Orbital Lance', role: 'Continuous Thermal Beam', color: '#f43f5e', dmg: 95, rate: 3.0, range: 8.0, pierce: 99, beam: true, crit: 0.2, cm: 2.0, upg: 270, power: 14, tip: 'Sustained thermal laser cuts through entire columns continuously.' },
+      B: { branch: 'B', name: 'Executioner', role: 'Anti-Boss Heavy Slug', color: '#be123c', dmg: 360, rate: 0.35, range: 8.5, crit: 0.35, cm: 3.5, pierce: 4, execThresh: 0.18, upg: 270, power: 14, tip: 'Hyper-kinetic round executes non-boss enemies under 18% HP instantly.' }
+    }
+  },
+  relay: {
+    id: 'relay', name: 'Fission Relay', color: '#10b981', cost: 90, key: '6', role: 'Infrastructure / +25 MW', power: [0, 0, 0],
+    tip: 'Auxiliary fission sub-reactor providing +25 MW to the grid. Click an active relay to trigger Sector Overdrive (+75% Fire Rate nearby).',
+    tiers: [
+      { dmg: 0, rate: 0, range: 2.2, upg: 0, powerSupply: 25, power: 0 },
+      { dmg: 0, rate: 0, range: 2.5, upg: 80, powerSupply: 40, power: 0 }
+    ],
+    branches: {
+      A: { branch: 'A', name: 'Fusion Reactor', role: '+60 MW Clean Power', color: '#059669', dmg: 0, rate: 0, range: 2.8, upg: 140, powerSupply: 60, power: 0, tip: 'Advanced fusion core providing massive clean power (+60 MW capacity).' },
+      B: { branch: 'B', name: 'Overcharge Pylon', role: 'Surge Emitter / +35 MW', color: '#34d399', dmg: 0, rate: 0, range: 3.0, upg: 140, powerSupply: 35, power: 0, overdriveBoost: 1.0, tip: 'Amplifies Sector Overdrive to +100% Fire Rate for nearby defenses.' }
     }
   }
 };
@@ -118,11 +130,12 @@ for (const k of Object.keys(TD)) TD[k].tiers[2] = TD[k].branches.A;
 
 function getTierData(t) {
   const def = TD[t.type];
+  if (!def) return { dmg: 0, rate: 0, range: 2.5 };
   if (t.branch && def.branches[t.branch]) return def.branches[t.branch];
   return def.tiers[t.tier] || def.tiers[0];
 }
 
-const TKEYS = ['gatling', 'plasma', 'cryo', 'tesla', 'rail'];
+const TKEYS = ['gatling', 'plasma', 'cryo', 'tesla', 'rail', 'relay'];
 const PRIOS = [['first', 'First'], ['last', 'Last'], ['strongest', 'Strongest'], ['weakest', 'Weakest']];
 
 /* ============================================================
@@ -163,11 +176,208 @@ const PERKS = {
   targeting_matrix: { id: 'targeting_matrix', name: 'Targeting Matrix', tag: 'ALL TOWERS', desc: 'All towers gain +15% attack range and +10% Critical Chance.' }
 };
 
+const COMMANDER_DOCTRINES = {
+  vanguard: {
+    id: 'vanguard',
+    name: 'Siege Vanguard',
+    tag: 'BALLISTICS & EXPLOSIVES',
+    color: '#f97316',
+    desc: 'Spesialis senjata kinetik berat, fragmentasi pecahan peluru, dan artileri pemusnah.',
+    passiveName: 'Shrapnel Cascade',
+    passiveDesc: 'Serangan kritis fisik (Gatling/Railgun) memicu serpihan fragmentasi ke musuh di sekitarnya.',
+    skills: ['orbital', 'minefield', 'sabot_rounds', 'carpet_bomb']
+  },
+  architect: {
+    id: 'architect',
+    name: 'Quantum Architect',
+    tag: 'ENERGY & GRID SYNERGY',
+    color: '#38bdf8',
+    desc: 'Spesialis manipulasi medan energi, sinergi listrik reaktor, dan relokasi menara seketika.',
+    passiveName: 'Superconductive Conduit',
+    passiveDesc: 'Seluruh menara energi saling terhubung; Reaksi Elemen menghasilkan +40% kerusakan.',
+    skills: ['swap_towers', 'overcharge', 'cryo_singularity', 'emp_nuke']
+  },
+  infiltrator: {
+    id: 'infiltrator',
+    name: 'Spec-Ops Infiltrator',
+    tag: 'TACTICS, SABOTAGE & ECO',
+    color: '#a855f7',
+    desc: 'Spesialis pengacau taktis, umpan hologram, peretasan musuh, dan pencairan pasar gelap.',
+    passiveName: 'Counter-Measures',
+    passiveDesc: 'Musuh siluman menerima 2.5x kerusakan saat diungkap. Kebocoran pertama di setiap wave dinetralkan drone pangkalan.',
+    skills: ['holo_beacon', 'cyber_hijack', 'caltrops', 'liquidation']
+  }
+};
+
 const COMMANDER_SKILLS = {
-  orbital: { id: 'orbital', name: 'Orbital Strike', key: 'Q', cd: 32, icon: 'target', desc: 'Call down a devastating kinetic strike on target area.' },
-  overcharge: { id: 'overcharge', name: 'Overcharge', key: 'W', cd: 25, icon: 'ff', desc: 'Supercharge a tower for 7s (+100% fire rate).' },
-  caltrops: { id: 'caltrops', name: 'Nanite Caltrops', key: 'E', cd: 18, icon: 'shield', desc: 'Deploy spike hazard on road (slows 60% and shreds).' },
-  emp_nuke: { id: 'emp_nuke', name: 'Tactical EMP Nuke', key: 'R', cd: 40, icon: 'spark', desc: 'Global EMP wave: clears enemy shields, stuns all enemies on screen for 3.0s.' }
+  // Vanguard skills
+  orbital: { id: 'orbital', name: 'Orbital Strike', key: 'Q', cd: 32, icon: 'target', desc: 'Dentuman meteor kinetik berdaya hancur tinggi dan mengungkap musuh siluman.' },
+  minefield: { id: 'minefield', name: 'Proximity Minefield', key: 'W', cd: 28, icon: 'spark', desc: 'Menebar 6 ranjau ledak di jalur tempur (180 damage fisik + 35% slow).' },
+  sabot_rounds: { id: 'sabot_rounds', name: 'AP Sabot Rounds', key: 'E', cd: 24, icon: 'target', desc: 'Menara fisik mengabaikan 75% armor musuh dan memperoleh +25% crit selama 6s.' },
+  carpet_bomb: { id: 'carpet_bomb', name: 'Carpet Bombing', key: 'R', cd: 50, icon: 'flag', desc: '5 pengeboman udara berturut-turut di sepanjang jalur lintasan utama (300 dmg tiap ledakan).' },
+  // Architect skills
+  swap_towers: { id: 'swap_towers', name: 'Spatial Shift', key: 'Q', cd: 14, icon: 'redo', desc: 'Menukar seketika posisi 2 menara kawan tanpa biaya jual/beli.' },
+  overcharge: { id: 'overcharge', name: 'Overcharge Surge', key: 'W', cd: 22, icon: 'ff', desc: 'Supercharge menara terpilih selama 8 detik (+120% attack rate, +20% jangkauan).' },
+  cryo_singularity: { id: 'cryo_singularity', name: 'Cryo Singularity', key: 'E', cd: 32, icon: 'spark', desc: 'Pusaran lubang es menarik seluruh musuh dalam radius 120px dan membekukan selama 3 detik.' },
+  emp_nuke: { id: 'emp_nuke', name: 'Tactical EMP Nuke', key: 'R', cd: 40, icon: 'spark', desc: 'Gelombang EMP global: menghapus perisai dan melumpuhkan sirkuit semua musuh selama 3.5 detik.' },
+  // Infiltrator skills
+  holo_beacon: { id: 'holo_beacon', name: 'Decoy Holo-Beacon', key: 'Q', cd: 30, icon: 'shield', desc: 'Umpan holografis (400 HP). Musuh berhenti maju dan memukuli umpan selama 5 detik.' },
+  cyber_hijack: { id: 'cyber_hijack', name: 'Cyber-Hijack', key: 'W', cd: 26, icon: 'spark', desc: 'Meretas 1 musuh non-boss menjadi kawan selama 6s untuk menembaki kawanannya.' },
+  caltrops: { id: 'caltrops', name: 'Nanite Caltrops', key: 'E', cd: 18, icon: 'shield', desc: 'Menebar kawat duri nanit di jalan (memperlambat 60% dan merontokkan armor).' },
+  liquidation: { id: 'liquidation', name: 'Market Liquidation', key: 'R', cd: 45, icon: 'coin', desc: 'Cairkan 25% investasi menara jadi emas instan + 100% peluang crit menara selama 8s.' }
+};
+
+/* ============================================================
+   MODULAR CHIPS (FASE 3)
+   ============================================================ */
+const MODULAR_CHIPS = {
+  prism_refractor: {
+    id: 'prism_refractor',
+    name: 'Prism Refractor',
+    target: 'rail',
+    icon: 'spark',
+    color: '#e0e7ff',
+    desc: 'Tembakan laser Railgun terbias jadi 3 cabang saat mengenai musuh berstatus beku atau memiliki perisai.'
+  },
+  cryo_igniter: {
+    id: 'cryo_igniter',
+    name: 'Cryo-Igniter Core',
+    target: 'plasma',
+    icon: 'spark',
+    color: '#93c5fd',
+    desc: 'Ledakan Plasma meninggalkan tanah es-api: menerapkan Slow 40% sekaligus Thermite Burn (3.5% Max HP/s).'
+  },
+  vampiric_siphon: {
+    id: 'vampiric_siphon',
+    name: 'Vampiric Siphon',
+    target: 'gatling',
+    icon: 'coin',
+    color: '#fbbf24',
+    desc: 'Setiap 8 musuh yang ditumbangkan oleh menara ini menyetor +1 Gold langsung ke kas markas.'
+  },
+  arc_resonance: {
+    id: 'arc_resonance',
+    name: 'Arc Resonance',
+    target: 'tesla',
+    icon: 'bolt',
+    color: '#a855f7',
+    desc: 'Pantulan petir Tesla antar menara kawan memantul ke musuh dengan +50% bonus kerusakan.'
+  },
+  executioner_nanites: {
+    id: 'executioner_nanites',
+    name: 'Executioner Nanites',
+    target: 'any',
+    icon: 'target',
+    color: '#f43f5e',
+    desc: 'Peluang 8% untuk langsung mengeksekusi musuh non-boss yang memiliki sisa HP di bawah 30%.'
+  },
+  feedback_chrono: {
+    id: 'feedback_chrono',
+    name: 'Feedback Chrono',
+    target: 'any',
+    icon: 'ff',
+    color: '#34d399',
+    desc: 'Setiap kali menara memicu Reaksi Elemen, cooldown seluruh skill Komandan terpotong 0.5 detik.'
+  }
+};
+
+/* ============================================================
+   LIVING HIVE MUTATIONS (FASE 3)
+   ============================================================ */
+const HIVE_MUTATIONS = {
+  chitin: {
+    id: 'chitin',
+    name: 'Chitin Armor Plating',
+    desc: 'Musuh melahirkan cangkang kitin tebal yang kebal dari 4 peluru balistik pertama.',
+    badge: 'CHITIN PLATING',
+    color: '#fb7185'
+  },
+  insulation: {
+    id: 'insulation',
+    name: 'Cryo-Thermal Insulation',
+    desc: 'Efek Cryo memicu lonjakan adrenalin musuh (+25% speed 1.5s) jika tidak dibekukan total.',
+    badge: 'CRYO INSULATION',
+    color: '#38bdf8'
+  },
+  rubber: {
+    id: 'rubber',
+    name: 'Grounding Rubber Hulls',
+    desc: 'Tubuh musuh dilapisi karet penangkal listrik; pantulan petir Tesla dibatasi maksimal 1 kali.',
+    badge: 'GROUNDED HULLS',
+    color: '#fbbf24'
+  },
+  scrambler: {
+    id: 'scrambler',
+    name: 'Scrambler Drones',
+    desc: 'Drone pengacau frekuensi udara memperlambat pemulihan cooldown skill Komandan sebesar -30%.',
+    badge: 'SCRAMBLER DRONES',
+    color: '#c084fc'
+  }
+};
+
+/* ============================================================
+   NAMED TITAN BOSSES (FASE 4)
+   ============================================================ */
+const TITAN_BOSSES = {
+  goliath: {
+    id: 'goliath',
+    name: 'Goliath Excavator',
+    wave: 10,
+    hpMult: 4.5,
+    armor: 0.55,
+    speed: 18,
+    color: '#f59e0b',
+    desc: 'Titan bor tektonik baja berat. Pada 50% HP melancarkan Tectonic Drill yang melumpuhkan 2 menara terdekat selama 6 detik.'
+  },
+  chronoweaver: {
+    id: 'chronoweaver',
+    name: 'Chrono-Weaver',
+    wave: 15,
+    hpMult: 4.0,
+    shieldPct: 0.35,
+    speed: 22,
+    color: '#38bdf8',
+    desc: 'Master manipulasi waktu. Melompati mundur 90px saat HP turun 25%, dan membangkitkan anak buah yang gugur di dalam gelembung waktu.'
+  },
+  swarm_mother: {
+    id: 'swarm_mother',
+    name: 'Apex Swarm-Mother',
+    wave: 20,
+    hpMult: 5.0,
+    armor: 0.30,
+    speed: 20,
+    color: '#ec4899',
+    desc: 'Ratu biomekanik kolosal. Memuntahkan telur mikro-swarm, melepaskan drone Kamikaze udara, dan berserk saat terluka kritis.'
+  }
+};
+
+/* ============================================================
+   HIGH-RISK DEFENSE CONTRACTS (FASE 4)
+   ============================================================ */
+const DEFENSE_CONTRACTS = {
+  blind_fire: {
+    id: 'blind_fire',
+    name: 'Operation Blind Fire',
+    desc: 'Lingkaran jangkauan menara dinonaktifkan dan kecepatan game terkunci 1x.',
+    rewardGold: 250,
+    rewardCores: 15,
+    rewardText: '+250 Gold, +15 Cores'
+  },
+  hyper_velocity: {
+    id: 'hyper_velocity',
+    name: 'Hyper-Velocity Influx',
+    desc: 'Musuh bergerak +60% lebih cepat, tetapi memiliki -30% Max HP.',
+    rewardChip: 'prism_refractor',
+    rewardGold: 120,
+    rewardText: '+1 Modular Chip, +120 Gold'
+  },
+  pacifist: {
+    id: 'pacifist',
+    name: 'Pacifist Perimeter',
+    desc: 'Selesaikan wave tanpa menggunakan kemampuan komandan aktif [Q, W, E, R].',
+    rewardInterest: 0.20,
+    rewardText: '+20% Gold Interest Bonus'
+  }
 };
 
 /* ============================================================
@@ -358,7 +568,16 @@ function buildSpawns(n) {
   if (n >= 7) { const st = 1 + Math.floor((n - 7) / 3); for (let i = 0; i < st; i++) add(4 + i * 2.2, 'stealth'); }
   if (n >= 9) { const cr = 1 + Math.floor((n - 9) / 5); for (let i = 0; i < cr; i++) add(5 + i * 4.5, 'carrier'); }
   if (n >= 11) { const br = 1 + Math.floor((n - 11) / 4); for (let i = 0; i < br; i++) add(2 + i * 3.2, 'breacher'); }
-  if (n % 5 === 0) { const bc = 1 + Math.floor(n / 20); for (let i = 0; i < bc; i++) add(6 + i * 9, 'boss'); }
+  if (n % 5 === 0) {
+    const bc = 1 + Math.floor(n / 20);
+    for (let i = 0; i < bc; i++) {
+      const sp = { t: 6 + i * 9, type: 'boss', affix: null, threat: null, pathId: 0 };
+      if (n === 10) sp.titanId = 'goliath';
+      else if (n === 15) sp.titanId = 'chronoweaver';
+      else if (n === 20) sp.titanId = 'swarm_mother';
+      ev.push(sp);
+    }
+  }
 
   // Adaptive Threat Director
   const threat = getThreatDirectorAnalysis();

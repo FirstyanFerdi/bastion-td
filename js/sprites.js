@@ -119,6 +119,38 @@ function drawTowerSprite(c, type, tier, o, time) {
       if (fl > 0) glow(c, L + 2, 0, 22, '#ffe4e6', fl);
       break;
     }
+    case 'relay': {
+      const isOverdrive = o.overdriveT > 0;
+      const isShutdown = o.shutdownT > 0;
+      // Hexagonal reactor base
+      c.fillStyle = isShutdown ? '#1e293b' : '#064e3b';
+      c.strokeStyle = isShutdown ? '#475569' : (isOverdrive ? '#34d399' : col);
+      c.lineWidth = isOverdrive ? 2.5 : 1.8;
+      c.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const q = i * TAU / 6 + (o.spin || 0) * 0.2;
+        const rx = Math.cos(q) * 16, ry = Math.sin(q) * 16;
+        i ? c.lineTo(rx, ry) : c.moveTo(rx, ry);
+      }
+      c.closePath(); c.fill(); c.stroke();
+
+      // Pulsing reactor core
+      const pulse = isShutdown ? 0.2 : (0.5 + 0.5 * Math.sin(time * (isOverdrive ? 18 : 6)));
+      const coreCol = isShutdown ? '#64748b' : (isOverdrive ? '#6ee7b7' : '#10b981');
+      glow(c, 0, 0, 14, coreCol, pulse);
+      c.fillStyle = coreCol;
+      c.beginPath(); c.arc(0, 0, 6.5, 0, TAU); c.fill();
+      c.fillStyle = '#ecfdf5';
+      c.beginPath(); c.arc(0, 0, 2.8, 0, TAU); c.fill();
+
+      // 3 Cooling rods
+      for (let i = 0; i < 3; i++) {
+        const q = i * TAU / 3 + (o.spin || 0) * 0.5;
+        c.fillStyle = isShutdown ? '#334155' : '#059669';
+        c.beginPath(); c.arc(Math.cos(q) * 11, Math.sin(q) * 11, 2.2, 0, TAU); c.fill();
+      }
+      break;
+    }
   }
   c.restore();
 }
@@ -235,6 +267,73 @@ function drawEnemy(c, e, time) {
       break;
     }
     case 'boss': {
+      if (e.titanId === 'goliath') {
+        // Heavy industrial caterpillar treads
+        c.fillStyle = '#1e293b';
+        rr(c, -r * 1.1, -r * 0.95, r * 2.2, r * 0.38, 4); c.fill();
+        rr(c, -r * 1.1, r * 0.57, r * 2.2, r * 0.38, 4); c.fill();
+        c.strokeStyle = '#475569'; c.lineWidth = 1.5;
+        rr(c, -r * 1.1, -r * 0.95, r * 2.2, r * 0.38, 4); c.stroke();
+        rr(c, -r * 1.1, r * 0.57, r * 2.2, r * 0.38, 4); c.stroke();
+        // Heavy armored chassis
+        c.fillStyle = '#78350f'; rr(c, -r * 0.9, -r * 0.65, r * 1.8, r * 1.3, 5); c.fill();
+        c.fillStyle = '#b45309'; rr(c, -r * 0.75, -r * 0.55, r * 1.5, r * 1.1, 4); c.fill();
+        c.strokeStyle = '#f59e0b'; c.lineWidth = 2; rr(c, -r * 0.75, -r * 0.55, r * 1.5, r * 1.1, 4); c.stroke();
+        // Conical spinning drill bit head on front
+        const dSpin = Math.sin(e.anim * 25) * 3;
+        c.fillStyle = '#475569'; c.beginPath();
+        c.moveTo(r * 0.75, -r * 0.45); c.lineTo(r * 1.5, dSpin); c.lineTo(r * 0.75, r * 0.45); c.closePath();
+        c.fill(); c.strokeStyle = '#94a3b8'; c.lineWidth = 1.5; c.stroke();
+        // Glowing orange rear fuel valve (weak point)
+        const rearPulse = 0.6 + 0.4 * Math.sin(time * 8);
+        glow(c, -r * 0.85, 0, 14, '#ea580c', rearPulse);
+        c.fillStyle = '#ea580c'; c.beginPath(); c.arc(-r * 0.85, 0, 5, 0, TAU); c.fill();
+        c.strokeStyle = '#fef08a'; c.lineWidth = 1.5; c.stroke();
+        break;
+      }
+      if (e.titanId === 'chronoweaver') {
+        c.rotate(-e.ang); // keep dials oriented
+        // Outer chrono-dial
+        c.save(); c.rotate(time * 1.2);
+        c.strokeStyle = '#38bdf8'; c.lineWidth = 2; c.setLineDash([6, 6]);
+        c.beginPath(); c.arc(0, 0, r * 1.2, 0, TAU); c.stroke();
+        c.restore();
+        // Inner reverse chrono-dial
+        c.save(); c.rotate(-time * 1.8);
+        c.strokeStyle = '#818cf8'; c.lineWidth = 1.5; c.setLineDash([4, 4]);
+        c.beginPath(); c.arc(0, 0, r * 0.85, 0, TAU); c.stroke();
+        c.restore();
+        // Central time singularity orb
+        const sp = 0.5 + 0.5 * Math.sin(time * 6);
+        glow(c, 0, 0, r * 0.7, '#38bdf8', 0.5 + 0.3 * sp);
+        c.fillStyle = '#0f172a'; c.beginPath(); c.arc(0, 0, r * 0.5, 0, TAU); c.fill();
+        c.strokeStyle = '#e0f2fe'; c.lineWidth = 2; c.stroke();
+        c.fillStyle = '#38bdf8'; c.beginPath(); c.arc(0, 0, r * 0.25, 0, TAU); c.fill();
+        break;
+      }
+      if (e.titanId === 'swarm_mother') {
+        // Segmented chitin abdomen
+        c.fillStyle = '#831843'; c.beginPath(); c.ellipse(-r * 0.4, 0, r * 0.9, r * 0.65, 0, 0, TAU); c.fill();
+        c.strokeStyle = '#ec4899'; c.lineWidth = 2; c.stroke();
+        // Biomorphic brood sacs
+        const broodPulse = 0.5 + 0.5 * Math.sin(e.anim * 8);
+        glow(c, -r * 0.5, 0, r * 0.5, '#ec4899', 0.4 + 0.3 * broodPulse);
+        // Head & Mandibles
+        c.fillStyle = '#500724'; c.beginPath(); c.arc(r * 0.6, 0, r * 0.45, 0, TAU); c.fill();
+        c.strokeStyle = '#f472b6'; c.lineWidth = 1.5; c.stroke();
+        // Mandibles
+        c.strokeStyle = '#fbcfe8'; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(r * 0.8, -r * 0.25); c.lineTo(r * 1.3, -r * 0.1); c.stroke();
+        c.beginPath(); c.moveTo(r * 0.8, r * 0.25); c.lineTo(r * 1.3, r * 0.1); c.stroke();
+        // Wings if damaged
+        if (e.hp <= e.maxHp * 0.6) {
+          const wFlap = Math.sin(e.anim * 20) * 0.3;
+          c.fillStyle = 'rgba(236,72,153,0.35)'; c.strokeStyle = '#ec4899'; c.lineWidth = 1.5;
+          c.beginPath(); c.moveTo(0, -r * 0.3); c.lineTo(-r * 0.8, -r * (1.6 + wFlap)); c.lineTo(r * 0.4, -r * 0.3); c.closePath(); c.fill(); c.stroke();
+          c.beginPath(); c.moveTo(0, r * 0.3); c.lineTo(-r * 0.8, r * (1.6 + wFlap)); c.lineTo(r * 0.4, r * 0.3); c.closePath(); c.fill(); c.stroke();
+        }
+        break;
+      }
       c.rotate(-e.ang + e.anim * 0.35);
       const spikes = 10;
       c.fillStyle = e.phase === 3 ? '#881337' : '#581c87'; c.strokeStyle = e.phase === 3 ? '#fb7185' : '#d8b4fe'; c.lineWidth = 2;
@@ -293,6 +392,22 @@ function drawEnemy(c, e, time) {
     const pct = clamp(e.shield / e.maxShield, 0, 1);
     c.fillStyle = 'rgba(34,211,238,' + (0.1 + 0.12 * pct) + ')'; c.beginPath(); c.arc(0, 0, r + 6, 0, TAU); c.fill();
     c.save(); c.rotate(e.anim * 1.5); c.strokeStyle = 'rgba(103,232,249,' + (0.5 + 0.4 * pct) + ')'; c.lineWidth = 2; c.setLineDash([7, 5]); c.beginPath(); c.arc(0, 0, r + 6, 0, TAU); c.stroke(); c.restore();
+  }
+  if (e.hijackedT > 0) {
+    c.save();
+    c.strokeStyle = '#38bdf8'; c.lineWidth = 2; c.setLineDash([5, 4]);
+    c.beginPath(); c.arc(0, 0, r + 8, 0, TAU); c.stroke();
+    glow(c, 0, 0, r + 12, '#38bdf8', 0.5);
+    c.restore();
+  }
+  if (e.chitinHits > 0) {
+    c.save();
+    c.strokeStyle = '#fb7185'; c.lineWidth = 2.5;
+    for (let k = 0; k < e.chitinHits; k++) {
+      const ca = k * TAU / 4;
+      c.beginPath(); c.arc(0, 0, r + 4, ca - 0.4, ca + 0.4); c.stroke();
+    }
+    c.restore();
   }
   c.restore();
 }

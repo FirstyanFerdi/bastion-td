@@ -404,9 +404,121 @@ Audit menyeluruh dari Fase 1 hingga Fase 5 dilakukan untuk membuktikan bahwa **s
 
 ---
 
-## 9. Status Akhir & Panduan Unggah ke GitHub
+## 9. Bastion TD 3.0: Mastery & Adaptive Evolution
 
-Seluruh kode dalam kondisi bersih, aman, bebas bug, bebas dependensi pihak ketiga, dan siap diunggah ke repositori GitHub.
+Pembaruan besar versi 3.0 mengintegrasikan 4 pilar mekanik tingkat lanjut yang dirancang untuk membawa kedalaman strategi, adaptabilitas AI, dan replayability tak terbatas ke Bastion TD:
+
+### 9.1 Tahap 1: Power Grid & Sub-Reactors (Jaringan Energi & Beban Menara)
+* **Kapasitas Dasar Daya:** Jaringan pangkalan memiliki kapasitas dasar $60\text{ MW}$.
+* **Konsumsi Daya Menara Berdasarkan Tier:**
+  * Gatling Turret: $[2, 3, 5]\text{ MW}$
+  * Plasma Cannon: $[5, 7, 9]\text{ MW}$
+  * Cryo Emitter: $[4, 6, 8]\text{ MW}$
+  * Tesla Coil: $[6, 8, 11]\text{ MW}$
+  * Railgun Sniper: $[8, 11, 15]\text{ MW}$
+* **Kondisi Brownout (Krisis Daya Listrik):**
+  * Ketika total konsumsi daya melampaui kapasitas $(\text{Used} > \text{Capacity})$, seluruh pertahanan memasuki status **Brownout**.
+  * Chip penunjuk daya di bar atas (`#chipPower`) berubah menjadi merah berkedip.
+  * Seluruh menara tempur menerima penalti laju tembak $-35\%$ ($0.65\times$ Attack Rate).
+* **Menara Baru: Fission Relay (Sub-Reaktor Terfusi):**
+  * **Fungsi:** Menyuplai energi bersih $+25\text{ MW}$ (Tier I) / $+45\text{ MW}$ (Tier II / Spesialisasi).
+  * **Kemampuan Interaktif: Sector Overdrive:**
+    * Tombol pemicu aktif di panel inspektur.
+    * Memberikan lonjakan daya instan selama 8 detik: seluruh menara dalam radius 2.4 tile memperoleh buff laju tembak $+75\%$ (Tier I) / $+100\%$ (Tier II) dan radius jangkauan $+25\%$.
+    * **Thermal Shutdown:** Setelah Overdrive usai, reaktor mengalami pendinginan paksa (*shutdown*) selama 6 detik (output suplai daya menjadi $0\text{ MW}$, menara mengeluarkan asap abu-abu sebelum kembali beroperasi normal).
+
+---
+
+### 9.2 Tahap 2: Commander Tactical Doctrines & 8 Skill Aktif Baru
+Pemain kini dapat memilih doktrin taktis komandan sebelum memulai ekspedisi di menu utama. Setiap doktrin memiliki efek pasif eksklusif dan 4 slot skill aktif yang terikat pada tombol $[Q, W, E, R]$:
+
+1. **Siege Vanguard (Balistik, Kinetik & Peledak Berat):**
+   * **Pasif (Shrapnel Cascade):** Serangan kritis fisik (Gatling/Railgun) memicu ledakan serpihan kinetik ke musuh dalam radius 35px ($45\%$ dari damage kritis).
+   * **Skill Aktif:**
+     * $[Q]$ **Orbital Strike:** Dentuman proyektil meteor satelit kinetik (420 base damage + skala HP).
+     * $[W]$ **Proximity Minefield:** Menebar 6 ranjau darat peledak di sepanjang jalur lintasan (180 damage fisik + efek slow 35%).
+     * $[E]$ **AP Sabot Rounds:** Amunisi penembus baja; menara fisik mengabaikan $75\%$ armor musuh dan memperoleh $+25\%$ crit chance selama 6 detik.
+     * $[R]$ **Carpet Bombing:** 5 pengeboman udara beruntun di sepanjang sektor lintasan tempur utama (300 plasma damage tiap ledakan).
+
+2. **Quantum Architect (Manipulasi Energi & Reaktor Jaringan):**
+   * **Pasif (Superconductive Conduit):** Seluruh menara energi saling terhubung; seluruh Reaksi Elemen menghasilkan $+40\%$ kerusakan tambahan.
+   * **Skill Aktif:**
+     * $[Q]$ **Spatial Shift (`swap_towers`):** Menukar posisi 2 menara kawan secara instan di kanvas tanpa biaya pembongkaran, mempertahankan tingkatan tier, spesialisasi cabang, dan chip yang terpasang.
+     * $[W]$ **Overcharge Surge:** Melipatgandakan kecepatan tembak menara terpilih selama 8 detik (+120% attack rate, +20% jangkauan).
+     * $[E]$ **Cryo Singularity:** Pusaran lubang es anomali yang menyedot seluruh musuh dalam radius 120px ke titik pusat dan membekukan selama 3 detik.
+     * $[R]$ **Tactical EMP Nuke:** Gelombang EMP global yang seketika menghapus perisai musuh dan melumpuhkan musuh non-boss selama 3.5 detik (1.2 detik pada boss).
+
+3. **Spec-Ops Infiltrator (Taktik Sabotase, Umpan & Ekonomi Pasar Gelap):**
+   * **Pasif (Counter-Measures):** Musuh siluman menerima $2.5\times$ kerusakan ketika status kamuflasenya terungkap. Kebocoran musuh pertama di setiap wave dinetralkan secara gratis oleh drone pertahanan markas.
+   * **Skill Aktif:**
+     * $[Q]$ **Decoy Holo-Beacon:** Memproyeksikan umpan holografis berkapasitas 400 HP di jalur musuh selama 6 detik. Musuh berhenti maju dan mengalihkan seluruh serangannya ke umpan.
+     * $[W]$ **Cyber-Hijack:** Meretas sistem kontrol 1 musuh non-boss terdekat selama 6 detik, mengubahnya menjadi kawan untuk menembaki gerombolan musuh lain.
+     * $[E]$ **Nanite Caltrops:** Menebar kawat duri nanit di jalur tempur yang memperlambat musuh $60\%$ dan mengikis armor.
+     * $[R]$ **Market Liquidation:** Mencairkan $25\%$ dari seluruh nilai investasi menara yang ada di medan pertempuran menjadi emas instan, serta memberikan $100\%$ jaminan Critical Hit ke semua menara selama 8 detik.
+
+---
+
+### 9.3 Tahap 3: Modular Chip Socketing & Living Hive Mutation AI
+
+#### A. Modular Chip Socketing
+Menara tempur yang telah ditingkatkan ke **Tier II** membuka slot soket komponen modular (1 slot pada Tier II, 2 slot pada Tier III). Pemain dapat memasang (*socket*) dan mencabut (*unsocket*) chip secara bebas di panel inspektur:
+1. `prism_refractor` (Khusus Railgun): Tembakan laser terbias menjadi 3 cabang berkas saat mengenai target berstatus beku atau memiliki perisai energi.
+2. `cryo_igniter` (Khusus Plasma): Ledakan proyektil plasma menciptakan genangan api-es (*frostfire puddle*), menerapkan Slow 40% sekaligus Thermite Burn (3.5% Max HP/s).
+3. `vampiric_siphon` (Khusus Gatling): Setiap 8 musuh yang ditumbangkan oleh menara ini menyetor langsung $+1\text{ Gold}$ ke kas markas.
+4. `arc_resonance` (Khusus Tesla): Sambaran petir antar menara kawan memantul ke musuh dengan $+50\%$ bonus kerusakan.
+5. `executioner_nanites` (Universal / Any Tower): Peluang $8\%$ untuk langsung mengeksekusi instan musuh non-boss yang memiliki sisa HP di bawah $30\%$.
+6. `feedback_chrono` (Universal / Any Tower): Setiap kali menara memicu Reaksi Elemen, cooldown seluruh skill Komandan berkurang $0.5$ detik.
+
+#### B. Living Hive Mutation AI (Evolusi Adaptif Musuh)
+Mulai Wave 6 ke atas, sistem AI melacak distribusi tipe damage yang diterima swarm (`G.damageTrack`). Jika salah satu jenis damage mendominasi lebih dari $45\%$, koloni Hive bermutasi di awal wave berikutnya untuk menangkal strategi dominan pemain:
+* **Chitin Armor Plating (Counter Fisik):** Jika damage fisik mendominasi, musuh melahirkan lapisan kitin pelindung yang kebal terhadap 4 tembakan balistik pertama.
+* **Cryo-Thermal Insulation (Counter Cryo):** Jika damage Cryo mendominasi, musuh yang terkena efek dingin memperoleh lonjakan adrenalin $(+25\%\text{ Speed})$ selama 1.5 detik jika tidak dibekukan total.
+* **Grounding Rubber Hulls (Counter Listrik):** Jika damage Tesla mendominasi, tubuh musuh dilapisi karet penangkal listrik yang membatasi pantulan petir maksimal 1 kali lompatan.
+* **Scrambler Drones (Counter Komandan):** Jika penggunaan skill aktif sangat tinggi, drone pengganggu sinyal di udara memperlambat pemulihan cooldown kemampuan komandan sebesar $-30\%$.
+
+---
+
+### 9.4 Tahap 4: Named Titan Boss Raids & High-Risk Defense Contracts
+
+#### A. Named Titan Boss Raids
+Menggantikan Boss generik pada milestone tertentu dengan Titan berkarakteristik dan fase tempur unik:
+1. **Wave 10 — Goliath Excavator:**
+   * Titan bor tektonik lapis baja berat ($4.5\times\text{ HP}$, $55\%\text{ Armor}$).
+   * **Tectonic Drill:** Pada $50\%\text{ HP}$, menghujamkan bor ke tanah pangkalan, memicu gempa bumi yang melumpuhkan 2 menara kawan terdekat selama 6 detik.
+   * **Rear Weak Point:** Titik lemah radiator di bagian belakang; tembakan yang mengenai dari arah belakang menghasilkan $2.0\times$ kerusakan.
+2. **Wave 15 — Chrono-Weaver:**
+   * Pengendali waktu biomekanik ($4.0\times\text{ HP}$, $35\%\text{ Shield}$).
+   * **Temporal Rewind:** Setiap kali kehilangan $25\%\text{ HP}$, Chrono-Weaver melompat mundur $90\text{px}$ di sepanjang lintasan.
+   * **Dilation Bubble & Echoes:** Memancarkan gelembung distorsi waktu yang memperlambat laju proyektil menara sebesar $-40\%$ dan membangkitkan musuh yang gugur sebagai *Chrono Echoes*.
+3. **Wave 20 — Apex Swarm-Mother:**
+   * Ratu koloni raksasa ($5.0\times\text{ HP}$, $30\%\text{ Armor}$).
+   * **Brood Spawn:** Memuntahkan telur-telur mikro-swarm yang langsung menetas di tengah jalur.
+   * **Kamikaze Flyers:** Melepaskan drone terbang berkecepatan tinggi yang menabrak menara terdekat untuk menyegelnya sementara.
+   * **Berserk Enrage:** Memasuki mode amuk pada $30\%\text{ HP}$, bergerak $+35\%$ lebih cepat dengan aura resistensi kerusakan.
+
+#### B. High-Risk Defense Contracts (Kontrak Pertahanan Opsional)
+Pada fase persiapan wave, pemain dapat menandatangani kontrak militer berisiko tinggi untuk meraih imbalan masif:
+* **Operation Blind Fire:** Seluruh lingkaran jangkauan menara disembunyikan dan kecepatan permainan dikunci pada $1\times$. *Imbalan:* $+250\text{ Gold}$ dan $+15\text{ Nanite Cores}$.
+* **Hyper-Velocity Influx:** Musuh bergerak $+60\%$ lebih cepat, namun memiliki $-30\%\text{ Max HP}$. *Imbalan:* $+1\text{ Modular Chip}$ dan $+120\text{ Gold}$.
+* **Pacifist Perimeter:** Bersihkan wave tanpa menggunakan satupun kemampuan komandan aktif $[Q, W, E, R]$. Jika kemampuan digunakan, kontrak langsung gagal. *Imbalan:* $+20\%$ bonus bunga tabungan emas akhir wave.
+
+---
+
+## 10. Verifikasi Kualitas & Hasil Pengujian Lengkap
+
+Seluruh komponen diuji secara mendalam melalui 8 suite pengujian otomatis mandiri:
+1. `tests/test_browser_init.js`: Inisialisasi siklus frame canvas, pemuatan aset sprite vektor, dan penanganan event browser (100% PASS).
+2. `tests/test_reactions.js`: 4 Reaksi Elemen Kimia/Fisika (Thermal Shockwave, Electrolytic Detonation, Thermite Incineration, Superconductor Surge) (100% PASS).
+3. `tests/test_champions.js`: Threat Director cerdas dan 4 afiks Elite Champions (Regenerator, Phase-Shifter, Avenger, Protective Dome) (100% PASS).
+4. `tests/test_workshop.js`: Sistem meta-progresi Nanite Cores, 4 upgrade Workshop HQ, dan Tactical EMP Nuke (100% PASS).
+5. `tests/test_map_dynamics.js`: Node Leyline interaktif, jalur flanking dinamis gelombang 8, dan barel Fuel Cell (100% PASS).
+6. `tests/test_ascension.js`: Seluruh 5 tingkat Ascension Protocol, multiplier Cores, dan mutator cuaca (100% PASS).
+7. `tests/test_mastery.js`: Pengujian komprehensif sistem 3.0: Power Grid, Brownout, Sector Overdrive, 3 Doktrin Komandan, 8 Skill Baru, Modular Chip Socketing, AI Living Hive Mutations, Titan Boss Raids, dan Kontrak Pertahanan (100% PASS).
+8. `tests/smoke.js`: Simulasi loop kontinu puluhan ribu frame tempur hingga wave akhir tanpa degradasi memori (100% PASS).
+
+---
+
+## 11. Panduan Unggah ke GitHub
 
 ### Perintah Unggah (Terminal Pengguna):
 ```powershell
@@ -416,8 +528,8 @@ git add .
 # 2. Periksa status
 git status
 
-# 3. Lakukan commit perubahan
-git commit -m "feat: complete tactical defense overhaul (phases 1-5), fix mechanics edge cases, and full test suite verification"
+# 3. Lakukan commit perubahan Bastion TD 3.0
+git commit -m "feat(v3.0): complete mastery update with power grid, commander doctrines, modular chips, hive AI, titan bosses, and defense contracts"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git
@@ -425,4 +537,5 @@ git remote add origin https://github.com/USERNAME/REPO_NAME.git
 # 5. Unggah ke branch main
 git push -u origin main
 ```
+
 

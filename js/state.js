@@ -32,24 +32,46 @@ function emptyGrid() { return Array.from({ length: ROWS }, () => Array(COLS).fil
 
 function hasPerk(id) { return G && G.perks && G.perks.indexOf(id) >= 0; }
 
+function initDoctrineSkills() {
+  if (!G) return;
+  G.skills = {};
+  if (typeof COMMANDER_SKILLS !== 'undefined') {
+    for (const skId of Object.keys(COMMANDER_SKILLS)) {
+      G.skills[skId] = { cd: 0 };
+    }
+  }
+}
+
 function newGame(keepSpeed) {
   const asc = (typeof SAVE !== 'undefined' && SAVE.ascension) || 0;
   const startLives = asc >= 2 ? 12 : 25;
   const speed = keepSpeed && G ? G.speed : 1;
   const startBonus = typeof getWorkshopLevel === 'function' ? getWorkshopLevel('treasury') * 50 : 0;
+  const docId = (typeof SAVE !== 'undefined' && SAVE.doctrine) || 'vanguard';
   G = {
     state: 'prep', lives: startLives, gold: 250 + startBonus, wave: 0, score: 0, time: 0, anim: 0, speed, paused: false,
     enemies: [], towers: [], proj: [], queue: [], grid: emptyGrid(),
     sel: null, placing: null, hover: null, mouse: { x: 0, y: 0, in: false },
     prepT: 20, shake: 0, dmgFlash: 0, baseFlash: 0, banner: null, endless: false, uiDirty: true, kills: 0,
-    perks: [], skills: { orbital: { cd: 0 }, overcharge: { cd: 0 }, caltrops: { cd: 0 }, emp_nuke: { cd: 0 } },
+    perks: [], skills: {},
     hazards: [], casting: null, mutator: null, drafting: null, leakedThisWave: 0, citadelCd: 0,
     fuelCells: [
       { id: 1, c: 6, row: 3, x: 6 * TILE + TILE / 2, y: 3 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false },
       { id: 2, c: 12, row: 7, x: 12 * TILE + TILE / 2, y: 7 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false }
     ],
-    ascension: asc
+    ascension: asc,
+    doctrine: docId,
+    damageTrack: { phys: 0, cryo: 0, energy: 0, plasma: 0, skills: 0 },
+    hiveMutation: null,
+    activeContract: null,
+    contractFailed: false,
+    infiltratorDroneUsed: -1,
+    sabotRoundsT: 0,
+    liquidationT: 0,
+    skillsUsedThisWave: 0,
+    swapSource: null
   };
+  initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
 }
 
@@ -116,8 +138,36 @@ function dealDamage(e, amount, type, src, opts) {
   if (e.dead) return 0;
   opts = opts || {};
   let a = amount;
+  if (G && G.damageTrack && G.damageTrack[type] !== undefined) {
+    G.damageTrack[type] += amount;
+  }
+
+  // Hive Mutation: Chitin Armor Plating (deflects first 4 physical hits)
+  if (e.chitinHits > 0 && type === 'phys') {
+    e.chitinHits--;
+    burst(e.x, e.y, 4, '#fb7185', 65, 0.25, 2.5, false);
+    addText(e.x, e.y - e.r - 18, 'CHITIN DEFLECT (' + e.chitinHits + ')', '#fb7185', 11);
+    return 0;
+  }
+
+  // Hive Mutation: Cryo-Thermal Insulation (Adrenaline speed surge on cold)
+  if (e.insulation && (type === 'cryo' || (src && src.type === 'cryo'))) {
+    if (e.stunT <= 0 && (!e.speedBoostT || e.speedBoostT <= 0)) {
+      e.speedBoostT = 1.5;
+      burst(e.x, e.y, 4, '#38bdf8', 60, 0.25, 2, false);
+      if (Math.random() < 0.25) addText(e.x, e.y - e.r - 16, 'ADRENALINE', '#38bdf8', 11);
+    }
+  }
+
+  // Commander Doctrine: Spec-Ops Infiltrator (Revealed stealth take 2.5x dmg)
+  if (G && G.doctrine === 'infiltrator' && e.type === 'stealth' && e.revealT > 0) {
+    a *= 2.5;
+  }
+
   if (type === 'phys') {
     let effArmor = Math.max(0, e.armor - e.shred);
+    // Commander Skill: AP Sabot Rounds ignores 75% armor
+    if (G && G.sabotRoundsT > 0) effArmor *= 0.25;
     if (src && src.type === 'gatling' && hasPerk('depleted_uranium')) effArmor = Math.max(0, effArmor - 0.25);
     a *= (1 - effArmor);
   }
@@ -126,6 +176,29 @@ function dealDamage(e, amount, type, src, opts) {
   if (G.mutator && G.mutator.id === 'ion_storm' && (type === 'energy' || (src && src.type === 'tesla'))) a *= 1.25;
   if (e.shield > 0 && opts.shieldMult) a *= opts.shieldMult;
   if (G.mutator && G.mutator.id === 'solar_flare' && (type === 'energy' || type === 'plasma' || (src && (src.type === 'tesla' || src.type === 'plasma')))) a *= 1.35;
+
+  // Commander Skill: Market Liquidation (100% crit chance)
+  if (G && G.liquidationT > 0) opts.crit = true;
+
+  // Named Titan Boss: Goliath Excavator rear weak point
+  if (e.titanId === 'goliath' && opts.fromAngle !== undefined) {
+    const diff = Math.abs(angDiff(opts.fromAngle, e.ang));
+    if (diff < Math.PI * 0.45) {
+      a *= 2.0;
+      opts.crit = true;
+      burst(e.x, e.y, 10, '#f59e0b', 140, 0.4, 3.5, true);
+      addText(e.x, e.y - e.r - 28, 'REAR WEAK POINT x2!', '#f59e0b', 15);
+    }
+  }
+
+  // Modular Chip: Executioner Nanites
+  if (src && src.chips && src.chips.includes('executioner_nanites') && e.type !== 'boss') {
+    if ((e.hp / e.maxHp) <= 0.30 && Math.random() < 0.08) {
+      a = e.hp + 999;
+      burst(e.x, e.y, 14, '#f43f5e', 140, 0.4, 3, true);
+      addText(e.x, e.y - e.r - 18, 'NANITE EXECUTE!', '#f43f5e', 14);
+    }
+  }
 
   // Adaptive Threat: Kinetic Deflector (-50% physical damage)
   if (e.threat === 'deflector' && type === 'phys') {
@@ -142,9 +215,11 @@ function dealDamage(e, amount, type, src, opts) {
   }
 
   // Elemental Combos & Reactions (Fase 1)
+  let reactionTriggered = false;
   if (!opts.noReaction && !opts.isReaction) {
     // 1. Thermal Shockwave (Cryo + Plasma)
     if (type === 'plasma' && (e.slowT > 0 || e.stunT > 0)) {
+      reactionTriggered = true;
       e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
       a *= 2.5;
       if (e.armor > 0) e.shred = Math.min(e.armor, e.shred + e.armor * 0.5);
@@ -162,6 +237,7 @@ function dealDamage(e, amount, type, src, opts) {
 
     // 2. Electrolytic Detonation (Acid + Tesla)
     if ((type === 'energy' || (src && src.type === 'tesla')) && e.acidT > 0) {
+      reactionTriggered = true;
       e.acidT = 0;
       addRing(e.x, e.y, 6, 65, 0.4, '#a3e635', 3);
       burst(e.x, e.y, 10, '#a3e635', 100, 0.4, 2.5, false);
@@ -179,6 +255,7 @@ function dealDamage(e, amount, type, src, opts) {
 
     // 3. Thermite Incineration (Bleed + Radiation/Plasma)
     if ((type === 'plasma' || (src && src.type === 'plasma')) && e.bleedT > 0) {
+      reactionTriggered = true;
       e.bleedT = 0;
       e.thermiteT = 3.0;
       e.thermiteDps = Math.max(e.thermiteDps || 0, e.maxHp * 0.035, 24);
@@ -189,6 +266,7 @@ function dealDamage(e, amount, type, src, opts) {
 
     // 4. Superconductor Surge (Cryo + Tesla)
     if (src && src.type === 'tesla' && (e.slowT > 0 || e.stunT > 0)) {
+      reactionTriggered = true;
       a *= 2.0;
       opts.crit = true;
       if (e.type !== 'boss') e.stunT = Math.max(e.stunT * 2, 1.2);
@@ -197,6 +275,32 @@ function dealDamage(e, amount, type, src, opts) {
       burst(e.x, e.y, 10, '#fef08a', 120, 0.4, 3, true);
       addText(e.x, e.y - e.r - 28, 'SUPERCONDUCTOR', '#fde047', 14);
       Sfx.play('reaction');
+    }
+  }
+
+  // Commander Doctrine: Quantum Architect (+40% reaction damage)
+  if (reactionTriggered && G && G.doctrine === 'architect') {
+    a *= 1.40;
+  }
+
+  // Modular Chip: Feedback Chrono (Reactions reduce cooldowns by 0.5s)
+  if (reactionTriggered && src && src.chips && src.chips.includes('feedback_chrono')) {
+    for (const k in G.skills) {
+      if (G.skills[k] && G.skills[k].cd > 0) {
+        G.skills[k].cd = Math.max(0, G.skills[k].cd - 0.5);
+      }
+    }
+    burst(src.x, src.y, 6, '#34d399', 60, 0.3, 2, true);
+  }
+
+  // Commander Doctrine: Siege Vanguard (Shrapnel Cascade on physical crits)
+  if (G && G.doctrine === 'vanguard' && type === 'phys' && opts.crit && !opts.noShrapnel && src && (src.type === 'gatling' || src.type === 'rail')) {
+    burst(e.x, e.y, 8, '#f59e0b', 110, 0.35, 2.5, true);
+    for (const o of G.enemies) {
+      if (o.dead || o === e) continue;
+      if ((o.x - e.x) ** 2 + (o.y - e.y) ** 2 <= 48 * 48) {
+        dealDamage(o, a * 0.35, 'phys', src, { noShrapnel: true, noReaction: true });
+      }
     }
   }
   e.flash = 1;
@@ -241,6 +345,29 @@ function killEnemy(e, src) {
     burst(e.x, e.y, e.type === 'swarm' ? 6 : 14, col, 130, 0.5, e.type === 'brute' || e.type === 'carrier' ? 4 : 3, e.type === 'swarm');
     if (e.type !== 'swarm') addText(e.x, e.y - e.r - 6, '+' + e.reward, '#fbbf24', 13);
     Sfx.play('kill');
+  }
+
+  // Modular Chip: Vampiric Siphon (+1 Gold every 8 kills)
+  if (src && src.chips && src.chips.includes('vampiric_siphon')) {
+    src.vampKills = (src.vampKills || 0) + 1;
+    if (src.vampKills % 8 === 0) {
+      G.gold += 1;
+      burst(src.x, src.y, 4, '#fbbf24', 50, 0.25, 2, true);
+      addText(src.x, src.y - 18, '+1G SIPHON', '#fbbf24', 12);
+    }
+  }
+
+  // Titan Boss: Chrono-Weaver Time Dilation Field (minions leave revival echoes)
+  if (e.type !== 'boss' && !e.isChronoClone) {
+    const cw = G.enemies.find(o => !o.dead && o.titanId === 'chronoweaver');
+    if (cw && Math.hypot(e.x - cw.x, e.y - cw.y) <= 110) {
+      G.hazards.push({
+        type: 'chrono_echo',
+        x: e.x, y: e.y, enemyType: e.type, d: e.d, pathId: e.pathId || 0,
+        timer: 3.5, life: 3.5, max: 3.5
+      });
+      addText(e.x, e.y - e.r - 20, 'TEMPORAL ECHO', '#38bdf8', 12);
+    }
   }
   // Champion Affix: Avenger trigger on nearby allies
   for (const o of G.enemies) {

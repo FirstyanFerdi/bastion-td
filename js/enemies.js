@@ -4,7 +4,7 @@
 /* ============================================================
    ENEMIES
    ============================================================ */
-function spawnEnemy(type, n, affix, threat, pathId) {
+function spawnEnemy(type, n, affix, threat, pathId, titanId) {
   const d = ED[type], sc = hpScale(n), hp = Math.round(d.hp * sc);
   let spd = d.speed * (1 + Math.min(0.25, n * 0.006)) * (type === 'swarm' ? rand(0.98, 1.02) : rand(0.94, 1.06));
   if (type === 'swarm' && G && G.ascension >= 3) spd *= 1.15;
@@ -26,8 +26,38 @@ function spawnEnemy(type, n, affix, threat, pathId) {
     phase: 1, mortarCd: 7,
     isChampion: isChamp, affix: affix || null, threat: threat || null,
     noDmgT: 0, phaseCd: 0, avengerStacks: 0, thawCd: rand(1.5, 2.5), artilleryCd: rand(4.0, 7.0),
-    pathId: pId
+    pathId: pId, titanId: titanId || null,
+    chitinHits: 0, insulation: false, grounded: false, speedBoostT: 0,
+    hijackedT: 0, hijackFireCd: 0
   };
+
+  // Named Titan Boss stats
+  if (titanId && typeof TITAN_BOSSES !== 'undefined' && TITAN_BOSSES[titanId]) {
+    const tb = TITAN_BOSSES[titanId];
+    e.hp = Math.round(hp * tb.hpMult);
+    e.maxHp = e.dispHp = e.hp;
+    if (tb.armor) e.armor = tb.armor;
+    if (tb.speed) { e.speed = tb.speed; e.curSpeed = tb.speed; }
+    if (tb.shieldPct) e.maxShield = e.shield = Math.round(e.hp * tb.shieldPct);
+    e.r = Math.round(d.r * 1.5);
+    e.reward = Math.round(e.reward * 2.5);
+    if (titanId === 'chronoweaver') e.rewindThresholds = [0.75, 0.50, 0.25];
+    if (titanId === 'swarm_mother') e.broodCd = 5.0;
+  }
+
+  // Living Hive Mutations
+  if (G && G.hiveMutation) {
+    if (G.hiveMutation === 'chitin' && type !== 'boss') e.chitinHits = 4;
+    if (G.hiveMutation === 'insulation') e.insulation = true;
+    if (G.hiveMutation === 'rubber') e.grounded = true;
+  }
+
+  // Defense Contract: Hyper-Velocity Influx
+  if (G && G.activeContract === 'hyper_velocity') {
+    e.speed *= 1.60; e.curSpeed = e.speed;
+    e.hp = Math.max(1, Math.round(e.hp * 0.70)); e.maxHp = e.dispHp = e.hp;
+  }
+
   if (type === 'swarm') { e.off = rand(-15, 15); e.d = -rand(0, 22); }
   if ((type === 'scout' || type === 'brute') && n >= 8 && Math.random() < Math.min(0.5, (n - 6) * 0.05)) {
     e.maxShield = e.shield = Math.round(hp * (type === 'brute' ? 0.35 : 0.5));
@@ -221,17 +251,149 @@ function updateEnemy(e, dt) {
         addText(e.x, e.y - e.r - 24, 'SHIELD', '#67e8f9', 15);
       }
     }
+
+    // Titan Boss: Goliath Excavator (Tectonic Drill Quake at 50% HP)
+    if (e.titanId === 'goliath' && !e.tectonicTriggered && e.hp <= e.maxHp * 0.50) {
+      e.tectonicTriggered = true;
+      shake(18);
+      Sfx.play('boom');
+      burst(e.x, e.y, 35, '#f59e0b', 200, 0.8, 5, true);
+      addText(e.x, e.y - e.r - 28, 'TECTONIC DRILL QUAKE!', '#f59e0b', 18);
+      const sorted = [...G.towers].sort((a, b) => Math.hypot(a.x - e.x, a.y - e.y) - Math.hypot(b.x - e.x, b.y - e.y));
+      for (let k = 0; k < Math.min(2, sorted.length); k++) {
+        sorted[k].empT = 6.0;
+        burst(sorted[k].x, sorted[k].y, 16, '#f59e0b', 120, 0.5, 3.5, false);
+        addText(sorted[k].x, sorted[k].y - 20, 'GROUND FAULT!', '#f59e0b', 14);
+      }
+    }
+
+    // Titan Boss: Chrono-Weaver (Temporal Rewind at 75%, 50%, 25% HP)
+    if (e.titanId === 'chronoweaver' && e.rewindThresholds && e.rewindThresholds.length > 0) {
+      if (e.hp <= e.maxHp * e.rewindThresholds[0]) {
+        e.rewindThresholds.shift();
+        e.d = Math.max(0, e.d - 90);
+        e.shield = Math.min(e.maxShield, e.shield + Math.round(e.maxHp * 0.15));
+        burst(e.x, e.y, 30, '#38bdf8', 180, 0.7, 4, true);
+        addRing(e.x, e.y, 10, 90, 0.6, '#38bdf8', 5);
+        shake(10);
+        Sfx.play('emp');
+        addText(e.x, e.y - e.r - 28, 'TEMPORAL REWIND!', '#38bdf8', 16);
+      }
+    }
+
+    // Titan Boss: Apex Swarm-Mother (Brood, Kamikaze Drones, Berserk)
+    if (e.titanId === 'swarm_mother' && !e.dead) {
+      e.broodCd = (e.broodCd || 5.0) - dt;
+      if (e.broodCd <= 0) {
+        e.broodCd = 5.0;
+        for (let k = 0; k < 3; k++) {
+          spawnEnemy('swarm', G.wave, null, null, e.pathId || 0);
+          const m = G.enemies[G.enemies.length - 1];
+          if (m) {
+            m.d = Math.max(0, e.d - 20 - k * 12);
+            m.hp = Math.round(m.hp * 1.2);
+            m.maxHp = m.hp;
+          }
+        }
+        burst(e.x, e.y, 18, '#ec4899', 120, 0.5, 3.5, false);
+        addText(e.x, e.y - e.r - 20, 'SWARM BROOD!', '#ec4899', 14);
+        Sfx.play('reaction');
+      }
+      if (!e.droneSpawned && e.hp <= e.maxHp * 0.60) {
+        e.droneSpawned = true;
+        shake(10);
+        addText(e.x, e.y - e.r - 28, 'KAMIKAZE DRONES LAUNCHED!', '#ef4444', 16);
+        for (let k = 0; k < 3; k++) {
+          G.hazards.push({
+            type: 'drone',
+            x: e.x + rand(-20, 20),
+            y: e.y + rand(-20, 20),
+            hp: 90 * hpScale(G.wave) * 0.35,
+            maxHp: 90 * hpScale(G.wave) * 0.35,
+            r: 12,
+            speed: 65,
+            life: 25,
+            anim: Math.random() * 5
+          });
+        }
+        Sfx.play('boom');
+      }
+      if (!e.berserkTriggered && e.hp <= e.maxHp * 0.25) {
+        e.berserkTriggered = true;
+        e.speed *= 1.40;
+        e.curSpeed = e.speed;
+        shake(14);
+        burst(e.x, e.y, 35, '#ec4899', 200, 0.8, 5, true);
+        addText(e.x, e.y - e.r - 32, 'APEX BERSERK!', '#ef4444', 20);
+        Sfx.play('boss');
+        if (typeof CHAMPION_AFFIXES !== 'undefined') {
+          const affKeys = Object.keys(CHAMPION_AFFIXES);
+          spawnEnemy('brute', G.wave, affKeys[0], null, e.pathId || 0);
+          const esc1 = G.enemies[G.enemies.length - 1];
+          if (esc1) { esc1.d = Math.max(0, e.d - 30); esc1.isEscort = true; }
+          spawnEnemy('scout', G.wave, affKeys[1], null, e.pathId || 0);
+          const esc2 = G.enemies[G.enemies.length - 1];
+          if (esc2) { esc2.d = Math.max(0, e.d - 50); esc2.isEscort = true; }
+        }
+      }
+    }
   }
   let sp = e.speed;
+  if (e.speedBoostT > 0) { e.speedBoostT -= dt; sp *= 1.25; }
   if (G.mutator && G.mutator.id === 'frenzy' && e.hp < e.maxHp * 0.4) sp *= 1.35;
   if (G.mutator && G.mutator.id === 'cryo_lockdown') sp *= 0.80;
   if (G.mutator && G.mutator.id === 'overcharge_anomaly') sp *= 1.25;
   if (e.stunT > 0) sp = 0; else if (e.slowT > 0) sp *= 1 - e.slowAmt;
+
+  // Cyber-Hijacked minion AI
+  if (e.hijackedT > 0) {
+    e.hijackedT -= dt;
+    sp = 0;
+    e.hijackFireCd = (e.hijackFireCd || 0.6) - dt;
+    if (e.hijackFireCd <= 0) {
+      e.hijackFireCd = 0.6;
+      let bestTar = null, bestDist = 120 * 120;
+      for (const o of G.enemies) {
+        if (o.dead || o === e || o.hijackedT > 0) continue;
+        const d = (o.x - e.x) ** 2 + (o.y - e.y) ** 2;
+        if (d < bestDist) { bestDist = d; bestTar = o; }
+      }
+      if (bestTar) {
+        addFx('tracer', e.x, e.y, bestTar.x, bestTar.y, 0.12, '#38bdf8', 2);
+        burst(bestTar.x, bestTar.y, 4, '#38bdf8', 80, 0.25, 2, true);
+        dealDamage(bestTar, 45 * hpScale(G.wave) * 0.3, 'energy', null);
+        Sfx.play('hit');
+      }
+    }
+    if (e.hijackedT <= 0) {
+      addText(e.x, e.y - e.r - 18, 'HIJACK EXPIRED', '#94a3b8', 12);
+    }
+  }
+
+  // Decoy Holo-Beacon
+  if (G.hazards) {
+    const beacon = G.hazards.find(h => h.type === 'beacon' && h.hp > 0 && Math.hypot(h.x - e.x, h.y - e.y) <= 85);
+    if (beacon && e.type !== 'boss') {
+      sp = 0;
+      beacon.hp -= 25 * dt;
+      if (Math.random() < 0.2) burst(beacon.x, beacon.y, 2, '#38bdf8', 40, 0.2, 2, true);
+    }
+  }
+
   e.curSpeed = sp;
   e.d += sp * dt;
   const plen = e.pathId === 1 ? PLEN_BREACH : PLEN;
   if (e.d >= plen) {
     e.dead = true;
+    // Doctrine Passive: Spec-Ops Infiltrator Counter-Measures (First leak intercepted)
+    if (G.doctrine === 'infiltrator' && G.infiltratorDroneUsed !== G.wave) {
+      G.infiltratorDroneUsed = G.wave;
+      burst(BASE_PT.x, BASE_PT.y, 20, '#a855f7', 150, 0.6, 3.5, true);
+      addRing(BASE_PT.x, BASE_PT.y, 10, 75, 0.5, '#a855f7', 4);
+      addText(BASE_PT.x - 20, BASE_PT.y - 32, 'INTERCEPT DRONE DEFLECT', '#a855f7', 15);
+      Sfx.play('shield');
+      return;
+    }
     // Perk: Emergency Forcefield
     if (hasPerk('energy_shield') && G.leakedThisWave < 2) {
       G.leakedThisWave++;

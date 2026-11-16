@@ -46,6 +46,17 @@ function init() {
   $('btnMute').addEventListener('click', toggleMute);
   $('btnCall').addEventListener('click', () => { Sfx.init(); Sfx.resume(); if (G.state === 'menu') return; Sfx.play('click'); callWave(); });
   $('dock').addEventListener('click', e => { const s = e.target.closest('.shop'); if (s) { Sfx.init(); Sfx.resume(); selectShop(s.dataset.type); } });
+  const wc = $('waveCard');
+  if (wc) {
+    wc.addEventListener('click', e => {
+      const b = e.target.closest('button[data-act="sign_contract"]');
+      if (b && b.dataset.contract) {
+        G.activeContract = b.dataset.contract;
+        G.uiDirty = true;
+        Sfx.play('upgrade');
+      }
+    });
+  }
   $('cmdSkills').addEventListener('click', e => {
     const b = e.target.closest('.cmd-btn');
     if (b && b.dataset.skill) triggerSkill(b.dataset.skill);
@@ -56,6 +67,17 @@ function init() {
     if (act === 'upgrade') upgradeTower(G.sel, b.dataset.branch);
     else if (act === 'sell') sellTower(G.sel);
     else if (act === 'prio') { G.sel.prio = b.dataset.prio; G.uiDirty = true; Sfx.play('click'); }
+    else if (act === 'overdrive') { triggerOverdrive(G.sel); }
+    else if (act === 'socket') {
+      if (typeof socketChip === 'function') socketChip(G.sel, b.dataset.chip);
+      G.uiDirty = true;
+      Sfx.play('upgrade');
+    }
+    else if (act === 'unsocket') {
+      if (typeof unsocketChip === 'function') unsocketChip(G.sel, Number(b.dataset.slot));
+      G.uiDirty = true;
+      Sfx.play('click');
+    }
   });
   if ($('btnWorkshop')) {
     $('btnWorkshop').addEventListener('click', () => {
@@ -85,6 +107,11 @@ function init() {
       showOverlay('menu');
       Sfx.play('click');
       return;
+    } else if (a === 'set_doctrine') {
+      setDoctrine(b.dataset.doc);
+      showOverlay('menu');
+      Sfx.play('click');
+      return;
     }
     if (a === 'start' || a === 'again') { begin(); Sfx.play('click'); }
     else if (a === 'endless') { showOverlay(null); G.endless = true; G.state = 'prep'; G.prepT = 15; G.uiDirty = true; wcWave = -1; Sfx.play('click'); }
@@ -97,4 +124,4 @@ function init() {
 init();
 
 // Small debug/test hook (harmless in production)
-window.__nb = { get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension };
+window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive };

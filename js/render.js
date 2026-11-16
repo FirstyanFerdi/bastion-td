@@ -256,8 +256,60 @@ function drawHazards(c, time) {
       c.strokeStyle = 'rgba(242,193,79,' + (0.6 * k) + ')'; c.lineWidth = 1.2;
       for (let i = 0; i < 5; i++) {
         const q = i * TAU / 5 + time * 0.4, sx = h.x + Math.cos(q) * 14, sy = h.y + Math.sin(q) * 14;
-        c.beginPath(); c.moveTo(sx - 3, sy); c.lineTo(sx + 3, sy); c.moveTo(sx, sy - 3); c.lineTo(sx, sy + 3); c.stroke();
+        c.beginPath(); c.moveTo(sx - 3, sy); c.lineTo(sx + 3, sy); c.moveTo(sx, sy - 3); c.lineTo(sx + 3, sy); c.stroke();
       }
+    } else if (h.type === 'frostfire') {
+      const k = clamp(h.life / h.max, 0, 1);
+      const g = c.createRadialGradient(h.x, h.y, 2, h.x, h.y, h.r);
+      g.addColorStop(0, 'rgba(56,189,248,' + (0.4 * k) + ')');
+      g.addColorStop(0.5, 'rgba(251,146,60,' + (0.3 * k) + ')');
+      g.addColorStop(1, 'rgba(56,189,248,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(h.x, h.y, h.r, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(147,197,253,' + (0.6 * k) + ')'; c.lineWidth = 1.5;
+      c.beginPath(); c.arc(h.x, h.y, h.r * 0.7, 0, TAU); c.stroke();
+    } else if (h.type === 'singularity') {
+      const k = clamp(h.life / h.max, 0, 1);
+      c.save(); c.translate(h.x, h.y); c.rotate(time * 3);
+      const g = c.createRadialGradient(0, 0, 4, 0, 0, h.r);
+      g.addColorStop(0, 'rgba(15,23,42,' + (0.9 * k) + ')');
+      g.addColorStop(0.4, 'rgba(56,189,248,' + (0.35 * k) + ')');
+      g.addColorStop(1, 'rgba(56,189,248,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, h.r, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(56,189,248,' + (0.7 * k) + ')'; c.lineWidth = 2; c.setLineDash([12, 8]);
+      c.beginPath(); c.arc(0, 0, h.r * 0.8, 0, TAU); c.stroke();
+      c.beginPath(); c.arc(0, 0, h.r * 0.4, 0, TAU); c.stroke();
+      c.restore();
+    } else if (h.type === 'mine') {
+      c.fillStyle = '#334155'; c.beginPath(); c.arc(h.x, h.y, 7, 0, TAU); c.fill();
+      c.strokeStyle = '#f59e0b'; c.lineWidth = 1.5; c.stroke();
+      const blink = Math.sin(time * 12) > 0;
+      c.fillStyle = blink ? '#ef4444' : '#7f1d1d'; c.beginPath(); c.arc(h.x, h.y, 2.5, 0, TAU); c.fill();
+    } else if (h.type === 'beacon') {
+      const hpPct = clamp(h.hp / h.maxHp, 0, 1);
+      c.fillStyle = '#1e293b'; c.fillRect(h.x - 8, h.y - 4, 16, 8);
+      c.strokeStyle = '#38bdf8'; c.lineWidth = 1.5; c.strokeRect(h.x - 8, h.y - 4, 16, 8);
+      const f = 0.5 + 0.5 * Math.sin(time * 15);
+      c.fillStyle = 'rgba(56,189,248,' + (0.2 + 0.15 * f) + ')';
+      c.beginPath(); c.moveTo(h.x - 12, h.y - 20); c.lineTo(h.x + 12, h.y - 20); c.lineTo(h.x + 6, h.y - 4); c.lineTo(h.x - 6, h.y - 4); c.closePath(); c.fill();
+      c.strokeStyle = '#38bdf8'; c.lineWidth = 1.2; c.stroke();
+      c.fillStyle = '#0f172a'; c.fillRect(h.x - 14, h.y - 28, 28, 4);
+      c.fillStyle = '#38bdf8'; c.fillRect(h.x - 14, h.y - 28, 28 * hpPct, 4);
+    } else if (h.type === 'drone') {
+      c.save(); c.translate(h.x, h.y);
+      const ang = Math.atan2(BASE_PT.y - h.y, BASE_PT.x - h.x);
+      c.rotate(ang);
+      c.fillStyle = '#ef4444'; c.beginPath(); c.moveTo(8, 0); c.lineTo(-6, -6); c.lineTo(-3, 0); c.lineTo(-6, 6); c.closePath(); c.fill();
+      c.strokeStyle = '#fee2e2'; c.lineWidth = 1.2; c.stroke();
+      glow(c, 0, 0, 10, '#ef4444', 0.6);
+      c.restore();
+    } else if (h.type === 'chrono_echo') {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 10);
+      c.strokeStyle = 'rgba(56,189,248,' + (0.4 + 0.4 * pulse) + ')';
+      c.lineWidth = 2; c.setLineDash([4, 4]);
+      c.beginPath(); c.arc(h.x, h.y, 14, 0, TAU); c.stroke(); c.setLineDash([]);
+      c.fillStyle = 'rgba(56,189,248,0.2)'; c.beginPath(); c.arc(h.x, h.y, 14, 0, TAU); c.fill();
+      c.fillStyle = '#38bdf8'; c.font = '700 9px ' + FONT; c.textAlign = 'center';
+      c.fillText(Math.ceil(h.timer) + 's', h.x, h.y - 18);
     }
   }
 }
@@ -286,6 +338,40 @@ function drawCasting(c, time) {
     c.beginPath(); c.arc(mx, my, 34, 0, TAU); c.fill(); c.stroke();
     c.fillStyle = '#e2a72e'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
     c.fillText('DEPLOY NANITE CALTROPS ON ROAD', mx, my - 42);
+  } else if (G.casting === 'minefield') {
+    c.strokeStyle = '#f59e0b'; c.lineWidth = 2; c.setLineDash([5, 5]);
+    c.beginPath(); c.arc(mx, my, 48, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = 'rgba(245,158,11,0.18)'; c.beginPath(); c.arc(mx, my, 48, 0, TAU); c.fill();
+    c.fillStyle = '#f59e0b'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
+    c.fillText('DEPLOY 6 PROXIMITY MINES', mx, my - 54);
+  } else if (G.casting === 'carpet_bomb') {
+    c.strokeStyle = '#ef4444'; c.lineWidth = 2.5; c.setLineDash([8, 6]);
+    c.beginPath(); c.arc(mx, my, 65, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = 'rgba(239,68,68,0.18)'; c.beginPath(); c.arc(mx, my, 65, 0, TAU); c.fill();
+    c.fillStyle = '#ef4444'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
+    c.fillText('HEAVY CARPET BOMBING INBOUND', mx, my - 72);
+  } else if (G.casting === 'swap_towers') {
+    c.strokeStyle = '#38bdf8'; c.lineWidth = 2; c.setLineDash([4, 4]);
+    c.beginPath(); c.arc(mx, my, 36, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = '#38bdf8'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
+    c.fillText(G.swapSource ? 'CLICK SECOND TOWER TO SWAP' : 'CLICK FIRST TOWER TO SWAP', mx, my - 44);
+  } else if (G.casting === 'cryo_singularity') {
+    c.strokeStyle = '#60a5fa'; c.lineWidth = 2; c.setLineDash([10, 6]);
+    c.beginPath(); c.arc(mx, my, 120, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = 'rgba(96,165,250,0.14)'; c.beginPath(); c.arc(mx, my, 120, 0, TAU); c.fill();
+    c.fillStyle = '#93c5fd'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
+    c.fillText('CRYO SINGULARITY (120px VORTEX)', mx, my - 128);
+  } else if (G.casting === 'holo_beacon') {
+    c.strokeStyle = '#38bdf8'; c.lineWidth = 2;
+    c.fillStyle = 'rgba(56,189,248,0.2)';
+    c.beginPath(); c.arc(mx, my, 28, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = '#38bdf8'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
+    c.fillText('DEPLOY DECOY HOLO-BEACON (400 HP)', mx, my - 36);
+  } else if (G.casting === 'cyber_hijack') {
+    c.strokeStyle = '#a855f7'; c.lineWidth = 2; c.setLineDash([6, 4]);
+    c.beginPath(); c.arc(mx, my, 42, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = '#a855f7'; c.font = '700 12px ' + FONT; c.textAlign = 'center';
+    c.fillText('TARGET HOSTILE TO CYBER-HIJACK', mx, my - 48);
   }
 }
 
@@ -330,7 +416,7 @@ function render() {
       c.strokeStyle = good ? '#34d399' : '#f43f5e'; c.lineWidth = 2; c.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
       const rg = def.tiers[0].range * (hasPerk('targeting_matrix') ? 1.15 : 1) * TILE, cx = x + TILE / 2, cy = y + TILE / 2;
       c.fillStyle = good ? 'rgba(52,211,153,0.07)' : 'rgba(244,63,94,0.07)'; c.strokeStyle = good ? 'rgba(52,211,153,0.6)' : 'rgba(244,63,94,0.5)';
-      c.lineWidth = 1.5; c.setLineDash([6, 5]); c.beginPath(); c.arc(cx, cy, rg, 0, TAU); c.fill(); c.stroke(); c.setLineDash([]);
+      c.lineWidth = 1.5; c.setLineDash([6, 5]); c.beginPath(); if (!G.activeContract || G.activeContract !== 'blind_fire') { c.arc(cx, cy, rg, 0, TAU); c.fill(); c.stroke(); } c.setLineDash([]);
       if (ok) { c.globalAlpha = 0.65; drawTowerSprite(c, G.placing, 0, { x: cx, y: cy, angle: -Math.PI / 4, spin: time, charge: 1 }, time); c.globalAlpha = 1; }
     } else if (G.grid[hr][hc] && G.grid[hr][hc] !== G.sel) {
       const t = G.grid[hr][hc], rg = getTierData(t).range * (hasPerk('targeting_matrix') ? 1.15 : 1) * TILE;
@@ -339,7 +425,7 @@ function render() {
       c.strokeStyle = 'rgba(255,255,255,0.22)'; c.lineWidth = 1; c.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
     }
   }
-  if (G.sel) {
+  if (G.sel && (!G.activeContract || G.activeContract !== 'blind_fire')) {
     const t = G.sel, def = TD[t.type], rg = getTierData(t).range * (hasPerk('targeting_matrix') ? 1.15 : 1) * TILE;
     c.fillStyle = 'rgba(255,255,255,0.045)'; c.strokeStyle = t.branch ? def.branches[t.branch].color : def.color; c.lineWidth = 1.5; c.setLineDash([8, 6]);
     c.beginPath(); c.arc(t.x, t.y, rg, 0, TAU); c.fill(); c.stroke(); c.setLineDash([]);

@@ -43,8 +43,38 @@ const SAVE = {
   cores: Store.get('nb_cores', 0),
   workshop: Store.get('nb_workshop', {}),
   ascension: Number(Store.get('nb_ascension', 0)),
-  maxAscension: Number(Store.get('nb_maxAscension', 0))
+  maxAscension: Number(Store.get('nb_maxAscension', 0)),
+  doctrine: Store.get('nb_doctrine', 'vanguard'),
+  chipsInventory: Store.get('nb_chips', {
+    prism_refractor: 2,
+    cryo_igniter: 2,
+    vampiric_siphon: 2,
+    arc_resonance: 2,
+    executioner_nanites: 2,
+    feedback_chrono: 2
+  })
 };
+
+function setDoctrine(id) {
+  if (typeof COMMANDER_DOCTRINES !== 'undefined' && !COMMANDER_DOCTRINES[id]) return false;
+  SAVE.doctrine = id;
+  Store.set('nb_doctrine', id);
+  if (typeof G !== 'undefined' && G && G.state === 'prep' && G.wave === 0) {
+    G.doctrine = id;
+    if (typeof initDoctrineSkills === 'function') initDoctrineSkills();
+  }
+  if (typeof refreshUI === 'function') refreshUI();
+  return true;
+}
+
+function addChip(id, count) {
+  count = count || 1;
+  SAVE.chipsInventory = SAVE.chipsInventory || {};
+  SAVE.chipsInventory[id] = (SAVE.chipsInventory[id] || 0) + count;
+  Store.set('nb_chips', SAVE.chipsInventory);
+  if (typeof refreshUI === 'function') refreshUI();
+  return SAVE.chipsInventory[id];
+}
 
 function addCores(n) {
   const mult = (typeof G !== 'undefined' && G && G.ascension > 0) ? (1 + G.ascension * 0.25) : 1;

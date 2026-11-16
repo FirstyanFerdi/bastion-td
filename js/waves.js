@@ -7,11 +7,29 @@
 function startWave() {
   G.wave++;
   const n = G.wave, ev = buildSpawns(n), base = G.time + 0.5;
-  for (const x of ev) G.queue.push({ at: base + x.t, type: x.type, wave: n, affix: x.affix, threat: x.threat, pathId: x.pathId || 0 });
+  for (const x of ev) G.queue.push({ at: base + x.t, type: x.type, wave: n, affix: x.affix, threat: x.threat, pathId: x.pathId || 0, titanId: x.titanId || null });
   G.queue.sort((a, b) => a.at - b.at);
   G.state = 'active';
   G.leakedThisWave = 0;
   if (n > SAVE.bestWave) { SAVE.bestWave = n; Store.set('nb_bestWave', n); addCores(3); }
+
+  // Living Hive Mutation Evaluation (wave >= 6)
+  if (n >= 6 && G.damageTrack) {
+    const dtTrack = G.damageTrack;
+    const totalDmg = (dtTrack.phys || 0) + (dtTrack.cryo || 0) + (dtTrack.energy || 0) + (dtTrack.plasma || 0) + 1;
+    const physRatio = (dtTrack.phys || 0) / totalDmg;
+    const cryoRatio = (dtTrack.cryo || 0) / totalDmg;
+    const energyRatio = ((dtTrack.energy || 0) + (dtTrack.plasma || 0)) / totalDmg;
+    if (physRatio >= 0.45) G.hiveMutation = 'chitin';
+    else if (cryoRatio >= 0.30) G.hiveMutation = 'insulation';
+    else if (energyRatio >= 0.45) G.hiveMutation = 'rubber';
+    else if ((G.skillsUsedThisWave || 0) >= 3) G.hiveMutation = 'scrambler';
+    else G.hiveMutation = null;
+  } else {
+    G.hiveMutation = null;
+  }
+  G.skillsUsedThisWave = 0;
+
   const boss = n % 5 === 0;
   if (n >= 7 && (n % 2 === 1 || boss)) {
     const mKeys = Object.keys(WAVE_MUTATORS);
@@ -21,10 +39,23 @@ function startWave() {
   }
   let sub = boss ? 'Heavy hostile signature detected' : '';
   if (G.mutator) sub = (sub ? sub + ' · ' : '') + 'MUTATOR: ' + G.mutator.name;
+  if (G.hiveMutation && typeof HIVE_MUTATIONS !== 'undefined' && HIVE_MUTATIONS[G.hiveMutation]) {
+    sub = (sub ? sub + ' · ' : '') + 'HIVE: ' + HIVE_MUTATIONS[G.hiveMutation].badge;
+  }
+
   if (n === 8) {
     shake(12);
     Sfx.play('boss');
     G.banner = { text: 'STRUCTURAL BREACH!', sub: 'Hostiles flanking from North Route!', t: 0, max: 3.5, color: '#ef4444' };
+  } else if (n === 10) {
+    shake(14); Sfx.play('boss');
+    G.banner = { text: 'TITAN RAID: GOLIATH EXCAVATOR', sub: 'Tectonic drilling titan! Disables defenses at 50% HP!', t: 0, max: 4.0, color: '#f59e0b' };
+  } else if (n === 15) {
+    shake(14); Sfx.play('boss');
+    G.banner = { text: 'TITAN RAID: CHRONO-WEAVER', sub: 'Temporal Anomaly! Reverses path and resurrects fallen hostiles!', t: 0, max: 4.0, color: '#38bdf8' };
+  } else if (n === 20) {
+    shake(16); Sfx.play('boss');
+    G.banner = { text: 'TITAN RAID: APEX SWARM-MOTHER', sub: 'Colossal Hive Queen! Unleashes kamikaze drones & brood!', t: 0, max: 4.5, color: '#ec4899' };
   } else {
     G.banner = { text: boss ? 'BOSS WAVE ' + n : 'WAVE ' + n, sub, t: 0, max: 2.6, color: boss ? '#d9534f' : (G.mutator ? '#f59e0b' : '#e2a72e') };
   }
@@ -59,6 +90,30 @@ function onWaveClear() {
   const earnedCores = addCores(1);
   addText(W / 2, 142, '+' + earnedCores + ' Nanite Core' + (earnedCores > 1 ? 's' : ''), '#38bdf8', 14);
   Sfx.play('coin');
+
+  // Defense Contract evaluation & reward
+  if (G.activeContract && typeof DEFENSE_CONTRACTS !== 'undefined') {
+    const cId = G.activeContract;
+    const cDef = DEFENSE_CONTRACTS[cId];
+    if (cId === 'pacifist' && G.contractFailed) {
+      addText(W / 2, 168, 'CONTRACT FAILED: Powers Were Used!', '#fb7185', 16);
+    } else {
+      addText(W / 2, 168, 'CONTRACT FULFILLED! ' + cDef.rewardText, '#34d399', 18);
+      burst(W / 2, 168, 30, '#34d399', 180, 0.7, 4, true);
+      if (cDef.rewardGold) G.gold += cDef.rewardGold;
+      if (cDef.rewardCores) addCores(cDef.rewardCores);
+      if (cDef.rewardChip && typeof addChip === 'function') addChip(cDef.rewardChip, 1);
+      if (cDef.rewardInterest) {
+        const extraInt = Math.floor(G.gold * cDef.rewardInterest);
+        G.gold += extraInt;
+        addText(W / 2, 192, 'CONTRACT BONUS INTEREST +' + extraInt, '#fbbf24', 15);
+      }
+      Sfx.play('victory');
+    }
+    G.activeContract = null;
+    G.contractFailed = false;
+  }
+
   saveBest();
 
   // Boss Wave Roguelite Tech Requisition Draft
@@ -116,12 +171,15 @@ function update(dt) {
   G.time += dt; G.anim += dt;
 
   // Commander skills cooldown
-  for (const k of ['orbital', 'overcharge', 'caltrops', 'emp_nuke']) {
+  const scramblerSlow = (G.hiveMutation === 'scrambler') ? 0.70 : 1.0;
+  for (const k in G.skills) {
     if (G.skills[k] && G.skills[k].cd > 0) {
-      const cdRate = hasPerk('orbital_salvo') && k === 'orbital' ? 1.5 : 1;
+      const cdRate = (hasPerk('orbital_salvo') && k === 'orbital' ? 1.5 : 1) * scramblerSlow;
       G.skills[k].cd = Math.max(0, G.skills[k].cd - dt * cdRate);
     }
   }
+  if (G.sabotRoundsT > 0) G.sabotRoundsT = Math.max(0, G.sabotRoundsT - dt);
+  if (G.liquidationT > 0) G.liquidationT = Math.max(0, G.liquidationT - dt);
 
   // Workshop HQ: Citadel Auto-Turret
   const citLv = typeof getWorkshopLevel === 'function' ? getWorkshopLevel('citadel_turret') : 0;
@@ -168,11 +226,82 @@ function update(dt) {
           if (e.armor > 0) e.shred = Math.min(e.armor, e.shred + 0.18 * dt);
         }
       }
+    } else if (h.type === 'frostfire') {
+      for (const e of G.enemies) {
+        if (e.dead) continue;
+        if ((e.x - h.x) ** 2 + (e.y - h.y) ** 2 <= (h.r + e.r) ** 2) {
+          e.slowAmt = Math.max(e.slowAmt, h.slow || 0.40); e.slowT = 1.0;
+          e.thermiteT = 1.5; e.thermiteDps = Math.max(e.thermiteDps || 0, e.maxHp * 0.035, 24);
+          dealDamage(e, h.dps * dt, 'plasma', h.src, { noReaction: true });
+        }
+      }
+    } else if (h.type === 'singularity') {
+      for (const e of G.enemies) {
+        if (e.dead) continue;
+        const d = Math.hypot(e.x - h.x, e.y - h.y);
+        if (d <= h.r + e.r) {
+          if (e.type !== 'boss') {
+            e.d = Math.max(0, e.d - 90 * dt);
+            e.slowAmt = 0.8; e.slowT = 1.2;
+          }
+          dealDamage(e, 26 * dt, 'energy', null);
+        }
+      }
+    } else if (h.type === 'mine') {
+      for (const e of G.enemies) {
+        if (e.dead) continue;
+        if (Math.hypot(e.x - h.x, e.y - h.y) <= (h.r + e.r)) {
+          h.life = 0;
+          burst(h.x, h.y, 25, '#f59e0b', 160, 0.6, 4, true);
+          addRing(h.x, h.y, 10, 50, 0.45, '#f59e0b', 4);
+          shake(8); Sfx.play('boom');
+          addText(h.x, h.y - 18, 'PROXIMITY BLAST!', '#f59e0b', 14);
+          for (const o of G.enemies) {
+            if (o.dead) continue;
+            if (Math.hypot(o.x - h.x, o.y - h.y) <= 55 + o.r) {
+              dealDamage(o, 180 * hpScale(G.wave) * 0.4, 'phys', null);
+              o.slowAmt = 0.35; o.slowT = 3.0;
+            }
+          }
+          break;
+        }
+      }
+    } else if (h.type === 'drone') {
+      const dx = BASE_PT.x - h.x, dy = BASE_PT.y - h.y, dist = Math.hypot(dx, dy);
+      const step = h.speed * dt;
+      if (dist <= step || dist <= 14) {
+        h.life = 0;
+        G.lives -= 1;
+        shake(10);
+        burst(BASE_PT.x, BASE_PT.y, 20, '#ef4444', 160, 0.6, 4, false);
+        addText(BASE_PT.x - 20, BASE_PT.y - 30, '-1 LIFE (AERIAL DRONE)', '#fb7185', 18);
+        Sfx.play('leak');
+        if (G.lives <= 0) { G.lives = 0; endGame(false); }
+      } else {
+        h.x += (dx / dist) * step;
+        h.y += (dy / dist) * step;
+      }
+    } else if (h.type === 'chrono_echo') {
+      h.timer -= dt;
+      if (h.timer <= 0) {
+        h.life = 0;
+        spawnEnemy(h.enemyType, G.wave, null, null, h.pathId || 0);
+        const revived = G.enemies[G.enemies.length - 1];
+        if (revived) {
+          revived.d = h.d;
+          revived.hp = Math.round(revived.maxHp * 0.35);
+          revived.dispHp = revived.hp;
+          revived.isChronoClone = true;
+          burst(revived.x, revived.y, 16, '#38bdf8', 120, 0.5, 3, true);
+          addText(revived.x, revived.y - revived.r - 20, 'REVIVED', '#38bdf8', 14);
+          Sfx.play('emp');
+        }
+      }
     }
     if (h.life <= 0) G.hazards.splice(i, 1);
   }
 
-  while (G.queue.length && G.queue[0].at <= G.time) { const q = G.queue.shift(); spawnEnemy(q.type, q.wave, q.affix, q.threat, q.pathId); }
+  while (G.queue.length && G.queue[0].at <= G.time) { const q = G.queue.shift(); spawnEnemy(q.type, q.wave, q.affix, q.threat, q.pathId, q.titanId); }
   for (let i = 0; i < G.enemies.length; i++) updateEnemy(G.enemies[i], dt);
   let w = 0;
   for (let i = 0; i < G.enemies.length; i++) { const e = G.enemies[i]; if (!e.dead) G.enemies[w++] = e; }

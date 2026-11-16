@@ -4,7 +4,11 @@
 /* ============================================================
    INPUT
    ============================================================ */
-function setSpeed(s) { G.speed = s; Sfx.play('click'); }
+function setSpeed(s) {
+  if (G && G.activeContract === 'blind_fire') s = 1;
+  G.speed = s;
+  Sfx.play('click');
+}
 function togglePause() {
   if (G.state !== 'prep' && G.state !== 'active') return;
   G.paused = !G.paused; Sfx.play('click');
@@ -28,13 +32,23 @@ function onPointerMove(e) {
 }
 function triggerSkill(id) {
   if (!G || (G.state !== 'prep' && G.state !== 'active') || G.drafting) return;
+  if (!G.skills) G.skills = {};
+  if (!G.skills[id]) G.skills[id] = { cd: 0 };
   const sk = G.skills[id];
-  if (!sk || sk.cd > 0) { Sfx.play('error'); return; }
+  if (sk.cd > 0) { Sfx.play('error'); return; }
+
+  // Check Pacifist Defense Contract
+  if (G.activeContract === 'pacifist') {
+    G.contractFailed = true;
+    addText(W / 2, 70, 'PACIFIST CONTRACT BREACHED!', '#fb7185', 14);
+  }
+  G.skillsUsedThisWave = (G.skillsUsedThisWave || 0) + 1;
+
+  // Instant Cast Skills:
   if (id === 'emp_nuke') {
     sk.cd = COMMANDER_SKILLS.emp_nuke.cd;
     addRing(W / 2, H / 2, 20, Math.max(W, H), 0.85, '#38bdf8', 6);
-    shake(16);
-    Sfx.play('emp');
+    shake(16); Sfx.play('emp');
     addText(W / 2, 90, 'TACTICAL EMP DETONATED', '#38bdf8', 22);
     for (const en of G.enemies) {
       if (en.dead) continue;
@@ -44,12 +58,37 @@ function triggerSkill(id) {
       burst(en.x, en.y, 8, '#38bdf8', 90, 0.45, 2.5, true);
       addText(en.x, en.y - en.r - 20, 'EMP SHUTDOWN', '#38bdf8', 13);
     }
-    G.casting = null;
-    G.uiDirty = true;
+    G.casting = null; G.uiDirty = true;
     return;
   }
-  if (G.casting === id) { G.casting = null; G.uiDirty = true; Sfx.play('click'); return; }
-  G.casting = id; G.placing = null; G.sel = null; G.uiDirty = true;
+
+  if (id === 'sabot_rounds') {
+    sk.cd = COMMANDER_SKILLS.sabot_rounds.cd;
+    G.sabotRoundsT = 6.0;
+    shake(8); Sfx.play('upgrade');
+    addRing(W / 2, H / 2, 20, 300, 0.6, '#f97316', 5);
+    burst(W / 2, 90, 25, '#f97316', 150, 0.5, 3.5, true);
+    addText(W / 2, 90, 'AP SABOT ROUNDS ARMED!', '#f97316', 20);
+    G.casting = null; G.uiDirty = true;
+    return;
+  }
+
+  if (id === 'liquidation') {
+    sk.cd = COMMANDER_SKILLS.liquidation.cd;
+    let sum = 0;
+    for (const t of G.towers) sum += (t.invested || 0);
+    const cash = Math.max(150, Math.round(sum * 0.25));
+    G.gold += cash;
+    G.liquidationT = 8.0;
+    shake(10); Sfx.play('coin');
+    burst(W / 2, 90, 30, '#fbbf24', 160, 0.6, 4, true);
+    addText(W / 2, 90, 'LIQUIDATION +' + cash + 'G (100% CRITS!)', '#fbbf24', 20);
+    G.casting = null; G.uiDirty = true;
+    return;
+  }
+
+  if (G.casting === id) { G.casting = null; G.swapSource = null; G.uiDirty = true; Sfx.play('click'); return; }
+  G.casting = id; G.placing = null; G.sel = null; G.swapSource = null; G.uiDirty = true;
   Sfx.play('click');
 }
 
@@ -57,7 +96,7 @@ function onPointerDown(e) {
   if (!G || (G.state !== 'prep' && G.state !== 'active') || G.drafting) return;
   Sfx.init(); Sfx.resume();
   onPointerMove(e);
-  if (e.button === 2) { G.placing = null; G.sel = null; G.casting = null; G.uiDirty = true; return; }
+  if (e.button === 2) { G.placing = null; G.sel = null; G.casting = null; G.swapSource = null; G.uiDirty = true; return; }
 
   // Commander Casting Handle
   if (G.casting) {
@@ -78,6 +117,59 @@ function onPointerDown(e) {
       G.skills.orbital.cd = COMMANDER_SKILLS.orbital.cd;
       G.casting = null; G.uiDirty = true;
       return;
+    } else if (G.casting === 'minefield') {
+      for (let m = 0; m < 6; m++) {
+        const tOff = (m - 2.5) * 22;
+        const mx = clamp(p.x + rand(-20, 20) + tOff, 30, W - 30);
+        const my = clamp(p.y + rand(-20, 20), 30, H - 30);
+        G.hazards.push({ type: 'mine', x: mx, y: my, r: 16, life: 30 });
+        burst(mx, my, 4, '#f59e0b', 50, 0.3, 2, true);
+      }
+      shake(6); Sfx.play('upgrade');
+      addText(p.x, p.y - 20, 'MINEFIELD DEPLOYED', '#f59e0b', 15);
+      G.skills.minefield.cd = COMMANDER_SKILLS.minefield.cd;
+      G.casting = null; G.uiDirty = true;
+      return;
+    } else if (G.casting === 'carpet_bomb') {
+      shake(14); Sfx.play('boom');
+      for (let b = 0; b < 5; b++) {
+        const bx = clamp(p.x + (b - 2) * 55, 30, W - 30);
+        const by = p.y + rand(-15, 15);
+        burst(bx, by, 30, '#f97316', 180, 0.7, 4, true);
+        addRing(bx, by, 10, 65, 0.5, '#ef4444', 4);
+        for (const foe of G.enemies) {
+          if (foe.dead) continue;
+          if (Math.hypot(foe.x - bx, foe.y - by) <= 65 + foe.r) {
+            dealDamage(foe, 300 * hpScale(G.wave) * 0.45, 'plasma', null);
+          }
+        }
+      }
+      addText(p.x, p.y - 30, 'CARPET BOMBING INBOUND', '#ef4444', 18);
+      G.skills.carpet_bomb.cd = COMMANDER_SKILLS.carpet_bomb.cd;
+      G.casting = null; G.uiDirty = true;
+      return;
+    } else if (G.casting === 'swap_towers') {
+      let clickedTower = null, bestD = 48 * 48;
+      for (const t of G.towers) {
+        const d = (t.x - p.x) ** 2 + (t.y - p.y) ** 2;
+        if (d < bestD) { bestD = d; clickedTower = t; }
+      }
+      if (!clickedTower) { Sfx.play('error'); return; }
+      if (!G.swapSource) {
+        G.swapSource = clickedTower;
+        burst(clickedTower.x, clickedTower.y, 10, '#38bdf8', 80, 0.35, 2.5, true);
+        addText(clickedTower.x, clickedTower.y - 20, 'SELECT TARGET TOWER', '#38bdf8', 12);
+        Sfx.play('click');
+        return;
+      } else {
+        if (G.swapSource === clickedTower) {
+          G.swapSource = null; G.casting = null; G.uiDirty = true; Sfx.play('click'); return;
+        }
+        swapTowers(G.swapSource, clickedTower);
+        G.skills.swap_towers.cd = COMMANDER_SKILLS.swap_towers.cd;
+        G.swapSource = null; G.casting = null; G.uiDirty = true;
+        return;
+      }
     } else if (G.casting === 'overcharge') {
       let bestT = null, bestD = 48 * 48;
       for (const t of G.towers) {
@@ -85,7 +177,7 @@ function onPointerDown(e) {
         if (d < bestD) { bestD = d; bestT = t; }
       }
       if (bestT) {
-        bestT.overchargeT = 7.0;
+        bestT.overchargeT = 8.0;
         burst(bestT.x, bestT.y, 25, '#38bdf8', 140, 0.6, 3, false);
         addRing(bestT.x, bestT.y, 10, 50, 0.5, '#38bdf8', 4);
         addText(bestT.x, bestT.y - 20, 'OVERCHARGED!', '#38bdf8', 16);
@@ -96,6 +188,48 @@ function onPointerDown(e) {
       } else {
         Sfx.play('error'); return;
       }
+    } else if (G.casting === 'cryo_singularity') {
+      G.hazards.push({ type: 'singularity', x: p.x, y: p.y, r: 120, life: 3.5, max: 3.5 });
+      burst(p.x, p.y, 35, '#38bdf8', 150, 0.7, 4, true);
+      addRing(p.x, p.y, 15, 120, 0.7, '#60a5fa', 5);
+      shake(10); Sfx.play('cryo');
+      addText(p.x, p.y - 30, 'CRYO SINGULARITY!', '#38bdf8', 18);
+      for (const foe of G.enemies) {
+        if (foe.dead) continue;
+        if (Math.hypot(foe.x - p.x, foe.y - p.y) <= 120 + foe.r) {
+          foe.stunT = Math.max(foe.stunT, 2.5);
+          dealDamage(foe, 80 * hpScale(G.wave) * 0.4, 'energy', null);
+        }
+      }
+      G.skills.cryo_singularity.cd = COMMANDER_SKILLS.cryo_singularity.cd;
+      G.casting = null; G.uiDirty = true;
+      return;
+    } else if (G.casting === 'holo_beacon') {
+      G.hazards.push({ type: 'beacon', x: p.x, y: p.y, r: 24, hp: 400, maxHp: 400, life: 6.0, max: 6.0 });
+      burst(p.x, p.y, 25, '#38bdf8', 120, 0.5, 3.5, true);
+      addRing(p.x, p.y, 10, 85, 0.55, '#38bdf8', 4);
+      shake(6); Sfx.play('shield');
+      addText(p.x, p.y - 25, 'HOLO-BEACON DEPLOYED', '#38bdf8', 15);
+      G.skills.holo_beacon.cd = COMMANDER_SKILLS.holo_beacon.cd;
+      G.casting = null; G.uiDirty = true;
+      return;
+    } else if (G.casting === 'cyber_hijack') {
+      let bestEnemy = null, bestDist = 60 * 60;
+      for (const foe of G.enemies) {
+        if (foe.dead || foe.type === 'boss') continue;
+        const d = (foe.x - p.x) ** 2 + (foe.y - p.y) ** 2;
+        if (d < bestDist) { bestDist = d; bestEnemy = foe; }
+      }
+      if (!bestEnemy) { Sfx.play('error'); return; }
+      bestEnemy.hijackedT = 6.0;
+      bestEnemy.hijackFireCd = 0.2;
+      burst(bestEnemy.x, bestEnemy.y, 20, '#38bdf8', 130, 0.5, 3, true);
+      addRing(bestEnemy.x, bestEnemy.y, 8, 45, 0.5, '#38bdf8', 4);
+      shake(6); Sfx.play('emp');
+      addText(bestEnemy.x, bestEnemy.y - bestEnemy.r - 20, 'CYBER-HIJACKED!', '#38bdf8', 16);
+      G.skills.cyber_hijack.cd = COMMANDER_SKILLS.cyber_hijack.cd;
+      G.casting = null; G.uiDirty = true;
+      return;
     } else if (G.casting === 'caltrops') {
       if (col >= 0 && row >= 0 && col < COLS && row < ROWS && pathTile[row][col]) {
         const dur = hasPerk('nanite_infusion') ? 18 : 12;
@@ -151,16 +285,14 @@ function onKey(e) {
     return;
   }
   if (G.state !== 'prep' && G.state !== 'active') return;
-  if (k >= '1' && k <= '5') { selectShop(TKEYS[Number(k) - 1]); return; }
+  if (k >= '1' && k <= '6') { selectShop(TKEYS[Number(k) - 1]); return; }
+  const doc = (typeof COMMANDER_DOCTRINES !== 'undefined' && COMMANDER_DOCTRINES[G.doctrine]) || (typeof COMMANDER_DOCTRINES !== 'undefined' && COMMANDER_DOCTRINES.vanguard) || { skills: ['orbital', 'minefield', 'sabot_rounds', 'carpet_bomb'] };
+  const dSkills = doc.skills;
   switch (k) {
-    case 'q': case 'Q': triggerSkill('orbital'); break;
-    case 'w': case 'W': triggerSkill('overcharge'); break;
-    case 'e': case 'E': triggerSkill('caltrops'); break;
-    case 'r': case 'R':
-      if (typeof getWorkshopLevel === 'function' && getWorkshopLevel('command_protocol') > 0) {
-        triggerSkill('emp_nuke');
-      }
-      break;
+    case 'q': case 'Q': if (dSkills[0]) triggerSkill(dSkills[0]); break;
+    case 'w': case 'W': if (dSkills[1]) triggerSkill(dSkills[1]); break;
+    case 'e': case 'E': if (dSkills[2]) triggerSkill(dSkills[2]); break;
+    case 'r': case 'R': if (dSkills[3]) triggerSkill(dSkills[3]); break;
     case 'b': case 'B': {
       const ov = $('overlay');
       const isOpen = ov && ov.classList.contains('show') && ov.innerHTML.includes('WORKSHOP');

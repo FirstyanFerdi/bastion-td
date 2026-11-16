@@ -29,6 +29,115 @@ function getTowerCost(type) {
   return Math.round(def.cost * mult);
 }
 
+function getTowerPower(type, tier) {
+  if (type && typeof type === 'object') {
+    tier = type.tier;
+    type = type.type;
+  }
+  const def = TD[type];
+  if (!def || !def.power) return 0;
+  return def.power[Math.min(tier || 0, def.power.length - 1)];
+}
+
+function getGridPowerStatus() {
+  if (!G || !G.towers) return { used: 0, capacity: 60, isBrownout: false, pct: 0 };
+  let used = 0;
+  let capacity = 60;
+  if (typeof getWorkshopLevel === 'function') {
+    capacity += getWorkshopLevel('treasury') * 5;
+  }
+  for (const t of G.towers) {
+    if (t.type === 'relay') {
+      if (t.shutdownT > 0) continue; // In thermal shutdown, provides 0 MW
+      const st = getTierData(t);
+      capacity += st.powerSupply || 25;
+    } else {
+      used += getTowerPower(t.type, t.tier);
+    }
+  }
+  const isBrownout = used > capacity;
+  const pct = capacity > 0 ? used / capacity : 1;
+  return { used, capacity, isBrownout, pct };
+}
+
+function triggerOverdrive(relayTower) {
+  if (!relayTower || relayTower.type !== 'relay') return false;
+  if (relayTower.shutdownT > 0 || relayTower.overdriveT > 0) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  relayTower.overdriveT = 8.0;
+  const st = getTierData(relayTower);
+  const boost = relayTower.branch === 'B' ? '+100%' : '+75%';
+  burst(relayTower.x, relayTower.y, 25, '#10b981', 140, 0.6, 3.5, true);
+  addRing(relayTower.x, relayTower.y, 10, st.range * TILE, 0.6, '#34d399', 4);
+  shake(8);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+  addText(relayTower.x, relayTower.y - 28, 'OVERDRIVE ' + boost, '#34d399', 15);
+  G.uiDirty = true;
+  return true;
+}
+
+function maxChipsForTier(tier) {
+  if (tier <= 0) return 0;
+  if (tier === 1) return 1;
+  return 2; // tier >= 2
+}
+
+function socketChip(tower, chipId) {
+  if (!tower || !chipId) return false;
+  const chipDef = MODULAR_CHIPS[chipId];
+  if (!chipDef) return false;
+  if (chipDef.target !== 'any' && chipDef.target !== tower.type) return false;
+  tower.chips = tower.chips || [];
+  const maxChips = maxChipsForTier(tower.tier);
+  if (tower.chips.length >= maxChips) return false;
+  if (!SAVE.chipsInventory || (SAVE.chipsInventory[chipId] || 0) <= 0) return false;
+  SAVE.chipsInventory[chipId]--;
+  Store.set('nb_chips', SAVE.chipsInventory);
+  tower.chips.push(chipId);
+  burst(tower.x, tower.y, 14, chipDef.color || '#38bdf8', 90, 0.45, 3, true);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
+  addText(tower.x, tower.y - 25, chipDef.name + ' SOCKETED', chipDef.color || '#38bdf8', 13);
+  G.uiDirty = true;
+  return true;
+}
+
+function unsocketChip(tower, chipIndex) {
+  if (!tower || !tower.chips || chipIndex < 0 || chipIndex >= tower.chips.length) return false;
+  const chipId = tower.chips.splice(chipIndex, 1)[0];
+  SAVE.chipsInventory = SAVE.chipsInventory || {};
+  SAVE.chipsInventory[chipId] = (SAVE.chipsInventory[chipId] || 0) + 1;
+  Store.set('nb_chips', SAVE.chipsInventory);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+  addText(tower.x, tower.y - 25, 'CHIP REMOVED', '#94a3b8', 12);
+  G.uiDirty = true;
+  return true;
+}
+
+function swapTowers(t1, t2) {
+  if (!t1 || !t2 || t1 === t2) return false;
+  const r1 = t1.r, c1 = t1.c, x1 = t1.x, y1 = t1.y, l1 = t1.leyline;
+  const r2 = t2.r, c2 = t2.c, x2 = t2.x, y2 = t2.y, l2 = t2.leyline;
+
+  t1.r = r2; t1.c = c2; t1.x = x2; t1.y = y2; t1.leyline = l2;
+  t2.r = r1; t2.c = c1; t2.x = x1; t2.y = y1; t2.leyline = l1;
+
+  G.grid[r1][c1] = t2;
+  G.grid[r2][c2] = t1;
+
+  burst(x1, y1, 20, '#38bdf8', 140, 0.5, 3.5, true);
+  burst(x2, y2, 20, '#38bdf8', 140, 0.5, 3.5, true);
+  addRing(x1, y1, 10, 60, 0.5, '#38bdf8', 4);
+  addRing(x2, y2, 10, 60, 0.5, '#38bdf8', 4);
+  shake(8);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+  addText(x1, y1 - 25, 'SHIFTED!', '#38bdf8', 14);
+  addText(x2, y2 - 25, 'SHIFTED!', '#38bdf8', 14);
+  G.uiDirty = true;
+  return true;
+}
+
 function placeTower(col, row, type) {
   const def = TD[type];
   if (col < 0 || row < 0 || col >= COLS || row >= ROWS || pathTile[row][col] || G.grid[row][col]) return false;
@@ -41,6 +150,7 @@ function placeTower(col, row, type) {
     type, c: col, r: row, x: col * TILE + TILE / 2, y: row * TILE + TILE / 2, tier: 0, branch: null, angle: -Math.PI / 2,
     recoil: 0, flash: 0, spin: Math.random() * 6, spinV: 3, cd: 0.3, prio: 'first', invested: cost,
     kills: 0, dmg: 0, pulseN: 0, charge: 1, pop: 1, empT: 0, overchargeT: 0, heat: 0,
+    overdriveT: 0, shutdownT: 0, chips: [],
     leyline
   };
   G.towers.push(t); G.grid[row][col] = t;
@@ -90,6 +200,39 @@ function updateTower(t, dt) {
   t.cd -= dt; t.recoil = Math.max(0, t.recoil - dt * 6); t.flash = Math.max(0, t.flash - dt * 8); t.pop = Math.max(0, t.pop - dt * 4);
   if (t.overchargeT > 0) t.overchargeT -= dt;
 
+  // Fission Relay behaviour
+  if (t.type === 'relay') {
+    t.spin += dt * 1.5;
+    if (t.overdriveT > 0) {
+      t.overdriveT -= dt;
+      if (Math.random() < 0.25) burst(t.x, t.y, 2, '#34d399', 60, 0.25, 2, true);
+      if (t.overdriveT <= 0) {
+        t.overdriveT = 0;
+        t.shutdownT = 6.0;
+        addText(t.x, t.y - 24, 'THERMAL SHUTDOWN', '#fb7185', 13);
+        burst(t.x, t.y, 16, '#94a3b8', 90, 0.5, 3, false);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+        G.uiDirty = true;
+      }
+    } else if (t.shutdownT > 0) {
+      t.shutdownT -= dt;
+      if (Math.random() < 0.25) {
+        const p = partPool.get();
+        p.x = t.x + rand(-6, 6); p.y = t.y - 10;
+        p.vx = rand(-10, 10); p.vy = rand(-25, -45);
+        p.life = p.max = rand(0.3, 0.6); p.size = rand(3, 6);
+        p.color = 'rgba(203,213,225,0.4)'; p.drag = 1.2; p.round = true;
+      }
+      if (t.shutdownT <= 0) {
+        t.shutdownT = 0;
+        addText(t.x, t.y - 24, 'RELAY ONLINE', '#10b981', 13);
+        burst(t.x, t.y, 12, '#10b981', 80, 0.4, 2.5, true);
+        G.uiDirty = true;
+      }
+    }
+    return;
+  }
+
   let rateMult = 1, rangeMult = 1;
   if (t.overchargeT > 0) rateMult *= 2.0;
   if (hasPerk('targeting_matrix')) { rangeMult *= 1.15; }
@@ -99,6 +242,23 @@ function updateTower(t, dt) {
   if (G.mutator && G.mutator.id === 'cryo_lockdown') rateMult *= 0.80;
   if (G.mutator && G.mutator.id === 'overcharge_anomaly') rateMult *= 1.30;
   if (t.leyline && t.leyline.id === 'accelerator') rateMult *= 1.45;
+
+  // Power Grid: Brownout penalty
+  const gp = getGridPowerStatus();
+  if (gp.isBrownout) rateMult *= 0.65;
+
+  // Fission Relay: Sector Overdrive buff
+  for (const o of G.towers) {
+    if (o !== t && o.type === 'relay' && o.overdriveT > 0) {
+      const rRange = getTierData(o).range * TILE;
+      if ((o.x - t.x) ** 2 + (o.y - t.y) ** 2 <= rRange * rRange) {
+        const boost = o.branch === 'B' ? 2.0 : 1.75;
+        rateMult *= boost;
+        rangeMult *= 1.25;
+        break;
+      }
+    }
+  }
 
   // Tesla Grid Overcharger aura check
   for (const o of G.towers) {
@@ -198,6 +358,11 @@ function explode(p) {
     const dur = p.catalyst ? p.radDur * 1.5 : p.radDur;
     G.hazards.push({ type: 'radiation', x: p.x, y: p.y, r: p.splash * 1.1, life: dur, max: dur, dps: p.radDps, shred: p.shred, src: p.src });
   }
+  // Modular Chip: Cryo-Igniter Core (Plasma leaves burning frostfire)
+  if (p.src && p.src.chips && p.src.chips.includes('cryo_igniter')) {
+    G.hazards.push({ type: 'frostfire', x: p.x, y: p.y, r: p.splash * 0.9, life: 3.5, max: 3.5, dps: 38, slow: 0.40, src: p.src });
+    addRing(p.x, p.y, 8, p.splash * 0.9, 0.45, '#38bdf8', 3);
+  }
   for (const e of G.enemies) {
     if (e.dead) continue;
     const d = Math.hypot(e.x - p.x, e.y - p.y);
@@ -249,7 +414,9 @@ function cryoPulse(t, st, rangePx, effRate) {
 const BOUNCE = 1.8;
 function fireTesla(t, st, e) {
   const hit = [e];
-  for (let k = 1; k < st.targets; k++) {
+  // Hive Mutation: Grounding Rubber Hulls restricts chain bounce to 1
+  const maxTargets = (e.grounded || (hit.length > 0 && hit[0].grounded)) ? 1 : st.targets;
+  for (let k = 1; k < maxTargets; k++) {
     const cur = hit[hit.length - 1]; let best = null, bd = (BOUNCE * TILE) ** 2;
     for (const o of G.enemies) {
       if (o.dead || o.x < 2 || hit.indexOf(o) >= 0) continue;
@@ -262,6 +429,20 @@ function fireTesla(t, st, e) {
   let px = t.x, py = t.y - 4;
   const isEmp = t.branch === 'B';
   const isCat = !!(t.leyline && t.leyline.id === 'catalyst');
+
+  // Modular Chip: Arc Resonance (reflects off friendly tower to target with +50% dmg)
+  if (t.chips && t.chips.includes('arc_resonance')) {
+    for (const ally of G.towers) {
+      if (ally !== t && (ally.x - t.x) ** 2 + (ally.y - t.y) ** 2 <= (2.2 * TILE) ** 2) {
+        addBolt(t.x, t.y, ally.x, ally.y, '#c084fc');
+        burst(ally.x, ally.y, 4, '#c084fc', 70, 0.25, 2, true);
+        addBolt(ally.x, ally.y, e.x, e.y, '#c084fc');
+        dealDamage(e, st.dmg * 0.5, 'energy', t);
+        break;
+      }
+    }
+  }
+
   hit.forEach((h, i) => {
     h.revealT = 2.5; // reveals stealth
     if (isEmp) {
@@ -300,7 +481,25 @@ function fireRail(t, st, e) {
       burst(o.x, o.y, 20, '#f43f5e', 180, 0.5, 3.5, true);
       killEnemy(o, t);
     } else {
-      dealDamage(o, dmg, 'phys', t, { crit });
+      dealDamage(o, dmg, 'phys', t, { crit, fromAngle: a });
+    }
+    // Modular Chip: Prism Refractor (laser splits into 3 refracted beams on frozen/shielded)
+    if (t.chips && t.chips.includes('prism_refractor') && (o.slowT > 0 || o.stunT > 0 || o.shield > 0)) {
+      for (const sign of [-1, 1]) {
+        const ra = a + sign * 0.45;
+        const rdx = Math.cos(ra), rdy = Math.sin(ra);
+        addFx('rail', o.x, o.y, o.x + rdx * 130, o.y + rdy * 130, 0.25, '#c7d2fe', 4);
+        burst(o.x, o.y, 6, '#c7d2fe', 110, 0.35, 2.5, true);
+        for (const foe of G.enemies) {
+          if (foe.dead || foe === o) continue;
+          const frx = foe.x - o.x, fry = foe.y - o.y, fproj = frx * rdx + fry * rdy;
+          if (fproj > 0 && fproj <= 130 && Math.abs(frx * rdy - fry * rdx) <= foe.r + 8) {
+            dealDamage(foe, dmg * 0.55, 'phys', t, { crit, isReaction: true });
+            burst(foe.x, foe.y, 5, '#c7d2fe', 80, 0.25, 2, false);
+          }
+        }
+      }
+      addText(o.x, o.y - o.r - 20, 'PRISM REFRACT!', '#c7d2fe', 13);
     }
     // Anti-projectile Dome halts rail beam from piercing further
     if (o.affix === 'dome' && !o.dead) {

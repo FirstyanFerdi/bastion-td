@@ -22,7 +22,8 @@ const ICONS = {
   redo: ['<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>', 0],
   inf: ['<path d="M12 12c-2-2.6-3.7-4-5.7-4a4 4 0 0 0 0 8c2 0 3.7-1.4 5.7-4s3.7-4 5.7-4a4 4 0 0 1 0 8c-2 0-3.7-1.4-5.7-4z"/>', 0],
   tag: ['<path d="M3.5 12.5L12 4h8v8l-8.5 8.5z"/><circle cx="16" cy="8" r="1.3"/>', 0],
-  spark: ['<path d="M12 2.5L14.5 9.5L21.5 12L14.5 14.5L12 21.5L9.5 14.5L2.5 12L9.5 9.5z"/>', 1]
+  spark: ['<path d="M12 2.5L14.5 9.5L21.5 12L14.5 14.5L12 21.5L9.5 14.5L2.5 12L9.5 9.5z"/>', 1],
+  bolt: ['<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>', 1]
 };
 function svg(n, cls) {
   const i = ICONS[n] || ['<circle cx="12" cy="12" r="6"/>', 0];
@@ -39,11 +40,12 @@ function statRows(type, i, branch) {
   const s = branch && def.branches[branch] ? def.branches[branch] : (def.tiers[i] || def.tiers[0]);
   const f1 = v => String(Math.round(v * 10) / 10);
   switch (type) {
-    case 'gatling': return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + (s.maxRate ? '-' + f1(s.maxRate) : '') + '/s'], ['RANGE', f1(s.range) + ' t'], ['ROLE', s.role || 'Physical DPS']];
-    case 'plasma': return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + '/s'], ['RANGE', f1(s.range) + ' t'], ['SPLASH', f1(s.splash) + ' t'], ['SHRED', Math.round(s.shred * 100) + '%/hit']];
-    case 'cryo': return [['SLOW', Math.round(s.slow * 100) + '%'], ['BRITTLE', '+' + Math.round(s.brittle * 100) + '% dmg'], ['RANGE', f1(s.range) + ' t'], ['ROLE', s.role || 'Freeze / Control']];
-    case 'tesla': return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + '/s'], ['RANGE', f1(s.range) + ' t'], ['CHAIN', s.targets + ' targets'], ['SHIELD DMG', '×' + s.sm]];
-    default: return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + '/s'], ['RANGE', f1(s.range) + ' t'], ['CRIT', Math.round(s.crit * 100) + '% ×' + s.cm], ['PIERCE', s.pierce + ' units']];
+    case 'gatling': return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + (s.maxRate ? '-' + f1(s.maxRate) : '') + '/s'], ['RANGE', f1(s.range) + ' t'], ['POWER', '-' + (s.power || 2) + ' MW']];
+    case 'plasma': return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + '/s'], ['RANGE', f1(s.range) + ' t'], ['POWER', '-' + (s.power || 5) + ' MW']];
+    case 'cryo': return [['SLOW', Math.round(s.slow * 100) + '%'], ['BRITTLE', '+' + Math.round(s.brittle * 100) + '% dmg'], ['RANGE', f1(s.range) + ' t'], ['POWER', '-' + (s.power || 4) + ' MW']];
+    case 'tesla': return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + '/s'], ['RANGE', f1(s.range) + ' t'], ['POWER', '-' + (s.power || 6) + ' MW']];
+    case 'relay': return [['SUPPLY', '+' + (s.powerSupply || 25) + ' MW'], ['RANGE', f1(s.range) + ' t'], ['OVERDRIVE', s.overdriveBoost ? '+100% Rate' : '+75% Rate'], ['ROLE', 'Power Grid']];
+    default: return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + '/s'], ['RANGE', f1(s.range) + ' t'], ['POWER', '-' + (s.power || 8) + ' MW']];
   }
 }
 function buildDock() {
@@ -114,6 +116,7 @@ function renderInspector() {
   const rows = cur.map(r => '<div class="srow"><span>' + r[0] + '</span><span class="sv">' + r[1] + '</span></div>').join('');
   const sell = Math.floor(t.invested * 0.75);
   const isCryo = t.type === 'cryo';
+  const isRelay = t.type === 'relay';
   const tierTitle = t.tier === 0 ? 'TIER I' : (t.tier === 1 ? 'TIER II' : 'SPEC: ' + (t.branch ? def.branches[t.branch].name.toUpperCase() : 'TIER III'));
 
   let leylineHtml = '';
@@ -121,6 +124,56 @@ function renderInspector() {
     leylineHtml = '<div style="margin:6px 0 8px 0;padding:5px 8px;background:' + t.leyline.color + '22;border-left:3px solid ' + t.leyline.color + ';border-radius:3px;font-size:11px;color:#f8fafc">' +
       '<span style="color:' + t.leyline.color + ';font-weight:700">LEYLINE: ' + t.leyline.name.toUpperCase() + '</span><br>' +
       '<span style="color:#cbd5e1">' + t.leyline.tip + '</span></div>';
+  }
+
+  let relayHtml = '';
+  if (isRelay) {
+    const isOd = t.overdriveT > 0, isSd = t.shutdownT > 0;
+    const odLabel = isOd ? 'OVERDRIVE ACTIVE (' + Math.ceil(t.overdriveT) + 's)' : (isSd ? 'THERMAL SHUTDOWN (' + Math.ceil(t.shutdownT) + 's)' : '⚡ TRIGGER SECTOR OVERDRIVE');
+    relayHtml = '<button class="primary" data-act="overdrive" style="width:100%;margin:6px 0;background:' + (isOd ? '#059669' : (isSd ? '#475569' : '#10b981')) + '"' + (isOd || isSd ? ' disabled' : '') + '>' + odLabel + '</button>';
+  }
+
+  let chipsHtml = '';
+  if (!isRelay) {
+    const maxChips = typeof maxChipsForTier === 'function' ? maxChipsForTier(t.tier) : (t.tier === 0 ? 0 : (t.tier === 1 ? 1 : 2));
+    if (t.tier === 0) {
+      chipsHtml = '<div style="margin:6px 0;padding:6px;background:#0f172a;border:1px solid #334155;border-radius:4px;font-size:11px;color:#94a3b8">Upgrade to Tier II to unlock Modular Chip Sockets.</div>';
+    } else {
+      const inv = (typeof SAVE !== 'undefined' && SAVE.chipsInventory) || {};
+      const chipsList = (t.chips || []).map((cId, idx) => {
+        const cDef = (typeof MODULAR_CHIPS !== 'undefined' && MODULAR_CHIPS[cId]) || { name: cId, color: '#38bdf8' };
+        return '<div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;padding:4px 8px;border-radius:3px;margin-bottom:4px;border-left:3px solid ' + cDef.color + '">' +
+          '<span style="font-size:11px;font-weight:700;color:' + cDef.color + '">' + cDef.name + '</span>' +
+          '<button style="font-size:10px;padding:2px 6px;background:#334155;color:#e2e8f0;border:none;border-radius:2px;cursor:pointer" data-act="unsocket" data-slot="' + idx + '">Remove</button>' +
+          '</div>';
+      }).join('');
+
+      let emptySlotHtml = '';
+      if ((t.chips || []).length < maxChips) {
+        const available = typeof MODULAR_CHIPS !== 'undefined' ? Object.keys(MODULAR_CHIPS).filter(cId => {
+          const cDef = MODULAR_CHIPS[cId];
+          const matchesType = cDef.target === 'any' || cDef.target === t.type;
+          const hasCount = (inv[cId] || 0) > 0;
+          return matchesType && hasCount;
+        }) : [];
+
+        if (available.length > 0) {
+          emptySlotHtml = '<div style="margin-top:4px"><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">EQUIP CHIP (' + ((t.chips || []).length) + '/' + maxChips + ' SLOTS):</div>' +
+            available.map(cId => {
+              const cDef = MODULAR_CHIPS[cId];
+              return '<button style="display:block;width:100%;text-align:left;font-size:11px;padding:4px 6px;margin-bottom:3px;background:#0f172a;border:1px solid ' + cDef.color + ';border-radius:3px;color:#f8fafc;cursor:pointer" data-act="socket" data-chip="' + cId + '">' +
+                '<span style="color:' + cDef.color + ';font-weight:700">+ ' + cDef.name + '</span> <small style="color:#94a3b8">(' + inv[cId] + ' available)</small>' +
+                '</button>';
+            }).join('') + '</div>';
+        } else {
+          emptySlotHtml = '<div style="font-size:11px;color:#64748b;margin-top:4px">No compatible chips in inventory (' + ((t.chips || []).length) + '/' + maxChips + ' slots).</div>';
+        }
+      }
+
+      chipsHtml = '<div style="margin:6px 0;padding:6px;background:#090d16;border:1px solid #1e293b;border-radius:4px">' +
+        '<div style="font-size:10px;font-weight:700;color:#38bdf8;margin-bottom:4px;letter-spacing:0.5px">MODULAR CHIP SOCKETS (' + ((t.chips || []).length) + '/' + maxChips + ')</div>' +
+        chipsList + emptySlotHtml + '</div>';
+    }
   }
 
   let upgHtml = '';
@@ -142,8 +195,11 @@ function renderInspector() {
     '<div class="insp-name"><canvas id="inspIcon" width="56" height="56"></canvas><div><h4 style="color:' + (t.branch ? def.branches[t.branch].color : def.color) + '">' + (t.branch ? def.branches[t.branch].name : def.name) + '</h4><small>' + tierTitle + ' / ' + t.kills + ' KILLS</small></div></div>' +
     leylineHtml +
     rows +
-    '<div class="prio' + (isCryo ? ' off' : '') + '" id="prioBox">' + PRIOS.map(p => '<button tabindex="-1" data-act="prio" data-prio="' + p[0] + '" class="' + (t.prio === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') + '</div>' +
+    relayHtml +
+    chipsHtml +
+    '<div class="prio' + (isCryo || isRelay ? ' off' : '') + '" id="prioBox">' + PRIOS.map(p => '<button tabindex="-1" data-act="prio" data-prio="' + p[0] + '" class="' + (t.prio === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') + '</div>' +
     (isCryo ? '<div class="note" style="margin-top:-4px;margin-bottom:6px">Cryo pulses hit every enemy in range, no targeting needed.</div>' : '') +
+    (isRelay ? '<div class="note" style="margin-top:-4px;margin-bottom:6px">Fission Relays supply clean MW power to keep defense grid out of Brownout.</div>' : '') +
     '<div class="acts" style="' + (t.tier === 1 ? 'grid-template-columns:1fr;' : '') + '">' + upgHtml +
     '<button class="sell" tabindex="-1" data-act="sell">' + svg('tag') + 'Sell <i class="coin"></i>' + sell + '</button></div>' +
     '<div class="note">Sell refunds 75% of everything invested.</div>';
@@ -179,11 +235,42 @@ function renderWaveCard() {
     if (cnt.swarm) tags.push('<span class="tag red">SWARM RUSH</span>');
     if (cnt.brute) tags.push('<span class="tag">ARMORED</span>');
     if (ev.some(x => x.affix)) tags.push('<span class="tag purple">ELITE CHAMPIONS</span>');
+    if (n === 10) tags.push('<span class="tag orange">TITAN: GOLIATH</span>');
+    if (n === 15) tags.push('<span class="tag cy">TITAN: CHRONO-WEAVER</span>');
+    if (n === 20) tags.push('<span class="tag purple">TITAN: APEX MOTHER</span>');
+    if (G.hiveMutation && typeof HIVE_MUTATIONS !== 'undefined' && HIVE_MUTATIONS[G.hiveMutation]) {
+      const hm = HIVE_MUTATIONS[G.hiveMutation];
+      tags.push('<span class="tag" style="background:#4c0519;border:1px solid ' + hm.color + ';color:' + hm.color + '">HIVE: ' + hm.badge + '</span>');
+    }
     const threat = getThreatDirectorAnalysis();
     if (n >= 5 && threat) tags.push('<span class="tag orange">THREAT: ' + threat.name.toUpperCase() + '</span>');
     const waveMutator = (n >= 7 && (n % 2 === 1 || n % 5 === 0) && typeof WAVE_MUTATORS !== 'undefined') ? WAVE_MUTATORS[Object.keys(WAVE_MUTATORS)[(n * 3) % Object.keys(WAVE_MUTATORS).length]] : null;
     if (waveMutator) tags.push('<span class="tag ' + waveMutator.cls + '">MUTATOR: ' + waveMutator.name.toUpperCase() + '</span>');
-    $('wcTags').innerHTML = tags.join('');
+
+    let contractHtml = '';
+    if (G.activeContract && typeof DEFENSE_CONTRACTS !== 'undefined') {
+      const c = DEFENSE_CONTRACTS[G.activeContract];
+      contractHtml = '<div style="margin-top:8px;padding:6px;background:#1e1b4b;border:1px solid #6366f1;border-radius:4px">' +
+        '<div style="font-size:10px;font-weight:700;color:#818cf8">SIGNED DEFENSE CONTRACT:</div>' +
+        '<div style="font-size:11px;font-weight:700;color:#c7d2fe">' + c.name + '</div>' +
+        '<div style="font-size:10px;color:#94a3b8">' + c.desc + '</div>' +
+        '<div style="font-size:10px;font-weight:700;color:#34d399;margin-top:2px">Reward: ' + c.rewardText + '</div>' +
+        '</div>';
+    } else if (!G.activeContract && typeof DEFENSE_CONTRACTS !== 'undefined' && G.state === 'prep' && G.wave > 0) {
+      const cKeys = Object.keys(DEFENSE_CONTRACTS);
+      const c = DEFENSE_CONTRACTS[cKeys[(G.wave * 2) % cKeys.length]];
+      contractHtml = '<div style="margin-top:8px;padding:6px;background:#090d16;border:1px dashed #6366f1;border-radius:4px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-size:10px;font-weight:700;color:#818cf8">OPTIONAL CONTRACT:</span>' +
+        '<button style="font-size:10px;padding:2px 6px;background:#4338ca;color:#fff;border:none;border-radius:3px;cursor:pointer" data-act="sign_contract" data-contract="' + c.id + '">Sign</button>' +
+        '</div>' +
+        '<div style="font-size:11px;font-weight:700;color:#e0e7ff;margin-top:2px">' + c.name + '</div>' +
+        '<div style="font-size:10px;color:#94a3b8">' + c.desc + '</div>' +
+        '<div style="font-size:10px;font-weight:700;color:#34d399;margin-top:2px">Reward: ' + c.rewardText + '</div>' +
+        '</div>';
+    }
+
+    $('wcTags').innerHTML = tags.join('') + contractHtml;
   }
   const btn = $('btnCall');
   let label, dis = !canCall();
@@ -200,15 +287,27 @@ function renderWaveCard() {
 function renderSkillsAndPerks() {
   const skBox = $('cmdSkills'), pkBox = $('perkTray');
   if (!skBox || !pkBox || !G) return;
-  // Commander skills
-  const hasNuke = typeof getWorkshopLevel === 'function' && getWorkshopLevel('command_protocol') > 0;
-  const skillKeys = Object.keys(COMMANDER_SKILLS).filter(k => k !== 'emp_nuke' || hasNuke);
-  const skillsHtml = skillKeys.map(k => {
-    const sk = COMMANDER_SKILLS[k], state = G.skills[k] || { cd: 0 };
+  // Active commander doctrine skills
+  const doc = (typeof COMMANDER_DOCTRINES !== 'undefined' && COMMANDER_DOCTRINES[G.doctrine]) || (typeof COMMANDER_DOCTRINES !== 'undefined' && COMMANDER_DOCTRINES.vanguard);
+  const docSkills = doc ? doc.skills : ['orbital', 'minefield', 'sabot_rounds', 'carpet_bomb'];
+  const keyLabels = ['Q', 'W', 'E', 'R'];
+
+  let docBadge = '';
+  if (doc) {
+    docBadge = '<div class="cmd-doc-badge" style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:rgba(15,23,42,0.85);border:1px solid ' + doc.color + ';border-radius:2px;font-size:11px" title="' + doc.passiveName + ': ' + doc.passiveDesc + '">' +
+      '<span style="color:' + doc.color + ';font-weight:700">' + doc.name.toUpperCase() + '</span>' +
+      '<span style="font-size:10px;color:#94a3b8">[' + doc.passiveName + ']</span>' +
+      '</div>';
+  }
+
+  const skillsHtml = docBadge + docSkills.map((k, idx) => {
+    const sk = (typeof COMMANDER_SKILLS !== 'undefined' && COMMANDER_SKILLS[k]) || { name: k, cd: 30, icon: 'target', desc: '' };
+    const state = (G.skills && G.skills[k]) || { cd: 0 };
     const onCd = state.cd > 0, isActive = G.casting === k;
     const cdRatio = onCd ? clamp(state.cd / sk.cd, 0, 1) : 0;
+    const keyStr = keyLabels[idx] || sk.key || '';
     return '<button class="cmd-btn' + (isActive ? ' active' : '') + '" data-skill="' + k + '" tabindex="-1" title="' + sk.desc + '" ' + (onCd ? 'disabled' : '') + '>' +
-      '<span class="cmd-key">' + sk.key + '</span>' +
+      '<span class="cmd-key">' + keyStr + '</span>' +
       svg(sk.icon) + '<span>' + sk.name + '</span>' +
       (onCd ? '<div class="cmd-cooldown"><div class="cmd-cd-fill" style="width:' + Math.round(cdRatio * 100) + '%"></div><span>' + Math.ceil(state.cd) + 's</span></div>' : '') +
       '</button>';
@@ -252,6 +351,14 @@ function refreshUI() {
     }
   }
   if ($('vCores')) $('vCores').textContent = String((SAVE && SAVE.cores) || 0);
+  const gp = typeof getGridPowerStatus === 'function' ? getGridPowerStatus() : { used: 0, capacity: 60, isBrownout: false };
+  setText('vPower', gp.used + ' / ' + gp.capacity + ' MW');
+  const chipP = $('chipPower');
+  if (chipP) {
+    chipP.classList.toggle('warn', gp.isBrownout);
+    const bEl = chipP.querySelector('b');
+    if (bEl) bEl.style.color = gp.isBrownout ? '#f43f5e' : (gp.pct > 0.85 ? '#facc15' : '#10b981');
+  }
   renderWaveCard();
   renderSkillsAndPerks();
 }
@@ -285,8 +392,28 @@ function showOverlay(kind) {
       '<div style="margin-top:6px;font-size:11px;font-weight:700">' + bonusText + '</div>' +
       '</div>';
 
+    const curDoc = (typeof SAVE !== 'undefined' && SAVE.doctrine) || 'vanguard';
+    const docObj = (typeof COMMANDER_DOCTRINES !== 'undefined' && COMMANDER_DOCTRINES[curDoc]) || { name: 'Siege Vanguard', desc: '', color: '#f97316', passiveName: 'Shrapnel Cascade', passiveDesc: '' };
+    const docSelectorHtml = (typeof COMMANDER_DOCTRINES !== 'undefined') ?
+      '<div class="asc-box" style="margin-top:8px;border-color:#334155">' +
+      '<div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:6px;letter-spacing:0.08em;text-align:left">COMMANDER TACTICAL DOCTRINE:</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:6px">' +
+      Object.values(COMMANDER_DOCTRINES).map(d => {
+        const isSel = d.id === curDoc;
+        return '<button class="doc-pill' + (isSel ? ' on' : '') + '" data-ov="set_doctrine" data-doc="' + d.id + '" style="padding:6px 4px;background:' + (isSel ? 'rgba(56,189,248,0.12)' : '#0f172a') + ';border:1px solid ' + (isSel ? d.color : '#334155') + ';border-radius:3px;cursor:pointer;color:' + (isSel ? '#fff' : '#94a3b8') + ';font-size:11px;font-weight:700">' +
+          '<div style="color:' + d.color + '">' + d.name + '</div>' +
+          '<div style="font-size:9px;font-weight:400;margin-top:2px;color:#cbd5e1">' + d.passiveName + '</div>' +
+          '</button>';
+      }).join('') +
+      '</div>' +
+      '<div style="font-size:10px;color:#94a3b8;margin-top:6px;text-align:left">' +
+      '<b>' + docObj.name + ':</b> ' + docObj.desc + ' <span style="color:' + docObj.color + '">Passive: ' + docObj.passiveDesc + '</span>' +
+      '</div>' +
+      '</div>' : '';
+
     h = '<div class="ov-box"><h1>' + LOGO + 'BASTION</h1><div class="sub">Hold the grid. Survive 20 waves, then push into Endless Mode.</div>' +
       ascSelectorHtml +
+      docSelectorHtml +
       '<div class="how"><div><kbd>1</kbd>-<kbd>5</kbd> select tower</div><div><kbd>Q</kbd>/<kbd>W</kbd>/<kbd>E</kbd>/<kbd>R</kbd> commander powers</div><div><kbd>B</kbd> workshop HQ</div><div><kbd>Space</kbd> call wave / pause</div><div><kbd>Click</kbd> build / inspect</div><div><kbd>Esc</kbd> cancel / deselect</div><div><kbd>U</kbd> upgrade / <kbd>X</kbd> sell</div><div><kbd>P</kbd> pause / <kbd>F</kbd> speed / <kbd>M</kbd> mute</div></div>' +
       '<div class="ov-stats"><div><label>BEST WAVE</label><b>' + SAVE.bestWave + '</b></div><div><label>HIGH SCORE</label><b>' + SAVE.bestScore + '</b></div><div><label>NANITE CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div></div>' +
       '<div class="ov-btns"><button class="primary big" data-ov="start" tabindex="-1">' + svg('play') + 'Deploy</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
