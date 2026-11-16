@@ -389,8 +389,90 @@ function refreshUI() {
     const bEl = chipP.querySelector('b');
     if (bEl) bEl.style.color = gp.isBrownout ? '#f43f5e' : (gp.pct > 0.85 ? '#facc15' : '#10b981');
   }
+  const curSecId = (G && G.sector) || (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
+  const curSecObj = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : null;
+  if ($('vSector') && curSecObj) {
+    $('vSector').textContent = curSecObj.num + ' ' + curSecObj.shortName;
+    $('vSector').style.color = curSecObj.color;
+    if ($('chipSector')) $('chipSector').style.borderColor = curSecObj.color + '66';
+  }
   renderWaveCard();
   renderSkillsAndPerks();
+}
+
+function renderSectorMiniPreview(canvasEl, secObj) {
+  if (!canvasEl || !secObj) return;
+  const c = canvasEl.getContext('2d');
+  const cw = canvasEl.width, ch = canvasEl.height;
+  c.clearRect(0, 0, cw, ch);
+  c.fillStyle = secObj.bg || '#0f172a';
+  c.fillRect(0, 0, cw, ch);
+
+  const sx = cw / W, sy = ch / H;
+
+  // Path 0
+  if (secObj.wp0 && secObj.wp0.length > 0) {
+    c.strokeStyle = (secObj.palette && secObj.palette.accent) || secObj.color || '#38bdf8';
+    c.lineWidth = 3;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.beginPath();
+    const st0 = secObj.start0;
+    c.moveTo(Math.max(3, st0.x) * sx, st0.y * sy);
+    for (const [col, row] of secObj.wp0) {
+      c.lineTo((col * TILE + TILE / 2) * sx, (row * TILE + TILE / 2) * sy);
+    }
+    c.stroke();
+  }
+
+  // Path 1
+  if (secObj.wp1 && secObj.wp1.length > 0) {
+    c.strokeStyle = '#f43f5e';
+    c.lineWidth = 2.2;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.setLineDash([4, 3]);
+    c.beginPath();
+    const st1 = secObj.start1;
+    c.moveTo(st1.x * sx, Math.max(3, st1.y) * sy);
+    for (const [col, row] of secObj.wp1) {
+      c.lineTo((col * TILE + TILE / 2) * sx, (row * TILE + TILE / 2) * sy);
+    }
+    c.stroke();
+    c.setLineDash([]);
+  }
+
+  // Base marker
+  if (secObj.base) {
+    c.fillStyle = '#10b981';
+    c.beginPath();
+    c.arc(secObj.base.x * sx, secObj.base.y * sy, 4.5, 0, TAU);
+    c.fill();
+    c.strokeStyle = '#ffffff';
+    c.lineWidth = 1.2;
+    c.stroke();
+  }
+
+  // Hazards
+  if (secObj.hazards) {
+    for (const hz of secObj.hazards) {
+      const hx = (hz.c * TILE + TILE / 2) * sx, hy = (hz.row * TILE + TILE / 2) * sy;
+      c.fillStyle = hz.color || '#f97316';
+      c.beginPath();
+      c.arc(hx, hy, 3, 0, TAU);
+      c.fill();
+    }
+  }
+
+  // Leylines
+  if (secObj.leylines) {
+    for (const k in secObj.leylines) {
+      const ln = secObj.leylines[k];
+      const lx = (ln.c * TILE + TILE / 2) * sx, ly = (ln.r * TILE + TILE / 2) * sy;
+      c.fillStyle = ln.color || '#fbbf24';
+      c.fillRect(lx - 2, ly - 2, 4, 4);
+    }
+  }
 }
 
 /* overlay */
@@ -398,6 +480,7 @@ function showOverlay(kind) {
   const ov = $('overlay');
   if (!kind) { ov.classList.remove('show'); ov.innerHTML = ''; return; }
   let h = '';
+  let curSecObj = null;
   if (kind === 'menu') {
     const curAsc = (typeof SAVE !== 'undefined' && SAVE.ascension) || 0;
     const maxUnlocked = Math.min(5, Math.max(1, (typeof SAVE !== 'undefined' && SAVE.maxAscension) || 1));
@@ -441,6 +524,60 @@ function showOverlay(kind) {
       '</div>' +
       '</div>' : '';
 
+    const curSecId = (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
+    curSecObj = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : (typeof MAP_SECTORS !== 'undefined' ? MAP_SECTORS.foundry : null);
+    const secMastery = typeof getSectorMastery === 'function' ? getSectorMastery(curSecId) : { stars: [false, false, false], cleared: false };
+
+    // 7-sector tab bar
+    const sectorTabsHtml = (typeof MAP_SECTORS !== 'undefined') ?
+      '<div class="sec-tabs-bar">' +
+      Object.values(MAP_SECTORS).map(s => {
+        const isSel = s.id === curSecId;
+        const m = typeof getSectorMastery === 'function' ? getSectorMastery(s.id) : { stars: [] };
+        const unlocked = typeof isSectorUnlocked === 'function' ? isSectorUnlocked(s.id) : true;
+        const starStr = (m.stars && m.stars[0] ? '★' : '☆') + (m.stars && m.stars[1] ? '★' : '☆') + (m.stars && m.stars[2] ? '★' : '☆');
+        return '<button class="sec-tab-btn' + (isSel ? ' on' : '') + (!unlocked ? ' locked' : '') + '" data-ov="set_sector" data-sec="' + s.id + '" style="--sec-col:' + s.color + '"' + (!unlocked ? ' disabled' : '') + '>' +
+          '<div class="sec-tab-num">' + (unlocked ? 'SECTOR ' + s.num : 'LOCKED') + '</div>' +
+          '<div class="sec-tab-name">' + s.shortName + '</div>' +
+          '<div class="sec-tab-stars">' + (unlocked ? starStr : '🔒') + '</div>' +
+          '</button>';
+      }).join('') +
+      '</div>' : '';
+
+    const starsDetailed = [
+      { num: 1, title: 'Beat Wave 20', reward: '+25 Cores', done: !!(secMastery.stars && secMastery.stars[0]) },
+      { num: 2, title: 'Perfect (25 Lives)', reward: '+35 Cores', done: !!(secMastery.stars && secMastery.stars[1]) },
+      { num: 3, title: 'Ascension 2+ Clear', reward: '+50 Cores', done: !!(secMastery.stars && secMastery.stars[2]) }
+    ];
+
+    const dossierHtml = curSecObj ?
+      '<div class="sec-dossier" style="border-left-color:' + curSecObj.color + '">' +
+        '<div class="sec-dossier-top">' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+            '<span class="sec-badge" style="background:' + curSecObj.color + '22;color:' + curSecObj.color + ';border:1px solid ' + curSecObj.color + '">SECTOR ' + curSecObj.num + '</span>' +
+            '<b style="color:#f8fafc;font-size:11.5px">' + curSecObj.name + '</b>' +
+            '<span style="color:#94a3b8;font-size:9.5px">(' + curSecObj.subtitle + ')</span>' +
+          '</div>' +
+          '<div style="color:' + curSecObj.color + ';font-size:10px;font-weight:700">' + curSecObj.topology + '</div>' +
+        '</div>' +
+        '<div class="sec-dossier-grid">' +
+          '<canvas id="secMiniCanvas" width="160" height="96" style="background:' + curSecObj.bg + ';border:1px solid #1e293b;border-radius:3px"></canvas>' +
+          '<div class="sec-intel">' +
+            '<div><span class="sec-k">BIOME:</span> <span class="sec-v">' + curSecObj.biome + '</span></div>' +
+            '<div><span class="sec-k">HAZARD:</span> <span class="sec-v">' + curSecObj.hazardDesc + '</span></div>' +
+            '<div><span class="sec-k">CLIMATE:</span> <span class="sec-v" style="color:#fde047">' + curSecObj.climateDesc + '</span></div>' +
+            '<div class="sec-star-wrap">' +
+              starsDetailed.map(st =>
+                '<div class="sec-star-item' + (st.done ? ' done' : '') + '">' +
+                  '<span>' + (st.done ? '★' : '☆') + ' ' + st.title + '</span>' +
+                  '<b style="color:' + (st.done ? '#34d399' : '#38bdf8') + '">' + (st.done ? 'DONE' : st.reward) + '</b>' +
+                '</div>'
+              ).join('') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' : '';
+
     const controlsHtml =
       '<div class="how">' +
       '<div><kbd>1</kbd>-<kbd>6</kbd> select tower</div><div><kbd>Q/W/E/R</kbd> powers</div>' +
@@ -457,11 +594,16 @@ function showOverlay(kind) {
       '</div>';
 
     h = '<div class="ov-box"><h1>' + LOGO + 'BASTION</h1><div class="sub">Hold the grid. Survive 20 waves, then push into Endless Mode.</div>' +
+      '<div class="sec-box">' +
+      '<div style="font-size:10px;font-weight:800;color:#94a3b8;margin-bottom:5px;letter-spacing:0.08em;text-align:left">EXPEDITION SECTOR DOSSIER:</div>' +
+      sectorTabsHtml +
+      dossierHtml +
+      '</div>' +
       '<div class="ov-grid">' +
       '<div class="ov-col">' + docSelectorHtml + ascSelectorHtml + '</div>' +
       '<div class="ov-col">' + statsHtml + controlsHtml + '</div>' +
       '</div>' +
-      '<div class="ov-btns"><button class="primary big" data-ov="start" tabindex="-1">' + svg('play') + 'Deploy to Bastion</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
+      '<div class="ov-btns"><button class="primary big" data-ov="start" tabindex="-1" style="background:' + (curSecObj ? curSecObj.color : '#e2a72e') + ';border-color:' + (curSecObj ? curSecObj.color : '#e2a72e') + '">' + svg('play') + 'Deploy: ' + (curSecObj ? curSecObj.name : 'Bastion') + '</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
   } else if (kind === 'workshop') {
     const cards = Object.values(WORKSHOP_UPGRADES).map(u => {
       const lv = getWorkshopLevel(u.id);
@@ -507,19 +649,31 @@ function showOverlay(kind) {
     h = '<div class="draft-box"><h2>' + svg('tag') + ' TACTICAL TECH REQUISITION</h2><div class="sub">Boss eliminated. Choose 1 experimental technology to reinforce your perimeter defenses.</div>' +
       '<div class="draft-grid">' + cards + '</div></div>';
   } else if (kind === 'over') {
-    h = '<div class="ov-box" style="border-top-color:#fb7185"><h2 style="color:#fb7185">BASE OVERRUN</h2><div class="sub">The Bastion perimeter has been breached. Regroup and adapt defense layout.</div>' +
+    const sec = (typeof MAP_SECTORS !== 'undefined' && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
+    const secLabel = sec ? ('SECTOR ' + sec.num + ': ' + sec.name) : 'BASTION';
+    h = '<div class="ov-box" style="border-top-color:#fb7185"><h2 style="color:#fb7185">BASE OVERRUN</h2><div class="sub">' + secLabel + ' breached at Wave ' + G.wave + '. Regroup and adapt defense layout.</div>' +
       '<div class="ov-stats" style="grid-template-columns:repeat(4, 1fr);margin-bottom:12px"><div><label>WAVE</label><b>' + G.wave + '</b></div><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
       '<div class="ov-btns"><button class="primary big" data-ov="again" tabindex="-1">' + svg('redo') + 'Play again</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
   } else if (kind === 'win') {
     const curAsc = (G && G.ascension) || 0;
     const asc = typeof getAscensionData === 'function' ? getAscensionData(curAsc) : { badge: 'NORMAL', color: '#34d399' };
-    const winTitle = curAsc > 0 ? 'ASCENSION ' + asc.badge + ' CONQUERED!' : 'BASTION HELD!';
+    const sec = (typeof MAP_SECTORS !== 'undefined' && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
+    const secName = sec ? ('SECTOR ' + sec.num + ': ' + sec.name.toUpperCase()) : 'BASTION';
+    const bountyText = (G && G.sectorVictoryResult && G.sectorVictoryResult.coresEarned > 0) ?
+      '<div style="margin:8px 0;padding:6px;background:rgba(56,189,248,0.15);border:1px solid #38bdf8;border-radius:3px;color:#38bdf8;font-size:11px;font-weight:700">★ SECTOR MASTERY BOUNTY: +' + G.sectorVictoryResult.coresEarned + ' NANITE CORES! ★</div>' : '';
+
+    const winTitle = curAsc > 0 ? 'ASCENSION ' + asc.badge + ' CONQUERED!' : secName + ' SECURED!';
     const winSub = curAsc > 0 ?
       'The Pact of Punishment was shattered! Next Ascension Protocol unlocked.' :
-      'All 20 waves destroyed. The grid is safe, for now.';
+      'All 20 waves destroyed. Sector operational grid stabilized.';
     h = '<div class="ov-box" style="border-top-color:' + (curAsc > 0 ? asc.color : '#34d399') + '"><h2 style="color:' + (curAsc > 0 ? asc.color : '#34d399') + '">' + winTitle + '</h2><div class="sub">' + winSub + '</div>' +
+      bountyText +
       '<div class="ov-stats" style="grid-template-columns:repeat(4, 1fr);margin-bottom:12px"><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>BEST</label><b>' + SAVE.bestScore + '</b></div><div><label>CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
       '<div class="ov-btns"><button class="primary big" data-ov="endless" tabindex="-1">' + svg('inf') + 'Endless mode</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button><button class="ghost" data-ov="again" tabindex="-1">New Game</button></div></div>';
   }
   ov.innerHTML = h; ov.classList.add('show');
+  if (kind === 'menu' && curSecObj) {
+    const mini = $('secMiniCanvas');
+    if (mini) renderSectorMiniPreview(mini, curSecObj);
+  }
 }

@@ -45,6 +45,8 @@ const SAVE = {
   ascension: Number(Store.get('nb_ascension', 0)),
   maxAscension: Number(Store.get('nb_maxAscension', 0)),
   doctrine: Store.get('nb_doctrine', 'vanguard'),
+  currentSector: Store.get('nb_currentSector', 'foundry'),
+  sectorMastery: Store.get('nb_sectorMastery', {}),
   chipsInventory: Store.get('nb_chips', {
     prism_refractor: 2,
     cryo_igniter: 2,
@@ -126,6 +128,61 @@ function upgradeWorkshop(id) {
   Store.set('nb_cores', SAVE.cores);
   Store.set('nb_workshop', SAVE.workshop);
   if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('perk');
+  if (typeof refreshUI === 'function') refreshUI();
+  return true;
+}
+
+function getSectorMastery(secId) {
+  SAVE.sectorMastery = SAVE.sectorMastery || {};
+  return SAVE.sectorMastery[secId] || { stars: [false, false, false], cleared: false, bestWave: 0 };
+}
+
+function recordSectorProgress(secId, wave, isWin, lives, curAsc) {
+  SAVE.sectorMastery = SAVE.sectorMastery || {};
+  const m = getSectorMastery(secId);
+  m.bestWave = Math.max(m.bestWave || 0, wave);
+  let coresEarned = 0;
+  if (isWin) {
+    m.cleared = true;
+    if (!m.stars[0]) {
+      m.stars[0] = true;
+      coresEarned += 25;
+    }
+    const maxLives = (curAsc >= 2) ? 12 : 25;
+    if (lives >= maxLives && !m.stars[1]) {
+      m.stars[1] = true;
+      coresEarned += 35;
+    }
+    if (curAsc >= 2 && !m.stars[2]) {
+      m.stars[2] = true;
+      coresEarned += 50;
+    }
+  }
+  SAVE.sectorMastery[secId] = m;
+  Store.set('nb_sectorMastery', SAVE.sectorMastery);
+  if (coresEarned > 0) addCores(coresEarned);
+  return { m, coresEarned };
+}
+
+function isSectorUnlocked(secId) {
+  if (!secId || secId === 'foundry') return true;
+  const order = ['foundry', 'abyss', 'quarantine', 'skyspire', 'dunes', 'metropolis', 'abyssal'];
+  const idx = order.indexOf(secId);
+  if (idx <= 0) return true;
+  const prevId = order[idx - 1];
+  const prevM = getSectorMastery(prevId);
+  return !!(prevM.cleared || prevM.bestWave >= 10 || (prevM.stars && prevM.stars.some(Boolean)));
+}
+
+function setSector(secId) {
+  if (typeof MAP_SECTORS !== 'undefined' && !MAP_SECTORS[secId]) return false;
+  SAVE.currentSector = secId;
+  Store.set('nb_currentSector', secId);
+  if (typeof loadSector === 'function') loadSector(secId);
+  if (typeof buildMap === 'function') buildMap(secId);
+  if (typeof G !== 'undefined' && G && G.state === 'menu') {
+    G.sector = secId;
+  }
   if (typeof refreshUI === 'function') refreshUI();
   return true;
 }

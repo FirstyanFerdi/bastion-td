@@ -4,18 +4,22 @@
 /* ============================================================
    MAP (static layer)
    ============================================================ */
-function buildMap() {
+function buildMap(sectorId) {
+  const curSecId = sectorId || (typeof G !== 'undefined' && G && G.sector) || (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
+  const sec = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : (typeof MAP_SECTORS !== 'undefined' ? MAP_SECTORS.foundry : null);
+  const pal = (sec && sec.palette) || { ground: [27, 35, 32], road: [42, 47, 51], curb: '#566068', lane: 'rgba(226,167,46,0.5)', accent: '#f97316' };
+
   mapCanvas = document.createElement('canvas');
   mapCanvas.width = Math.round(W * S); mapCanvas.height = Math.round(H * S);
   const m = mapCanvas.getContext('2d'); m.scale(S, S);
   const rng = mulberry(20261111);
-  m.fillStyle = '#171d1b'; m.fillRect(0, 0, W, H);
+  m.fillStyle = sec ? sec.bg : '#171d1b'; m.fillRect(0, 0, W, H);
   // ground: mottled earth, rocks, grass tufts, cracks, build-pad brackets
   for (let r = 0; r < ROWS; r++) for (let col = 0; col < COLS; col++) {
     if (pathTile[r][col]) continue;
     const x = col * TILE, y = r * TILE, n = Math.floor(rng() * 7);
-    m.fillStyle = 'rgb(' + (27 + n) + ',' + (35 + n) + ',' + (32 + n) + ')'; m.fillRect(x, y, TILE, TILE);
-    for (let k = 0; k < 30; k++) {
+    m.fillStyle = 'rgb(' + (pal.ground[0] + n) + ',' + (pal.ground[1] + n) + ',' + (pal.ground[2] + n) + ')'; m.fillRect(x, y, TILE, TILE);
+    for (let k = 0; k < 28; k++) {
       m.fillStyle = rng() < 0.5 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.2)';
       m.fillRect(x + rng() * TILE, y + rng() * TILE, 1 + rng() * 2.4, 1 + rng() * 2.4);
     }
@@ -23,15 +27,14 @@ function buildMap() {
     if (q < 0.14) {
       const rx = 6 + rng() * 4, ry = 4 + rng() * 3;
       m.fillStyle = 'rgba(0,0,0,0.35)'; m.beginPath(); m.ellipse(cx + 2, cy + 3, rx, ry, 0, 0, TAU); m.fill();
-      m.fillStyle = '#38423f'; m.beginPath(); m.ellipse(cx, cy, rx, ry, 0, 0, TAU); m.fill();
-      m.fillStyle = '#46524e'; m.beginPath(); m.ellipse(cx - 1.5, cy - 1.5, rx * 0.55, ry * 0.5, 0, 0, TAU); m.fill();
+      m.fillStyle = pal.curb; m.beginPath(); m.ellipse(cx, cy, rx, ry, 0, 0, TAU); m.fill();
     } else if (q < 0.3) {
-      m.strokeStyle = '#34503f'; m.lineWidth = 1.3;
+      m.strokeStyle = pal.accent + '55'; m.lineWidth = 1.3;
       for (let i = -1; i <= 2; i++) { m.beginPath(); m.moveTo(cx + i * 3, cy); m.lineTo(cx + i * 3 + rng() * 4 - 2, cy - 5 - rng() * 4); m.stroke(); }
     } else if (q < 0.38) {
       m.strokeStyle = 'rgba(0,0,0,0.35)'; m.lineWidth = 1; m.beginPath(); m.moveTo(cx - 8, cy - 3); m.lineTo(cx, cy + 1); m.lineTo(cx + 4, cy - 2); m.lineTo(cx + 9, cy + 4); m.stroke();
     }
-    m.strokeStyle = 'rgba(200,214,224,0.12)'; m.lineWidth = 1.5;
+    m.strokeStyle = 'rgba(200,214,224,0.10)'; m.lineWidth = 1.5;
     for (const [sx, sy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
       const px = x + 6 + sx * (TILE - 12), py = y + 6 + sy * (TILE - 12), dx = sx ? -1 : 1, dy = sy ? -1 : 1;
       m.beginPath(); m.moveTo(px + dx * 9, py); m.lineTo(px, py); m.lineTo(px, py + dy * 9); m.stroke();
@@ -40,12 +43,12 @@ function buildMap() {
   m.strokeStyle = 'rgba(0,0,0,0.3)'; m.lineWidth = 1;
   for (let i = 0; i <= COLS; i++) { m.beginPath(); m.moveTo(i * TILE + 0.5, 0); m.lineTo(i * TILE + 0.5, H); m.stroke(); }
   for (let i = 0; i <= ROWS; i++) { m.beginPath(); m.moveTo(0, i * TILE + 0.5); m.lineTo(W, i * TILE + 0.5); m.stroke(); }
-  // road: gravelly asphalt with oil stains
+  // road: asphalt / terrain with biome palette
   for (let r = 0; r < ROWS; r++) for (let col = 0; col < COLS; col++) {
     if (!pathTile[r][col]) continue;
     const x = col * TILE, y = r * TILE, n = Math.floor(rng() * 5);
-    m.fillStyle = 'rgb(' + (42 + n) + ',' + (47 + n) + ',' + (51 + n) + ')'; m.fillRect(x, y, TILE, TILE);
-    for (let k = 0; k < 46; k++) {
+    m.fillStyle = 'rgb(' + (pal.road[0] + n) + ',' + (pal.road[1] + n) + ',' + (pal.road[2] + n) + ')'; m.fillRect(x, y, TILE, TILE);
+    for (let k = 0; k < 36; k++) {
       m.fillStyle = rng() < 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.25)';
       m.fillRect(x + rng() * TILE, y + rng() * TILE, 1 + rng() * 2.2, 1 + rng() * 2.2);
     }
@@ -56,23 +59,27 @@ function buildMap() {
   for (let r = 0; r < ROWS; r++) for (let col = 0; col < COLS; col++) {
     if (!pathTile[r][col]) continue;
     const x = col * TILE, y = r * TILE;
-    m.fillStyle = '#566068';
-    if (open(col, r - 1)) m.fillRect(x, y, TILE, 6);
-    if (open(col, r + 1)) m.fillRect(x, y + TILE - 6, TILE, 6);
-    if (open(col - 1, r)) m.fillRect(x, y, 6, TILE);
-    if (open(col + 1, r)) m.fillRect(x + TILE - 6, y, 6, TILE);
-    m.fillStyle = '#14181b';
-    if (open(col, r - 1)) m.fillRect(x, y + 6, TILE, 1.5);
-    if (open(col, r + 1)) m.fillRect(x, y + TILE - 7.5, TILE, 1.5);
-    if (open(col - 1, r)) m.fillRect(x + 6, y, 1.5, TILE);
-    if (open(col + 1, r)) m.fillRect(x + TILE - 7.5, y, 1.5, TILE);
+    m.fillStyle = pal.curb;
+    if (open(col, r - 1)) m.fillRect(x, y, TILE, 5.5);
+    if (open(col, r + 1)) m.fillRect(x, y + TILE - 5.5, TILE, 5.5);
+    if (open(col - 1, r)) m.fillRect(x, y, 5.5, TILE);
+    if (open(col + 1, r)) m.fillRect(x + TILE - 5.5, y, 5.5, TILE);
+    m.fillStyle = '#101418';
+    if (open(col, r - 1)) m.fillRect(x, y + 5.5, TILE, 1.5);
+    if (open(col, r + 1)) m.fillRect(x, y + TILE - 7, TILE, 1.5);
+    if (open(col - 1, r)) m.fillRect(x + 5.5, y, 1.5, TILE);
+    if (open(col + 1, r)) m.fillRect(x + TILE - 7, y, 1.5, TILE);
   }
   for (const s of SEG) {
     const nx = -Math.sin(s.ang), ny = Math.cos(s.ang);
     for (const o of [-13, 13]) { m.strokeStyle = 'rgba(0,0,0,0.16)'; m.lineWidth = 5; m.beginPath(); m.moveTo(s.x1 + nx * o, s.y1 + ny * o); m.lineTo(s.x2 + nx * o, s.y2 + ny * o); m.stroke(); }
   }
-  m.strokeStyle = 'rgba(226,167,46,0.5)'; m.lineWidth = 2.5; m.setLineDash([14, 12]);
-  m.beginPath(); PATH.forEach((p, i) => i ? m.lineTo(p.x, p.y) : m.moveTo(p.x, p.y)); m.stroke(); m.setLineDash([]);
+  m.strokeStyle = pal.lane; m.lineWidth = 2.5; m.setLineDash([14, 12]);
+  m.beginPath(); PATH.forEach((p, i) => i ? m.lineTo(p.x, p.y) : m.moveTo(p.x, p.y)); m.stroke();
+  if (PATH_BREACH.length > 0) {
+    m.beginPath(); PATH_BREACH.forEach((p, i) => i ? m.lineTo(p.x, p.y) : m.moveTo(p.x, p.y)); m.stroke();
+  }
+  m.setLineDash([]);
   const vg = m.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.9);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.5)');
   m.fillStyle = vg; m.fillRect(0, 0, W, H);
@@ -83,14 +90,19 @@ function buildMap() {
    ============================================================ */
 function drawFlow(c) {
   const sp = (G.anim * 46) % 60;
-  c.fillStyle = 'rgba(226,167,46,0.2)';
+  const curSecId = (G && G.sector) || (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
+  const sec = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : null;
+  const flowCol = (sec && sec.palette && sec.palette.accent) || '#e2a72e';
+
+  c.fillStyle = flowCol + '44';
   for (let d = sp; d < PLEN; d += 60) {
     const p = posAt(d, 0);
     c.save(); c.translate(p.x, p.y); c.rotate(p.ang);
     c.beginPath(); c.moveTo(6, 0); c.lineTo(-3, -6); c.lineTo(-1, 0); c.lineTo(-3, 6); c.closePath(); c.fill(); c.restore();
   }
-  if (G.wave >= 8) {
-    c.fillStyle = 'rgba(239,68,68,0.3)';
+  const isPath1Active = (curSecId === 'abyss') || (G.wave >= (curSecId === 'abyssal' ? 5 : (curSecId === 'quarantine' || curSecId === 'metropolis' ? 6 : (curSecId === 'skyspire' ? 7 : 8))));
+  if (PLEN_BREACH > 0 && isPath1Active) {
+    c.fillStyle = 'rgba(239,68,68,0.35)';
     for (let d = sp; d < PLEN_BREACH; d += 60) {
       const p = posAt(d, 0, 1);
       c.save(); c.translate(p.x, p.y); c.rotate(p.ang);
@@ -123,7 +135,7 @@ function drawLeylineNodes(c, time) {
     c.font = '700 12px ' + FONT;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.fillText(node.icon, cx, cy);
+    c.fillText(node.icon || '◈', cx, cy);
     c.restore();
   }
 }
@@ -138,26 +150,46 @@ function drawFuelCells(c, time) {
       c.restore();
       continue;
     }
+    const pulse = Math.sin(time * 4 + fc.id) * 0.15 + 0.85;
+    const col = fc.color || '#f97316';
     c.save();
     c.translate(fc.x, fc.y);
-    const pulse = Math.sin(time * 5) * 0.15 + 0.85;
-    c.fillStyle = 'rgba(249,115,22,0.18)';
-    c.beginPath(); c.arc(0, 0, (fc.r + 5) * pulse, 0, TAU); c.fill();
-    c.fillStyle = '#7c2d12';
+
+    // Threat aura
+    c.fillStyle = col + '26';
+    c.beginPath(); c.arc(0, 0, (fc.r + 6) * pulse, 0, TAU); c.fill();
+
+    // Body container
+    c.fillStyle = '#0f172a';
     c.beginPath(); c.arc(0, 0, fc.r, 0, TAU); c.fill();
-    c.fillStyle = '#ea580c';
+    c.fillStyle = col + '44';
     c.beginPath(); c.arc(0, 0, fc.r - 2.5, 0, TAU); c.fill();
-    c.fillStyle = '#ffedd5';
-    c.beginPath(); c.arc(0, 0, 5, 0, TAU); c.fill();
-    c.fillStyle = '#1c1917';
-    c.font = '800 9px ' + FONT;
+
+    // Inner core
+    c.fillStyle = col;
+    c.beginPath(); c.arc(0, 0, 5 * pulse, 0, TAU); c.fill();
+    c.fillStyle = '#ffffff';
+    c.beginPath(); c.arc(0, 0, 2.5, 0, TAU); c.fill();
+
+    c.strokeStyle = col;
+    c.lineWidth = 1.8;
+    c.beginPath(); c.arc(0, 0, fc.r, 0, TAU); c.stroke();
+
+    // Badges & Labels
+    const shortLabel = fc.type === 'cryo_tank' ? 'CRYO' :
+      (fc.type === 'spore_pod' ? 'SPORE' :
+      (fc.type === 'tesla_pylon' ? 'TESLA' :
+      (fc.type === 'sun_monolith' ? 'SOLAR' :
+      (fc.type === 'emp_terminal' ? 'EMP' :
+      (fc.type === 'hydro_geyser' ? 'HYDRO' : 'TNT')))));
+
+    c.fillStyle = '#ffffff';
+    c.font = '800 8.5px ' + FONT;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.fillText('TNT', 0, 0);
-    c.strokeStyle = '#fbbf24';
-    c.lineWidth = 1.5;
-    c.beginPath(); c.arc(0, 0, fc.r, 0, TAU); c.stroke();
-    c.fillStyle = '#fed7aa';
+    c.fillText(shortLabel, 0, 0);
+
+    c.fillStyle = col;
     c.font = '700 8px ' + FONT;
     c.fillText('[CLICK]', 0, fc.r + 8);
     c.restore();
@@ -165,26 +197,42 @@ function drawFuelCells(c, time) {
 }
 function drawSpawnBase(c) {
   const t = G.anim;
-  if (G.wave >= 8) {
-    c.save();
-    c.translate(7 * TILE + TILE / 2, 8);
-    c.fillStyle = Math.sin(t * 6) > 0 ? 'rgba(239,68,68,0.85)' : 'rgba(185,28,28,0.85)';
-    c.fillRect(-22, -6, 44, 12);
-    c.strokeStyle = '#fca5a5'; c.lineWidth = 1; c.strokeRect(-22, -6, 44, 12);
-    c.fillStyle = '#fff'; c.font = '800 8px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('! BREACH !', 0, 0);
+  const curSecId = (G && G.sector) || (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
+  const sec = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : (typeof MAP_SECTORS !== 'undefined' ? MAP_SECTORS.foundry : null);
+  const portalCol = (sec && sec.color) || '#e2a72e';
+
+  // Primary Spawn Portal
+  if (PATH.length > 0) {
+    const pt = PATH[0];
+    const px = Math.max(12, Math.min(W - 12, pt.x <= 0 ? 12 : pt.x));
+    const py = Math.max(12, Math.min(H - 12, pt.y <= 0 ? 12 : pt.y));
+    c.save(); c.translate(px, py);
+    c.fillStyle = portalCol + '33'; c.beginPath(); c.arc(0, 0, 16, 0, TAU); c.fill();
+    c.fillStyle = '#0f172a'; c.beginPath(); c.arc(0, 0, 11, 0, TAU); c.fill();
+    c.strokeStyle = portalCol; c.lineWidth = 2.5; c.stroke();
+    c.fillStyle = portalCol; c.font = '800 8px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(curSecId === 'abyss' ? 'WEST' : 'GATE 1', 0, 16);
     c.restore();
   }
-  c.save(); c.translate(0, SPAWN_PT.y);
-  const gx = 3, gw = 13, gh = TILE - 6;
-  c.fillStyle = '#0b0f12'; c.fillRect(gx - 2, -gh / 2 - 2, gw + 4, gh + 4);
-  c.save(); c.beginPath(); c.rect(gx, -gh / 2, gw, gh); c.clip();
-  c.fillStyle = '#e2a72e'; c.fillRect(gx, -gh / 2, gw, gh);
-  c.fillStyle = '#15181a';
-  for (let y0 = -gh / 2 - gw; y0 < gh / 2; y0 += 14) { c.beginPath(); c.moveTo(gx, y0); c.lineTo(gx + gw, y0 + gw); c.lineTo(gx + gw, y0 + gw + 7); c.lineTo(gx, y0 + 7); c.closePath(); c.fill(); }
-  c.restore();
-  c.fillStyle = Math.sin(t * 5) > 0 ? '#d9534f' : '#4a2a28'; c.fillRect(gx + gw + 4, -4, 5, 8);
-  c.restore();
+
+  // Secondary Spawn Portal / Breach
+  const isPath1Active = (curSecId === 'abyss') || (G.wave >= (curSecId === 'abyssal' ? 5 : (curSecId === 'quarantine' || curSecId === 'metropolis' ? 6 : (curSecId === 'skyspire' ? 7 : 8))));
+  if (PATH_BREACH.length > 0 && isPath1Active) {
+    const pt = PATH_BREACH[0];
+    const px = Math.max(16, Math.min(W - 16, pt.x <= 0 ? 16 : pt.x));
+    const py = Math.max(16, Math.min(H - 16, pt.y <= 0 ? 16 : pt.y));
+    c.save(); c.translate(px, py);
+    const pulse = Math.sin(t * 6) > 0;
+    c.fillStyle = pulse ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.15)';
+    c.beginPath(); c.arc(0, 0, 16, 0, TAU); c.fill();
+    c.fillStyle = '#0f172a'; c.beginPath(); c.arc(0, 0, 11, 0, TAU); c.fill();
+    c.strokeStyle = '#ef4444'; c.lineWidth = 2.5; c.stroke();
+    c.fillStyle = '#ef4444'; c.font = '800 8px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(curSecId === 'abyss' ? 'NORTH' : '! BREACH !', 0, 16);
+    c.restore();
+  }
+
+  // Base Structure
   c.save(); c.translate(BASE_PT.x, BASE_PT.y);
   const hex = r => { c.beginPath(); for (let i = 0; i < 6; i++) { const q = i * TAU / 6 + Math.PI / 6; c.lineTo(Math.cos(q) * r, Math.sin(q) * r); } c.closePath(); };
   const hit = G.baseFlash > 0.02;
@@ -207,6 +255,27 @@ function drawSpawnBase(c) {
   }
   c.fillStyle = '#7e8d97'; c.font = '700 9px ' + FONT; c.textAlign = 'center'; c.fillText('BASE', 0, 41);
   c.restore();
+}
+
+function drawAtmosphericParticles(c, time) {
+  const curSecId = (G && G.sector) || (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
+  let pCol = 'rgba(249,115,22,0.35)';
+  let pDirY = -1, pSpeed = 18;
+  if (curSecId === 'abyss') { pCol = 'rgba(224,242,254,0.45)'; pDirY = 1; pSpeed = 24; }
+  else if (curSecId === 'quarantine') { pCol = 'rgba(163,230,53,0.35)'; pDirY = -0.5; pSpeed = 12; }
+  else if (curSecId === 'skyspire') { pCol = 'rgba(165,180,252,0.45)'; pDirY = -0.2; pSpeed = 8; }
+  else if (curSecId === 'dunes') { pCol = 'rgba(234,179,8,0.35)'; pDirY = 0.4; pSpeed = 30; }
+  else if (curSecId === 'metropolis') { pCol = 'rgba(34,211,238,0.4)'; pDirY = -1; pSpeed = 22; }
+  else if (curSecId === 'abyssal') { pCol = 'rgba(45,212,191,0.45)'; pDirY = -1.2; pSpeed = 16; }
+
+  c.fillStyle = pCol;
+  for (let i = 0; i < 22; i++) {
+    const seed = i * 937.13;
+    const px = (seed * 11 + time * (12 + (i % 7) * 4)) % W;
+    const py = ((seed * 19 + time * pSpeed * pDirY) % H + H) % H;
+    const size = 1.2 + (i % 4) * 0.7;
+    c.fillRect(px, py, size, size);
+  }
 }
 function drawFx(c) {
   for (const f of fxPool.items) {
@@ -388,6 +457,7 @@ function render() {
   drawFuelCells(c, time);
   drawSpawnBase(c);
   drawHazards(c, time);
+  drawAtmosphericParticles(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {

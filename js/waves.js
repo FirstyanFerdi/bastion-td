@@ -155,6 +155,14 @@ function endGame(won) {
     G.score += G.lives * 50;
     if (typeof unlockNextAscension === 'function') unlockNextAscension(G.ascension || 0);
     addCores(15 + (G.ascension || 0) * 5);
+    if (typeof recordSectorProgress === 'function') {
+      const res = recordSectorProgress(G.sector || 'foundry', G.wave, true, G.lives, G.ascension || 0);
+      G.sectorVictoryResult = res;
+    }
+  } else {
+    if (typeof recordSectorProgress === 'function') {
+      recordSectorProgress(G.sector || 'foundry', G.wave, false, G.lives, G.ascension || 0);
+    }
   }
   saveBest();
   G.state = won ? 'victory' : 'over';

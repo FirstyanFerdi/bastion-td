@@ -514,11 +514,75 @@ Seluruh komponen diuji secara mendalam melalui 8 suite pengujian otomatis mandir
 5. `tests/test_map_dynamics.js`: Node Leyline interaktif, jalur flanking dinamis gelombang 8, dan barel Fuel Cell (100% PASS).
 6. `tests/test_ascension.js`: Seluruh 5 tingkat Ascension Protocol, multiplier Cores, dan mutator cuaca (100% PASS).
 7. `tests/test_mastery.js`: Pengujian komprehensif sistem 3.0: Power Grid, Brownout, Sector Overdrive, 3 Doktrin Komandan, 8 Skill Baru, Modular Chip Socketing, AI Living Hive Mutations, Titan Boss Raids, dan Kontrak Pertahanan (100% PASS).
-8. `tests/smoke.js`: Simulasi loop kontinu puluhan ribu frame tempur hingga wave akhir tanpa degradasi memori (100% PASS).
+8. `tests/test_sectors.js`: Pengujian komprehensif 7 Sektor Ekspedisi: integritas katalog, topologi jalur (Dual-Front Convergence), detonasi 7 hazard lingkungan, sifat iklim/biome passives, dan 3-Star Mastery + Bounties (100% PASS).
+9. `tests/smoke.js`: Simulasi loop kontinu puluhan ribu frame tempur hingga wave akhir tanpa degradasi memori (100% PASS).
 
 ---
 
-## 11. Panduan Unggah ke GitHub
+## 11. Ekspansi Multi-Sektor & Ekspedisi Peta Dinamis (Bastion TD 3.5)
+
+### Ringkasan Fitur 7 Sektor Ekspedisi:
+1. **Sektor 01: The Iron Foundry (Default / Terbuka Awal)**
+   - **Topologi:** Serpentine Gauntlet (Narrow Funnel) dengan jalur flanking dinamis Gelombang 8+.
+   - **Biome & Visual:** Basalt Magma & Smelting Vents (`#f97316`), partikel bara api melayang.
+   - **Bahaya Lingkungan:** 2x *Fuel Cells* (Detonasi manual 450 AoE Damage + 100% Armor Shred + Kubangan Radiasi).
+   - **Karakter Iklim:** *Heat Vents* (Semburan lava periodik membakar musuh).
+
+2. **Sektor 02: Sub-Zero Abyss**
+   - **Topologi:** *Dual-Front Convergence* (Dua gerbang spawn aktif serentak: Gerbang Barat & Gerbang Utara).
+   - **Biome & Visual:** Glacial Permafrost & Cryo-Ice Chasm (`#38bdf8`), partikel serpihan salju/kristal es.
+   - **Bahaya Lingkungan:** 2x *Cryo Nitrogen Tanks* (Detonasi manual 4.0s Flash-Freeze + Brittle + 180 Cryo Damage).
+   - **Karakter Iklim:** *Frozen Slipstream* (Kecepatan musuh +15%, namun semua damage Brittle/Cryo diamplifikasi +50%).
+
+3. **Sektor 03: Toxic Bio-Quarantine**
+   - **Topologi:** *Split Switchback with Bio-Tunnel Flank* (Jalur berliku sempit melintasi rawa asam).
+   - **Biome & Visual:** Acid Sludge & Bio-Hazard Waste (`#a3e635`), partikel spora bio-luminescent.
+   - **Bahaya Lingkungan:** 2x *Unstable Spore Pods* (Detonasi manual 2.5s Reverse Confusion / musuh berbalik arah + 150 Acid Damage).
+   - **Karakter Iklim:** *Corrosive Acid Runoffs* (Asam mengikis 15% armor musuh secara berkelanjutan tiap detik).
+
+4. **Sektor 04: Orbital Sky-Spire**
+   - **Topologi:** *Concentric Inward Spiral to Central Core* (Pusaran melingkar rapat menuju reaktor tengah).
+   - **Biome & Visual:** Deep Space Void & Anti-Grav Platform (`#818cf8`), lantai hexagonal grid dan partikel debu kosmik.
+   - **Bahaya Lingkungan:** 2x *Overcharged Tesla Pylons* (Detonasi manual 350 Chain Lightning ke 8 target + Total Shield Wipeout).
+   - **Karakter Iklim:** *Void Gravity* (20% kemungkinan proyektil balistik melempar musuh non-boss jatuh ke hampa udara).
+
+5. **Sektor 05: Sunken Dunes**
+   - **Topologi:** *Canyon Double-Fork around Ancient Sunken Relic* (Jalur bercabang canyon mengitari monolit kuno).
+   - **Biome & Visual:** Sandstone Canyon & Ancient Sunken Relic (`#eab308`), partikel badai pasir gurun.
+   - **Bahaya Lingkungan:** 2x *Relic Sun Monoliths* (Detonasi manual 400 True Damage Solar Beam + Thermite Burn).
+   - **Karakter Iklim:** *Quicksand Drift* (Musuh melambat 15% di pasir; debu badai memotong jarak tembak tower 10% kecuali berada di Leyline Sensor).
+
+6. **Sektor 06: Neon Cyber-Metropolis**
+   - **Topologi:** *Multi-Lane Skyway & Express Overpass* (Jalan layang tol ganda berkecepatan tinggi).
+   - **Biome & Visual:** Cyberpunk Skyway & Neon Highway Grid (`#06b6d4`), partikel paket data digital berpendar.
+   - **Bahaya Lingkungan:** 2x *EMP Security Terminals* (Detonasi manual 3.5s Global Area Stun + Total Shield Strip).
+   - **Karakter Iklim:** *Overclocked Grid* (Kapasitas Power Grid +15 MW menjadi 75 MW dasar; cooldown skill komandan 15% lebih cepat).
+
+7. **Sektor 07: Abyssal Trench**
+   - **Topologi:** *Deep Oceanic Chasm with Stepped Trenches* (Palung laut dalam bercabang dengan tekanan tinggi).
+   - **Biome & Visual:** Deep Oceanic Navy & Hydro-Thermal Vents (`#2dd4bf`), partikel gelembung hidrotermal naik ke permukaan.
+   - **Bahaya Lingkungan:** 2x *Hydrothermal Geysers* (Detonasi manual 300 Cryo Damage + 2.0s Knockup Stun + Kubangan Air Lambat 6 detik).
+   - **Karakter Iklim:** *Depth Hydro-Pressure & Conductivity* (Armor dasar musuh +10%; air laut membuat petir Tesla Coil memantul ke +2 target tambahan).
+
+---
+
+## 12. Sistem 3-Star Sector Mastery & Ekspedisi Dossier
+
+### Skema Bintang Tantangan Tiap Sektor:
+- **Bintang 1 (Sector Clearance):** Selesaikan Wave 20 di sektor tersebut (+25 Nanite Cores).
+- **Bintang 2 (Flawless Perimeter):** Selesaikan Wave 20 tanpa kehilangan satu pun nyawa / Perfect Lives (+35 Nanite Cores).
+- **Bintang 3 (Ascended Mastery):** Selesaikan Wave 20 pada tingkat kesulitan Ascension 2 atau lebih tinggi (+50 Nanite Cores).
+- **Total Hadiah:** Hingga **+770 Nanite Cores** yang dapat digunakan untuk upgrade permanen di Workshop HQ.
+
+### Tampilan Sector Dossier (Menu Utama):
+- **Bar Tab Interaktif:** 7 tombol tab sektor dengan status terkunci/terbuka, bintang tantangan, dan warna aksen bioma.
+- **Holographic Radar Mini-Map:** Menggambar sketsa visual radar miniatur jalur konvergensi, titik spawn, reaktor inti, dan posisi Leyline secara real-time.
+- **Intelijen Bioma & Iklim:** Rangkuman detail topologi, bahaya lingkungan, dan efek iklim aktif.
+- **Daftar Target Bintang:** Status pencapaian bintang 1-3 dengan indikator hadiah Cores secara visual.
+
+---
+
+## 13. Panduan Unggah ke GitHub
 
 ### Perintah Unggah (Terminal Pengguna):
 ```powershell
@@ -528,8 +592,8 @@ git add .
 # 2. Periksa status
 git status
 
-# 3. Lakukan commit perubahan Bastion TD 3.0
-git commit -m "feat(v3.0): complete mastery update with power grid, commander doctrines, modular chips, hive AI, titan bosses, and defense contracts"
+# 3. Lakukan commit perubahan Bastion TD Multi-Sector Expansion
+git commit -m "feat(v3.5): complete multi-sector expansion with 7 distinct environments, dual-front pathing, climate passives, interactive hazards, and 3-star mastery"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git

@@ -43,6 +43,7 @@ function getGridPowerStatus() {
   if (!G || !G.towers) return { used: 0, capacity: 60, isBrownout: false, pct: 0 };
   let used = 0;
   let capacity = 60;
+  if (G && G.sector === 'metropolis') capacity += 15; // Sektor 06: Overclocked Grid
   if (typeof getWorkshopLevel === 'function') {
     capacity += getWorkshopLevel('treasury') * 5;
   }
@@ -273,6 +274,7 @@ function updateTower(t, dt) {
   }
   t.charge = clamp(1 - t.cd * effRate, 0, 1);
   const sensorRangeBonus = (t.leyline && t.leyline.id === 'sensor') ? 2.5 * TILE : 0;
+  if (G && G.sector === 'dunes' && !(t.leyline && t.leyline.id === 'sensor')) rangeMult *= 0.90; // Sektor 05: Quicksand dust reduces range
   const rangePx = st.range * rangeMult * TILE + sensorRangeBonus;
 
   if (t.type === 'cryo') {
@@ -415,7 +417,8 @@ const BOUNCE = 1.8;
 function fireTesla(t, st, e) {
   const hit = [e];
   // Hive Mutation: Grounding Rubber Hulls restricts chain bounce to 1
-  const maxTargets = (e.grounded || (hit.length > 0 && hit[0].grounded)) ? 1 : st.targets;
+  const bonusTargets = (G && G.sector === 'abyssal') ? 2 : 0; // Sektor 07: Water conductivity (+2 targets)
+  const maxTargets = (e.grounded || (hit.length > 0 && hit[0].grounded)) ? 1 : ((st.targets || 4) + bonusTargets);
   for (let k = 1; k < maxTargets; k++) {
     const cur = hit[hit.length - 1]; let best = null, bd = (BOUNCE * TILE) ** 2;
     for (const o of G.enemies) {

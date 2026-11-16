@@ -4,49 +4,328 @@
 /* ============================================================
    PATH
    ============================================================ */
-const WP_TILES = [[0, 1], [5, 1], [5, 4], [2, 4], [2, 7], [8, 7], [8, 3], [11, 3], [11, 8], [14, 8], [14, 2], [15, 2]];
+/* ============================================================
+   MAP SECTORS & EXPEDITIONS (7 DISTINCT BIOMES)
+   ============================================================ */
+const MAP_SECTORS = {
+  foundry: {
+    id: 'foundry',
+    num: '01',
+    name: 'The Iron Foundry',
+    shortName: 'FOUNDRY',
+    subtitle: 'Industrial Smelting Facility',
+    biome: 'Basalt Magma & Smelting Vents',
+    color: '#f97316',
+    border: '#c2410c',
+    bg: '#171d1b',
+    topology: 'Serpentine Gauntlet (Narrow Funnel)',
+    hazardDesc: 'High-Pressure Fuel Cells (450 AoE + 100% Armor Shred)',
+    climateDesc: 'Heat Vents: Periodic lava bursts ignite hostiles with Thermite Burn.',
+    wp0: [[0, 1], [5, 1], [5, 4], [2, 4], [2, 7], [8, 7], [8, 3], [11, 3], [11, 8], [14, 8], [14, 2], [15, 2]],
+    wp1: [[7, 0], [7, 1], [11, 1], [11, 3], [11, 8], [14, 8], [14, 2], [15, 2]],
+    start0: { x: -TILE * 0.6, y: 1 * TILE + TILE / 2 },
+    start1: { x: 7 * TILE + TILE / 2, y: -TILE * 0.6 },
+    base: { x: 15 * TILE + TILE / 2, y: 2 * TILE + TILE / 2 },
+    leylines: {
+      accelerator: { id: 'accelerator', name: 'Hyper-Accelerator', c: 6, r: 2, color: '#fbbf24', aura: 'rgba(251,191,36,0.22)', desc: '+45% Attack Speed to tower deployed here.' },
+      sensor: { id: 'sensor', name: 'Sensor Relay', c: 10, r: 5, color: '#38bdf8', aura: 'rgba(56,189,248,0.22)', desc: '+2.5 Range and permanent Stealth true-sight.' },
+      catalyst: { id: 'catalyst', name: 'Catalyst Node', c: 7, r: 5, color: '#c084fc', aura: 'rgba(192,132,252,0.22)', desc: '+50% debuff potency and doubled effect durations.' }
+    },
+    hazards: [
+      { id: 1, type: 'fuel_cell', name: 'FUEL CELL', color: '#f97316', c: 6, row: 3, r: 16, hp: 60, dead: false },
+      { id: 2, type: 'fuel_cell', name: 'FUEL CELL', color: '#f97316', c: 12, row: 7, r: 16, hp: 60, dead: false }
+    ],
+    palette: {
+      ground: [27, 35, 32],
+      road: [42, 47, 51],
+      curb: '#566068',
+      lane: 'rgba(226,167,46,0.5)',
+      accent: '#f97316'
+    }
+  },
+  abyss: {
+    id: 'abyss',
+    num: '02',
+    name: 'Sub-Zero Abyss',
+    shortName: 'ABYSS',
+    subtitle: 'Cryogenic Permafrost Trench',
+    biome: 'Glacial Permafrost & Ice Rift',
+    color: '#38bdf8',
+    border: '#0284c7',
+    bg: '#0c1a24',
+    topology: 'Dual-Front Convergence (West & North Entries)',
+    hazardDesc: 'Cryo Nitrogen Tanks (Instant 4.0s AoE Freeze)',
+    climateDesc: 'Frozen Slipstream: +15% enemy speed, but +50% Brittle/Shatter damage taken.',
+    wp0: [[0, 2], [4, 2], [4, 5], [8, 5], [11, 5], [11, 2], [14, 2], [15, 2]],
+    wp1: [[8, 0], [8, 3], [6, 3], [6, 5], [8, 5], [11, 5], [11, 2], [14, 2], [15, 2]],
+    start0: { x: -TILE * 0.6, y: 2 * TILE + TILE / 2 },
+    start1: { x: 8 * TILE + TILE / 2, y: -TILE * 0.6 },
+    base: { x: 15 * TILE + TILE / 2, y: 2 * TILE + TILE / 2 },
+    leylines: {
+      catalyst: { id: 'catalyst', name: 'Catalyst Node', c: 8, r: 4, color: '#c084fc', aura: 'rgba(192,132,252,0.22)', desc: '+50% debuff potency and doubled effect durations.' },
+      sensor: { id: 'sensor', name: 'Sensor Relay', c: 5, r: 2, color: '#38bdf8', aura: 'rgba(56,189,248,0.22)', desc: '+2.5 Range and permanent Stealth true-sight.' },
+      accelerator: { id: 'accelerator', name: 'Hyper-Accelerator', c: 10, r: 3, color: '#fbbf24', aura: 'rgba(251,191,36,0.22)', desc: '+45% Attack Speed to tower deployed here.' }
+    },
+    hazards: [
+      { id: 1, type: 'cryo_tank', name: 'CRYO NITROGEN TANK', color: '#38bdf8', c: 7, row: 4, r: 16, hp: 60, dead: false },
+      { id: 2, type: 'cryo_tank', name: 'CRYO NITROGEN TANK', color: '#38bdf8', c: 10, row: 4, r: 16, hp: 60, dead: false }
+    ],
+    palette: {
+      ground: [15, 28, 42],
+      road: [28, 45, 65],
+      curb: '#7dd3fc',
+      lane: 'rgba(56,189,248,0.6)',
+      accent: '#38bdf8'
+    }
+  },
+  quarantine: {
+    id: 'quarantine',
+    num: '03',
+    name: 'Toxic Bio-Quarantine',
+    shortName: 'QUARANTINE',
+    subtitle: 'Contaminated Biochemical Vault',
+    biome: 'Acidic Sludge & Fungal Spores',
+    color: '#a3e635',
+    border: '#65a30d',
+    bg: '#181220',
+    topology: 'The Split Switchback (Parit Zig-Zag & Bio-Flank)',
+    hazardDesc: 'Unstable Spore Pods (2.5s Hostile Reverse Confusion + Acid)',
+    climateDesc: 'Corrosive Acid Runoffs: Hostiles continuously lose 15% armor/sec in sludge.',
+    wp0: [[0, 7], [3, 7], [3, 1], [7, 1], [7, 8], [11, 8], [11, 2], [14, 2], [14, 7], [15, 7]],
+    wp1: [[3, 4], [7, 4], [11, 4], [14, 4], [14, 7], [15, 7]],
+    start0: { x: -TILE * 0.6, y: 7 * TILE + TILE / 2 },
+    start1: { x: -TILE * 0.6, y: 4 * TILE + TILE / 2 },
+    base: { x: 15 * TILE + TILE / 2, y: 7 * TILE + TILE / 2 },
+    leylines: {
+      accelerator: { id: 'accelerator', name: 'Hyper-Accelerator', c: 5, r: 3, color: '#fbbf24', aura: 'rgba(251,191,36,0.22)', desc: '+45% Attack Speed to tower deployed here.' },
+      catalyst: { id: 'catalyst', name: 'Catalyst Node', c: 9, r: 5, color: '#c084fc', aura: 'rgba(192,132,252,0.22)', desc: '+50% debuff potency and doubled effect durations.' },
+      sensor: { id: 'sensor', name: 'Sensor Relay', c: 12, r: 5, color: '#38bdf8', aura: 'rgba(56,189,248,0.22)', desc: '+2.5 Range and permanent Stealth true-sight.' }
+    },
+    hazards: [
+      { id: 1, type: 'spore_pod', name: 'SPORE POD', color: '#a3e635', c: 5, row: 5, r: 16, hp: 60, dead: false },
+      { id: 2, type: 'spore_pod', name: 'SPORE POD', color: '#a3e635', c: 12, row: 6, r: 16, hp: 60, dead: false }
+    ],
+    palette: {
+      ground: [26, 20, 34],
+      road: [38, 32, 46],
+      curb: '#4d7c0f',
+      lane: 'rgba(163,230,53,0.6)',
+      accent: '#a3e635'
+    }
+  },
+  skyspire: {
+    id: 'skyspire',
+    num: '04',
+    name: 'Orbital Sky-Spire',
+    shortName: 'SKY-SPIRE',
+    subtitle: 'High-Orbit Citadel Platform',
+    biome: 'Deep Space Void & Titanium Hex',
+    color: '#818cf8',
+    border: '#4f46e5',
+    bg: '#080b14',
+    topology: 'Concentric Spiral (Pusaran Luar Menuju Inti Pusat)',
+    hazardDesc: 'Overcharged Tesla Pylons (350 Chain AoE + Shield Drain)',
+    climateDesc: 'Void Gravity: Heavy kinetic & railgun hits have 20% chance to blast hostiles off edge.',
+    wp0: [[0, 1], [14, 1], [14, 8], [1, 8], [1, 3], [12, 3], [12, 6], [4, 6], [4, 4], [8, 4]],
+    wp1: [[8, 9], [8, 6], [4, 6], [4, 4], [8, 4]],
+    start0: { x: -TILE * 0.6, y: 1 * TILE + TILE / 2 },
+    start1: { x: 8 * TILE + TILE / 2, y: H + TILE * 0.6 },
+    base: { x: 8 * TILE + TILE / 2, y: 4 * TILE + TILE / 2 },
+    leylines: {
+      sensor: { id: 'sensor', name: 'Sensor Relay', c: 7, r: 2, color: '#38bdf8', aura: 'rgba(56,189,248,0.22)', desc: '+2.5 Range and permanent Stealth true-sight.' },
+      accelerator: { id: 'accelerator', name: 'Hyper-Accelerator', c: 9, r: 2, color: '#fbbf24', aura: 'rgba(251,191,36,0.22)', desc: '+45% Attack Speed to tower deployed here.' },
+      catalyst: { id: 'catalyst', name: 'Catalyst Node', c: 7, r: 5, color: '#c084fc', aura: 'rgba(192,132,252,0.22)', desc: '+50% debuff potency and doubled effect durations.' }
+    },
+    hazards: [
+      { id: 1, type: 'tesla_pylon', name: 'TESLA PYLON', color: '#facc15', c: 6, row: 2, r: 16, hp: 60, dead: false },
+      { id: 2, type: 'tesla_pylon', name: 'TESLA PYLON', color: '#facc15', c: 10, row: 5, r: 16, hp: 60, dead: false }
+    ],
+    palette: {
+      ground: [20, 24, 38],
+      road: [35, 40, 60],
+      curb: '#6366f1',
+      lane: 'rgba(129,140,248,0.6)',
+      accent: '#818cf8'
+    }
+  },
+  dunes: {
+    id: 'dunes',
+    num: '05',
+    name: 'Sunken Dunes',
+    shortName: 'DUNES',
+    subtitle: 'Ancient Monolith Canyon',
+    biome: 'Golden Desert Sands & Sandstone Ruins',
+    color: '#eab308',
+    border: '#ca8a04',
+    bg: '#251c12',
+    topology: 'Canyon Double-Fork (Split Around Sunken Relic)',
+    hazardDesc: 'Relic Sun Monoliths (Concentrated 400 Solar Ray Beam)',
+    climateDesc: 'Quicksand Drift: Enemies slowed 20% on sand; dust cuts tower range 10% unless on Sensor.',
+    wp0: [[0, 4], [3, 4], [3, 7], [7, 7], [7, 8], [11, 8], [11, 5], [14, 5], [15, 5]],
+    wp1: [[0, 4], [3, 4], [3, 1], [8, 1], [8, 3], [11, 3], [11, 5], [14, 5], [15, 5]],
+    start0: { x: -TILE * 0.6, y: 4 * TILE + TILE / 2 },
+    start1: { x: -TILE * 0.6, y: 4 * TILE + TILE / 2 },
+    base: { x: 15 * TILE + TILE / 2, y: 5 * TILE + TILE / 2 },
+    leylines: {
+      accelerator: { id: 'accelerator', name: 'Hyper-Accelerator', c: 5, r: 2, color: '#fbbf24', aura: 'rgba(251,191,36,0.22)', desc: '+45% Attack Speed to tower deployed here.' },
+      sensor: { id: 'sensor', name: 'Sensor Relay', c: 9, r: 6, color: '#38bdf8', aura: 'rgba(56,189,248,0.22)', desc: '+2.5 Range and permanent Stealth true-sight.' },
+      catalyst: { id: 'catalyst', name: 'Catalyst Node', c: 5, r: 6, color: '#c084fc', aura: 'rgba(192,132,252,0.22)', desc: '+50% debuff potency and doubled effect durations.' }
+    },
+    hazards: [
+      { id: 1, type: 'sun_monolith', name: 'SUN MONOLITH', color: '#fbbf24', c: 6, row: 4, r: 16, hp: 60, dead: false },
+      { id: 2, type: 'sun_monolith', name: 'SUN MONOLITH', color: '#fbbf24', c: 10, row: 6, r: 16, hp: 60, dead: false }
+    ],
+    palette: {
+      ground: [48, 38, 24],
+      road: [62, 48, 32],
+      curb: '#a16207',
+      lane: 'rgba(234,179,8,0.6)',
+      accent: '#eab308'
+    }
+  },
+  metropolis: {
+    id: 'metropolis',
+    num: '06',
+    name: 'Neon Cyber-Metropolis',
+    shortName: 'METROPOLIS',
+    subtitle: 'Sector 07 Data Haven Highway',
+    biome: 'Cyberpunk Skyway & Neon Grid',
+    color: '#06b6d4',
+    border: '#0891b2',
+    bg: '#0e131d',
+    topology: 'Multi-Lane Skyway & Express Overpass',
+    hazardDesc: 'EMP Security Terminals (3.5s Stun + Total Shield Strip)',
+    climateDesc: 'Overclocked Grid: +15 MW Grid Power capacity, Commander Skills charge +15% faster.',
+    wp0: [[0, 2], [6, 2], [6, 6], [2, 6], [2, 8], [13, 8], [13, 5], [9, 5], [9, 2], [15, 2]],
+    wp1: [[0, 2], [6, 2], [9, 2], [15, 2]],
+    start0: { x: -TILE * 0.6, y: 2 * TILE + TILE / 2 },
+    start1: { x: -TILE * 0.6, y: 2 * TILE + TILE / 2 },
+    base: { x: 15 * TILE + TILE / 2, y: 2 * TILE + TILE / 2 },
+    leylines: {
+      accelerator: { id: 'accelerator', name: 'Hyper-Accelerator', c: 7, r: 4, color: '#fbbf24', aura: 'rgba(251,191,36,0.22)', desc: '+45% Attack Speed to tower deployed here.' },
+      sensor: { id: 'sensor', name: 'Sensor Relay', c: 11, r: 4, color: '#38bdf8', aura: 'rgba(56,189,248,0.22)', desc: '+2.5 Range and permanent Stealth true-sight.' },
+      catalyst: { id: 'catalyst', name: 'Catalyst Node', c: 4, r: 4, color: '#c084fc', aura: 'rgba(192,132,252,0.22)', desc: '+50% debuff potency and doubled effect durations.' }
+    },
+    hazards: [
+      { id: 1, type: 'emp_terminal', name: 'EMP TERMINAL', color: '#22d3ee', c: 4, row: 3, r: 16, hp: 60, dead: false },
+      { id: 2, type: 'emp_terminal', name: 'EMP TERMINAL', color: '#22d3ee', c: 11, row: 6, r: 16, hp: 60, dead: false }
+    ],
+    palette: {
+      ground: [16, 20, 28],
+      road: [24, 28, 38],
+      curb: '#06b6d4',
+      lane: 'rgba(34,211,238,0.7)',
+      accent: '#06b6d4'
+    }
+  },
+  abyssal: {
+    id: 'abyssal',
+    num: '07',
+    name: 'Abyssal Trench',
+    shortName: 'ABYSSAL',
+    subtitle: 'Deep Oceanic Geothermal Rift',
+    biome: 'Bioluminescent Abyss & Thermal Reef',
+    color: '#2dd4bf',
+    border: '#0d9488',
+    bg: '#08141e',
+    topology: 'Submerged Trench Chasm (Aquatic Labyrinth)',
+    hazardDesc: 'Hydrothermal Geysers (300 Dmg + 2.0s Knockup + Slow Puddles)',
+    climateDesc: 'Depth Pressure: Enemies +10% base armor; Tesla jumps +2 targets and deals +25% dmg.',
+    wp0: [[0, 5], [3, 5], [3, 1], [7, 1], [7, 7], [11, 7], [11, 3], [14, 3], [14, 6], [15, 6]],
+    wp1: [[0, 5], [5, 5], [5, 8], [11, 8], [11, 3], [14, 3], [14, 6], [15, 6]],
+    start0: { x: -TILE * 0.6, y: 5 * TILE + TILE / 2 },
+    start1: { x: -TILE * 0.6, y: 5 * TILE + TILE / 2 },
+    base: { x: 15 * TILE + TILE / 2, y: 6 * TILE + TILE / 2 },
+    leylines: {
+      catalyst: { id: 'catalyst', name: 'Catalyst Node', c: 9, r: 4, color: '#c084fc', aura: 'rgba(192,132,252,0.22)', desc: '+50% debuff potency and doubled effect durations.' },
+      sensor: { id: 'sensor', name: 'Sensor Relay', c: 12, r: 4, color: '#38bdf8', aura: 'rgba(56,189,248,0.22)', desc: '+2.5 Range and permanent Stealth true-sight.' },
+      accelerator: { id: 'accelerator', name: 'Hyper-Accelerator', c: 4, r: 3, color: '#fbbf24', aura: 'rgba(251,191,36,0.22)', desc: '+45% Attack Speed to tower deployed here.' }
+    },
+    hazards: [
+      { id: 1, type: 'hydro_geyser', name: 'HYDRO GEYSER', color: '#2dd4bf', c: 5, row: 3, r: 16, hp: 60, dead: false },
+      { id: 2, type: 'hydro_geyser', name: 'HYDRO GEYSER', color: '#2dd4bf', c: 9, row: 5, r: 16, hp: 60, dead: false }
+    ],
+    palette: {
+      ground: [10, 22, 32],
+      road: [18, 34, 46],
+      curb: '#0d9488',
+      lane: 'rgba(45,212,191,0.6)',
+      accent: '#2dd4bf'
+    }
+  }
+};
+
 const pathTile = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
-const PATH = [{ x: -TILE * 0.6, y: WP_TILES[0][1] * TILE + TILE / 2 }];
-for (const [c, r] of WP_TILES) PATH.push({ x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 });
-for (let i = 0; i < WP_TILES.length - 1; i++) {
-  const [c1, r1] = WP_TILES[i], [c2, r2] = WP_TILES[i + 1];
-  const dc = Math.sign(c2 - c1), dr = Math.sign(r2 - r1);
-  let c = c1, r = r1; pathTile[r][c] = true;
-  while (c !== c2 || r !== r2) { c += dc; r += dr; pathTile[r][c] = true; }
-}
-const SEG = []; let PLEN = 0;
-for (let i = 0; i < PATH.length - 1; i++) {
-  const a = PATH[i], b = PATH[i + 1], len = Math.hypot(b.x - a.x, b.y - a.y);
-  SEG.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, len, start: PLEN, ang: Math.atan2(b.y - a.y, b.x - a.x) });
-  PLEN += len;
+let WP_TILES = [];
+const PATH = [];
+const SEG = [];
+let PLEN = 0;
+let WP_BREACH = [];
+const PATH_BREACH = [];
+const SEG_BREACH = [];
+let PLEN_BREACH = 0;
+const BASE_PT = { x: 0, y: 0 };
+const SPAWN_PT = { x: 0, y: 0 };
+const LEYLINE_NODES = {};
+
+function loadSector(sectorId) {
+  const sec = MAP_SECTORS[sectorId] || MAP_SECTORS.foundry;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) pathTile[r][c] = false;
+
+  WP_TILES = sec.wp0;
+  PATH.length = 0;
+  PATH.push(sec.start0);
+  for (const [c, r] of WP_TILES) PATH.push({ x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 });
+  for (let i = 0; i < WP_TILES.length - 1; i++) {
+    const [c1, r1] = WP_TILES[i], [c2, r2] = WP_TILES[i + 1];
+    const dc = Math.sign(c2 - c1), dr = Math.sign(r2 - r1);
+    let c = c1, r = r1; pathTile[r][c] = true;
+    while (c !== c2 || r !== r2) { c += dc; r += dr; pathTile[r][c] = true; }
+  }
+  SEG.length = 0; PLEN = 0;
+  for (let i = 0; i < PATH.length - 1; i++) {
+    const a = PATH[i], b = PATH[i + 1], len = Math.hypot(b.x - a.x, b.y - a.y);
+    SEG.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, len, start: PLEN, ang: Math.atan2(b.y - a.y, b.x - a.x) });
+    PLEN += len;
+  }
+
+  WP_BREACH = sec.wp1 || [];
+  PATH_BREACH.length = 0;
+  SEG_BREACH.length = 0;
+  PLEN_BREACH = 0;
+  if (WP_BREACH.length > 0) {
+    PATH_BREACH.push(sec.start1);
+    for (const [c, r] of WP_BREACH) PATH_BREACH.push({ x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 });
+    for (let i = 0; i < WP_BREACH.length - 1; i++) {
+      const [c1, r1] = WP_BREACH[i], [c2, r2] = WP_BREACH[i + 1];
+      const dc = Math.sign(c2 - c1), dr = Math.sign(r2 - r1);
+      let c = c1, r = r1; pathTile[r][c] = true;
+      while (c !== c2 || r !== r2) { c += dc; r += dr; pathTile[r][c] = true; }
+    }
+    for (let i = 0; i < PATH_BREACH.length - 1; i++) {
+      const a = PATH_BREACH[i], b = PATH_BREACH[i + 1], len = Math.hypot(b.x - a.x, b.y - a.y);
+      SEG_BREACH.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, len, start: PLEN_BREACH, ang: Math.atan2(b.y - a.y, b.x - a.x) });
+      PLEN_BREACH += len;
+    }
+  }
+
+  BASE_PT.x = sec.base.x; BASE_PT.y = sec.base.y;
+  SPAWN_PT.x = sec.start0.x <= 0 ? TILE * 0.5 : sec.start0.x;
+  SPAWN_PT.y = sec.start0.y <= 0 ? TILE * 0.5 : sec.start0.y;
+
+  for (const k in LEYLINE_NODES) delete LEYLINE_NODES[k];
+  Object.assign(LEYLINE_NODES, sec.leylines);
 }
 
-/* Dynamic North Breach Route (Wave >= 8) */
-const WP_BREACH = [[7, 0], [7, 1], [11, 1], [11, 3], [11, 8], [14, 8], [14, 2], [15, 2]];
-for (let i = 0; i < WP_BREACH.length - 1; i++) {
-  const [c1, r1] = WP_BREACH[i], [c2, r2] = WP_BREACH[i + 1];
-  const dc = Math.sign(c2 - c1), dr = Math.sign(r2 - r1);
-  let c = c1, r = r1; pathTile[r][c] = true;
-  while (c !== c2 || r !== r2) { c += dc; r += dr; pathTile[r][c] = true; }
-}
-const PATH_BREACH = [{ x: 7 * TILE + TILE / 2, y: -TILE * 0.6 }];
-for (const [c, r] of WP_BREACH) PATH_BREACH.push({ x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 });
-const SEG_BREACH = []; let PLEN_BREACH = 0;
-for (let i = 0; i < PATH_BREACH.length - 1; i++) {
-  const a = PATH_BREACH[i], b = PATH_BREACH[i + 1], len = Math.hypot(b.x - a.x, b.y - a.y);
-  SEG_BREACH.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, len, start: PLEN_BREACH, ang: Math.atan2(b.y - a.y, b.x - a.x) });
-  PLEN_BREACH += len;
-}
+loadSector('foundry');
 
 function posAt(d, hint, pathId) {
-  const segs = pathId === 1 ? SEG_BREACH : SEG;
+  const segs = (pathId === 1 && SEG_BREACH.length > 0) ? SEG_BREACH : SEG;
   let i = hint || 0; if (d < 0) d = 0;
   while (i < segs.length - 1 && d >= segs[i].start + segs[i].len) i++;
   const s = segs[i], t = clamp((d - s.start) / s.len, 0, 1);
   return { x: s.x1 + (s.x2 - s.x1) * t, y: s.y1 + (s.y2 - s.y1) * t, ang: s.ang, seg: i };
 }
-const BASE_PT = PATH[PATH.length - 1];
-const SPAWN_PT = { x: TILE * 0.5, y: PATH[0].y };
 
 /* ============================================================
    DEFINITIONS
@@ -425,23 +704,6 @@ const WORKSHOP_UPGRADES = {
 /* ============================================================
    LEYLINE CONDUIT NODES (FASE 4)
    ============================================================ */
-const LEYLINE_NODES = {
-  accelerator: {
-    id: 'accelerator', name: 'Hyper-Accelerator', c: 6, r: 2,
-    color: '#fbbf24', aura: 'rgba(251,191,36,0.22)',
-    desc: '+45% Attack Speed to tower deployed here.'
-  },
-  sensor: {
-    id: 'sensor', name: 'Sensor Relay', c: 10, r: 5,
-    color: '#38bdf8', aura: 'rgba(56,189,248,0.22)',
-    desc: '+2.5 Range and permanent Stealth true-sight.'
-  },
-  catalyst: {
-    id: 'catalyst', name: 'Catalyst Node', c: 7, r: 5,
-    color: '#c084fc', aura: 'rgba(192,132,252,0.22)',
-    desc: '+50% debuff potency and doubled effect durations.'
-  }
-};
 function getLeylineAt(c, r) {
   for (const k in LEYLINE_NODES) {
     const node = LEYLINE_NODES[k];
@@ -607,12 +869,68 @@ function buildSpawns(n) {
     }
   }
 
-  // Dynamic North Breach Route (Wave >= 8, flanking ~35% non-boss, non-swarm enemies)
-  if (n >= 8) {
+  // Multi-Sector Dynamic Route Spawning
+  const curSec = (typeof G !== 'undefined' && G && G.sector) ? G.sector : ((typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry');
+  if (curSec === 'abyss') {
+    // Sektor 02: Dual-Front Convergence (West vs North split from wave 1)
     for (let i = 0; i < ev.length; i++) {
-      const item = ev[i];
-      if (item.type !== 'boss' && item.type !== 'swarm' && ((i + n) % 3 === 0)) {
-        item.pathId = 1;
+      if (ev[i].type !== 'boss') {
+        ev[i].pathId = (i % 2 === 0 ? 0 : 1);
+      }
+    }
+  } else if (curSec === 'dunes') {
+    // Sektor 05: Canyon Double-Fork (North Mesa vs South Canyon alternate on wave >= 4)
+    if (n >= 4) {
+      for (let i = 0; i < ev.length; i++) {
+        if (ev[i].type !== 'boss' && (i % 2 === 1)) {
+          ev[i].pathId = 1;
+        }
+      }
+    }
+  } else if (curSec === 'quarantine') {
+    // Sektor 03: Bio-Tunnel Flank on wave >= 6
+    if (n >= 6) {
+      for (let i = 0; i < ev.length; i++) {
+        if ((ev[i].type === 'breacher' || ev[i].type === 'stealth' || (i + n) % 3 === 0) && ev[i].type !== 'boss') {
+          ev[i].pathId = 1;
+        }
+      }
+    }
+  } else if (curSec === 'skyspire') {
+    // Sektor 04: Drop pods from South on wave >= 7
+    if (n >= 7) {
+      for (let i = 0; i < ev.length; i++) {
+        if (ev[i].type !== 'boss' && ((i + n) % 3 === 0)) {
+          ev[i].pathId = 1;
+        }
+      }
+    }
+  } else if (curSec === 'metropolis') {
+    // Sektor 06: Express Flyover on wave >= 6
+    if (n >= 6) {
+      for (let i = 0; i < ev.length; i++) {
+        if (ev[i].type !== 'boss' && ((i + n) % 3 === 0)) {
+          ev[i].pathId = 1;
+        }
+      }
+    }
+  } else if (curSec === 'abyssal') {
+    // Sektor 07: Geyser bypass on wave >= 5
+    if (n >= 5) {
+      for (let i = 0; i < ev.length; i++) {
+        if (ev[i].type !== 'boss' && ((i + n) % 3 === 0)) {
+          ev[i].pathId = 1;
+        }
+      }
+    }
+  } else {
+    // Sektor 01 (Foundry): Dynamic North Breach Route (Wave >= 8)
+    if (n >= 8) {
+      for (let i = 0; i < ev.length; i++) {
+        const item = ev[i];
+        if (item.type !== 'boss' && item.type !== 'swarm' && ((i + n) % 3 === 0)) {
+          item.pathId = 1;
+        }
       }
     }
   }

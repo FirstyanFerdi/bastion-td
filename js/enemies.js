@@ -8,7 +8,10 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
   const d = ED[type], sc = hpScale(n), hp = Math.round(d.hp * sc);
   let spd = d.speed * (1 + Math.min(0.25, n * 0.006)) * (type === 'swarm' ? rand(0.98, 1.02) : rand(0.94, 1.06));
   if (type === 'swarm' && G && G.ascension >= 3) spd *= 1.15;
+  if (G && G.sector === 'abyss') spd *= 1.15; // Frozen slipstream
+  if (G && G.sector === 'dunes') spd *= 0.85; // Quicksand drag
   let armor = d.armor;
+  if (G && G.sector === 'abyssal') armor = Math.min(0.85, armor + 0.10); // Ocean depth pressure
   if (G.mutator && G.mutator.id === 'heavy_plating') armor = Math.min(0.85, armor + 0.20);
   const isChamp = !!(affix && CHAMPION_AFFIXES[affix]);
   const finalHp = isChamp ? Math.round(hp * 1.4) : hp;
@@ -28,7 +31,7 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     noDmgT: 0, phaseCd: 0, avengerStacks: 0, thawCd: rand(1.5, 2.5), artilleryCd: rand(4.0, 7.0),
     pathId: pId, titanId: titanId || null,
     chitinHits: 0, insulation: false, grounded: false, speedBoostT: 0,
-    hijackedT: 0, hijackFireCd: 0
+    hijackedT: 0, hijackFireCd: 0, reversed: 0
   };
 
   // Named Titan Boss stats
@@ -380,8 +383,20 @@ function updateEnemy(e, dt) {
     }
   }
 
+  // Spore Pod Confusion (Walk backwards)
+  if (e.reversed > 0) {
+    e.reversed -= dt;
+    sp = -Math.abs(sp);
+  }
+
+  // Sektor 03 Bio-Quarantine: Corrosive Acid Runoffs (continuous armor shred)
+  if (G && G.sector === 'quarantine' && e.armor > 0) {
+    e.shred = Math.min(e.armor, e.shred + e.armor * 0.15 * dt);
+  }
+
   e.curSpeed = sp;
   e.d += sp * dt;
+  if (e.reversed > 0 && e.d < 0) e.d = 0;
   const plen = e.pathId === 1 ? PLEN_BREACH : PLEN;
   if (e.d >= plen) {
     e.dead = true;

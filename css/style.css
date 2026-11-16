@@ -1309,6 +1309,181 @@ kbd, .kbd {
 }
 
 /* ============================================================
+   EXPEDITION SECTOR DOSSIER (MULTI-MAP SYSTEM)
+   ============================================================ */
+.sec-box {
+  margin-bottom: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.sec-tabs-bar {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #0b0f17;
+}
+.sec-tabs-bar::-webkit-scrollbar {
+  height: 4px;
+}
+.sec-tabs-bar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 2px;
+}
+
+.sec-tab-btn {
+  flex: 1 0 74px;
+  min-width: 74px;
+  background: #090d13;
+  border: 1px solid #1e293b;
+  border-radius: 3px;
+  padding: 4px 5px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sec-tab-btn:hover:not(:disabled) {
+  border-color: var(--sec-col, #38bdf8);
+  background: #0f172a;
+}
+.sec-tab-btn.on {
+  border-color: var(--sec-col, #f59e0b);
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5), inset 0 0 8px rgba(255, 255, 255, 0.05);
+}
+.sec-tab-btn.locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+}
+
+.sec-tab-num {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.sec-tab-btn.on .sec-tab-num {
+  color: var(--sec-col, #f59e0b);
+}
+.sec-tab-name {
+  font-size: 10px;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sec-tab-stars {
+  font-size: 8.5px;
+  color: #f59e0b;
+  letter-spacing: 1px;
+}
+
+.sec-dossier {
+  background: #080c14;
+  border: 1px solid #1e293b;
+  border-left: 4px solid var(--amber);
+  border-radius: 3px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.sec-dossier-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 4px;
+}
+
+.sec-badge {
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 2px;
+  letter-spacing: 0.06em;
+}
+
+.sec-dossier-grid {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+#secMiniCanvas {
+  width: 160px;
+  height: 96px;
+  flex-shrink: 0;
+  border: 1px solid #1e293b;
+  border-radius: 3px;
+}
+
+.sec-intel {
+  flex: 1;
+  font-size: 10px;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sec-k {
+  font-weight: 700;
+  color: #64748b;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+.sec-v {
+  color: #e2e8f0;
+}
+
+.sec-star-wrap {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  padding: 3px 6px;
+}
+
+.sec-star-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9px;
+  color: #94a3b8;
+}
+.sec-star-item.done {
+  color: #34d399;
+}
+
+@media (max-width: 580px) {
+  .sec-dossier-grid {
+    flex-direction: column;
+    align-items: center;
+  }
+  #secMiniCanvas {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+  }
+}
+
+/* ============================================================
    RESPONSIVE DESIGN (TABLETS & LAPTOPS)
    ============================================================ */
 @media (max-width: 980px) {

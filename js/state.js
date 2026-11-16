@@ -48,6 +48,9 @@ function newGame(keepSpeed) {
   const speed = keepSpeed && G ? G.speed : 1;
   const startBonus = typeof getWorkshopLevel === 'function' ? getWorkshopLevel('treasury') * 50 : 0;
   const docId = (typeof SAVE !== 'undefined' && SAVE.doctrine) || 'vanguard';
+  const curSecId = (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
+  if (typeof loadSector === 'function') loadSector(curSecId);
+  const sec = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : (typeof MAP_SECTORS !== 'undefined' ? MAP_SECTORS.foundry : null);
   G = {
     state: 'prep', lives: startLives, gold: 250 + startBonus, wave: 0, score: 0, time: 0, anim: 0, speed, paused: false,
     enemies: [], towers: [], proj: [], queue: [], grid: emptyGrid(),
@@ -55,9 +58,10 @@ function newGame(keepSpeed) {
     prepT: 20, shake: 0, dmgFlash: 0, baseFlash: 0, banner: null, endless: false, uiDirty: true, kills: 0,
     perks: [], skills: {},
     hazards: [], casting: null, mutator: null, drafting: null, leakedThisWave: 0, citadelCd: 0,
-    fuelCells: [
-      { id: 1, c: 6, row: 3, x: 6 * TILE + TILE / 2, y: 3 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false },
-      { id: 2, c: 12, row: 7, x: 12 * TILE + TILE / 2, y: 7 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false }
+    sector: curSecId,
+    fuelCells: sec ? sec.hazards.map(h => ({ ...h, x: h.c * TILE + TILE / 2, y: h.row * TILE + TILE / 2 })) : [
+      { id: 1, type: 'fuel_cell', name: 'FUEL CELL', color: '#f97316', c: 6, row: 3, x: 6 * TILE + TILE / 2, y: 3 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false },
+      { id: 2, type: 'fuel_cell', name: 'FUEL CELL', color: '#f97316', c: 12, row: 7, x: 12 * TILE + TILE / 2, y: 7 * TILE + TILE / 2, r: 16, hp: 60, maxHp: 60, dead: false }
     ],
     ascension: asc,
     doctrine: docId,
@@ -79,20 +83,102 @@ function detonateFuelCell(fc) {
   if (!fc || fc.dead) return;
   fc.dead = true;
   fc.hp = 0;
-  const R = 110;
-  addRing(fc.x, fc.y, 12, R, 0.7, '#f97316', 5);
-  burst(fc.x, fc.y, 45, '#f97316', 220, 0.85, 4.5, true);
-  burst(fc.x, fc.y, 25, '#fff7ed', 150, 0.5, 3, true);
+  const R = 120;
+  const col = fc.color || '#f97316';
+  addRing(fc.x, fc.y, 12, R, 0.7, col, 5);
+  burst(fc.x, fc.y, 40, col, 220, 0.85, 4.5, true);
+  burst(fc.x, fc.y, 20, '#fff7ed', 150, 0.5, 3, true);
   shake(14);
-  Sfx.play('boom');
-  addText(fc.x, fc.y - 28, 'FUEL CELL DETONATION!', '#f97316', 17);
-  G.hazards.push({ type: 'radiation', x: fc.x, y: fc.y, r: 90, life: 4.5, max: 4.5, dps: 42, shred: 0.35, src: null });
-  for (const e of G.enemies) {
-    if (e.dead) continue;
-    const d = Math.hypot(e.x - fc.x, e.y - fc.y);
-    if (d <= R + e.r) {
-      if (e.armor > 0) e.shred = e.armor; // 100% armor shred
-      dealDamage(e, 450, 'plasma', null);
+
+  if (fc.type === 'cryo_tank') {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('freeze');
+    addText(fc.x, fc.y - 28, 'NITROGEN FLASH-FREEZE!', '#38bdf8', 16);
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - fc.x, e.y - fc.y);
+      if (d <= R + e.r) {
+        e.freezeT = Math.max(e.freezeT || 0, 4.0);
+        e.slowT = Math.max(e.slowT, 6.0);
+        e.brittleT = Math.max(e.brittleT, 6.0);
+        dealDamage(e, 180, 'cryo', null);
+      }
+    }
+  } else if (fc.type === 'spore_pod') {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+    addText(fc.x, fc.y - 28, 'SPORE CONFUSION BURST!', '#a3e635', 16);
+    G.hazards.push({ type: 'spore_cloud', x: fc.x, y: fc.y, r: 90, life: 4.0, max: 4.0, dps: 30, src: null });
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - fc.x, e.y - fc.y);
+      if (d <= R + e.r) {
+        e.reversed = 2.5; // Walk backwards!
+        if (e.armor > 0) e.shred = Math.min(e.armor, e.shred + e.armor * 0.5);
+        dealDamage(e, 150, 'plasma', null);
+      }
+    }
+  } else if (fc.type === 'tesla_pylon') {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('hit');
+    addText(fc.x, fc.y - 28, 'TESLA OVERLOAD SURGE!', '#facc15', 16);
+    let hitCount = 0;
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - fc.x, e.y - fc.y);
+      if (d <= 200 + e.r && hitCount < 8) {
+        hitCount++;
+        addFx('bolt', fc.x, fc.y, e.x, e.y, 0.25, '#facc15', 3.5);
+        e.shield = 0;
+        e.stunT = Math.max(e.stunT || 0, 1.8);
+        dealDamage(e, 350, 'energy', null);
+      }
+    }
+  } else if (fc.type === 'sun_monolith') {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+    addText(fc.x, fc.y - 28, 'SOLAR BEAM ERUPTION!', '#fbbf24', 16);
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - fc.x, e.y - fc.y);
+      if (d <= 140 + e.r) {
+        e.thermiteT = Math.max(e.thermiteT || 0, 5.0);
+        e.thermiteDps = Math.max(e.thermiteDps || 0, 55);
+        dealDamage(e, 400, 'energy', null);
+      }
+    }
+  } else if (fc.type === 'emp_terminal') {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+    addText(fc.x, fc.y - 28, 'EMP SECURITY PULSE!', '#22d3ee', 16);
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - fc.x, e.y - fc.y);
+      if (d <= 150 + e.r) {
+        e.shield = 0;
+        e.stunT = Math.max(e.stunT || 0, 3.5);
+        dealDamage(e, 250, 'energy', null);
+      }
+    }
+  } else if (fc.type === 'hydro_geyser') {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+    addText(fc.x, fc.y - 28, 'HYDRO-KINETIC GEYSER!', '#2dd4bf', 16);
+    G.hazards.push({ type: 'water_pool', x: fc.x, y: fc.y, r: 85, life: 6.0, max: 6.0, dps: 15, src: null });
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - fc.x, e.y - fc.y);
+      if (d <= 130 + e.r) {
+        e.stunT = Math.max(e.stunT || 0, 2.0);
+        dealDamage(e, 300, 'cryo', null);
+      }
+    }
+  } else {
+    // Default fuel cell
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+    addText(fc.x, fc.y - 28, 'FUEL CELL DETONATION!', '#f97316', 17);
+    G.hazards.push({ type: 'radiation', x: fc.x, y: fc.y, r: 90, life: 4.5, max: 4.5, dps: 42, shred: 0.35, src: null });
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - fc.x, e.y - fc.y);
+      if (d <= 110 + e.r) {
+        if (e.armor > 0) e.shred = e.armor; // 100% armor shred
+        dealDamage(e, 450, 'plasma', null);
+      }
     }
   }
 }
@@ -176,6 +262,21 @@ function dealDamage(e, amount, type, src, opts) {
   if (G.mutator && G.mutator.id === 'ion_storm' && (type === 'energy' || (src && src.type === 'tesla'))) a *= 1.25;
   if (e.shield > 0 && opts.shieldMult) a *= opts.shieldMult;
   if (G.mutator && G.mutator.id === 'solar_flare' && (type === 'energy' || type === 'plasma' || (src && (src.type === 'tesla' || src.type === 'plasma')))) a *= 1.35;
+
+  // Sector Climates:
+  if (G && G.sector === 'abyss' && (type === 'cryo' || e.brittleT > 0)) {
+    a *= 1.5; // Frozen Slipstream: +50% brittle/cryo damage
+  }
+  if (G && G.sector === 'abyssal' && (type === 'energy' || (src && src.type === 'tesla'))) {
+    a *= 1.25; // Depth water conductivity: +25% energy damage
+  }
+  if (G && G.sector === 'skyspire' && (type === 'phys' || (src && (src.type === 'gatling' || src.type === 'rail'))) && e.type !== 'boss' && Math.random() < 0.20) {
+    e.dead = true; e.hp = 0;
+    burst(e.x, e.y, 16, '#818cf8', 120, 0.5, 3, true);
+    addText(e.x, e.y - 15, 'VOID DROP!', '#818cf8', 13);
+    G.score += e.reward * 10; G.gold += e.reward; G.kills++;
+    return a;
+  }
 
   // Commander Skill: Market Liquidation (100% crit chance)
   if (G && G.liquidationT > 0) opts.crit = true;
