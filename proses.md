@@ -759,8 +759,8 @@ git add .
 # 2. Periksa status
 git status
 
-# 3. Lakukan commit perubahan Bastion TD 5.0: Deep Interconnected Synergy Matrix & Effects Realization
-git commit -m "feat(v5.0): implement deep interconnected synergy matrix, audit and realize 100% in-game effects and mechanics"
+# 3. Lakukan commit perubahan Bastion TD 6.0: The Living Paradox & Reality Manipulation
+git commit -m "feat(v6.0): implement living paradox, 4D chrono rewind, neural synapses, nanite necromancy, tectonic shifting, and infiltrator syndicate"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git
@@ -768,6 +768,46 @@ git remote add origin https://github.com/USERNAME/REPO_NAME.git
 # 5. Unggah ke branch main
 git push -u origin main
 ```
+
+---
+
+## 18. Tahap 7: Bastion TD 6.0 — The Living Paradox & Reality Manipulation
+
+### 18.1 Filosofi Anti-Klise (*Out-of-the-Box Systems*)
+Menolak formula Tower Defense klise (seperti angka statik "+10% damage" atau gelombang endless monoton), Bastion TD 6.0 merevolusi alur permainan dengan sistem manipulasi realitas dinamis, rekayasa biologi bangkai alien, perkawinan silang sistem syaraf menara, manipulasi tektonik medan tempur, dan intervensi faksi ketiga independen.
+
+### 18.2 Rincian Lima Pilar Mekanik Radikal:
+1. **Chrono-Echo Splicer & Quantum Paradox Loop (`[Z]` / `#btnChrono`):**
+   * Perangkat Tachyon Splicer merekam riwayat pertempuran setiap 0.1 detik (`recordTimeSnapshot()`).
+   * Menekan tombol `[Z]` atau tombol topbar `#btnChrono` memutar mundur waktu 5 detik ke masa lalu: nyawa markas dipulihkan, gold dikembalikan, dan musuh mundur ke koordinat lampau.
+   * **Ghost Echoes:** Menara dari masa lalu memproyeksikan siluet holografik cyan di garis waktu baru yang menembakkan laser masa lalu secara simultan bersama menara aktif.
+   * **Paradox Entropy & Reality Fracture:** Setiap pemutaran waktu menambah entropi paradoks (+35%). Jika mencapai 100%, terjadi retakan realitas yang memunculkan **Chrono-Horror** yang kebal proyektil fisik (*Void Physical Immunity*) dan hanya bisa dirusak laser resonansi/energi.
+2. **Tectonic Mag-Lev Shifting (Terraforming Rute Real-Time):**
+   * Diaktifkan melalui `[Shift + Scroll]` pada ubin medan tempur (`triggerTectonicShift(col, row)`).
+   * Memicu denyut kinetik mag-lev dalam radius 2.5 ubin: musuh terpelanting mundur sepanjang rute (*Centrifuge Loop Trap*).
+   * Musuh ber-HP rendah (< 25%) langsung terhisap jatuh ke jurang kehampaan (*Kinetic Void Chasm Drop*).
+   * Musuh Titan/Breacher beradaptasi dengan menancapkan pasak seismik pembatas lempeng (*Tectonic Spikes*).
+3. **Reclaimed Nanite Necromancy (Bangkai Musuh Jadi Barikade Hidup):**
+   * Setiap alien yang gugur meninggalkan bangkai biologis yang persisten (`G.corpses`) dengan indikator dekomposisi hijau.
+   * Pemain dapat mengklik bangkai tersebut untuk mereklamasi nanit (`reclaimCorpse(idx)`):
+     - **Bangkai Brute $\rightarrow$ Colossus Bastion:** Menjadi barikade fisik berlapis baja (850 HP) yang secara fisik menghentikan laju alien dan memaksa mereka menyerang patung pelindung terlebih dahulu.
+     - **Bangkai Carrier $\rightarrow$ Nanite Drone Hive:** Memunculkan sarang drone pemburu bunuh diri sekutu.
+     - **Bangkai Healer $\rightarrow$ Bio-Shield Emitter:** Memancarkan kubah penangkal EMP untuk membersihkan menara kawan.
+4. **Neural-Link Synapse Network (Sistem Syaraf Simbiotik Menara):**
+   * Menghubungkan dua menara kawan menggunakan serat sinapsis neon magenta-cyan (`[N]` atau klik tombol di Tactical Inspector).
+   * Menghasilkan perkawinan silang karakteristik senjata (*Weapon Hybridization*):
+     - **Gatling + Rail:** Gatling memperoleh proyektil penembus (*Kinetic Piercing* +2 target di belakang sasaran), sedangkan Railgun memperoleh akselerasi kinetik (+45% kecepatan tembak/spinup).
+     - **Cryo + Plasma:** Semburan Cryo meninggalkan genangan *Thermonuclear Frost* yang langsung memicu ledakan gelombang kejut termal (*Thermal Shockwave*).
+     - **Tesla + Relay:** Sambaran petir merambat melalui seluruh konduit laser resonansi di peta (*Conduit Perimeter Lightning*).
+5. **The Infiltrator Syndicate (Faksi Ketiga Netral / Pemburu Bayaran):**
+   * Pada Wave 6, 12, dan 18, Gunship Tentara Bayaran netral mendarat di langit sektor pertempuran.
+   * **Bribe (Suap 120 Gold):** Gunship menjadi sekutu bersenjata yang menghujani alien dengan salvo roket pandu setiap 1.2 detik.
+   * **Raid (Serang & Jarah):** Menandai gunship sebagai musuh. Menghancurkan gunship menghadiahkan **+220 Gold**, **+30 Nanite Cores**, dan Modular Chip Terlarang **Quantum Singularity Core**.
+   * **Ignore (Abaikan):** Tentara bayaran mengekstraksi 20% drop gold dari alien di dekatnya.
+
+### 18.3 Validasi Kualitas & Keandalan (14 Test Suites Lulus 100%):
+* `tests/test_paradox_reality.js`: **100% PASS** menguji seluruh fitur 6.0: 4D Time Rewind, Ghost Echoes, Chrono-Horror Void Immunity, Nanite Necromancy Colossus Path Blocking, Synapse Cross-Breeding, Syndicate Bribe/Raid, dan Tectonic Mag-Lev Shifting.
+* Seluruh 14 test suites (`audit_bugs.js`, `smoke.js`, `test_ascension.js`, `test_browser_init.js`, `test_champions.js`, `test_deep_synergy.js`, `test_effects_realization.js`, `test_map_dynamics.js`, `test_mastery.js`, `test_overdrive_fusions.js`, `test_paradox_reality.js`, `test_reactions.js`, `test_sectors.js`, `test_workshop.js`) **lulus serentak dengan 0 error & 0 regresi**.
 
 
 

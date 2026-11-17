@@ -463,6 +463,10 @@ function render() {
   drawFieldAnomalies(c, time);
   drawSporeSpires(c, time);
   drawSeismicPillars(c, time);
+  drawCorpses(c, time);
+  drawReclaimedMinions(c, time);
+  drawNeuralSynapses(c, time);
+  drawGhostEchoes(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -511,6 +515,7 @@ function render() {
   for (const e of G.enemies) if (e.type !== 'boss' && e.x > -30) drawEnemy(c, e, time);
   for (const e of G.enemies) if (e.type === 'boss' && e.x > -40) drawEnemy(c, e, time);
   for (const e of G.enemies) if (e.x > -10) drawBars(c, e);
+  drawSyndicateGunship(c, time);
   // plasma shells
   for (const p of G.proj) {
     glow(c, p.x, p.y, 13, '#fb923c', 0.9);
@@ -563,6 +568,8 @@ function render() {
     c.fillStyle = 'rgba(251,113,133,0.08)';
     c.fillRect(0, 0, W, H);
   }
+  // 6.0 Chrono Ripple & Paradox Glitch
+  drawChronoRipple(c, time);
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
     c.save(); c.globalAlpha = a; c.textAlign = 'center';
@@ -775,5 +782,335 @@ function drawTowerHeatGauges(c, time) {
       c.arc(t.x, t.y, 26, 0, TAU);
       c.fill();
     }
+  }
+}
+
+/* ============================================================
+   BASTION TD 6.0 THE LIVING PARADOX CANVAS RENDERING
+   ============================================================ */
+
+function drawCorpses(c, time) {
+  if (!G || !G.corpses || G.corpses.length === 0) return;
+  c.save();
+  for (let i = 0; i < G.corpses.length; i++) {
+    const cp = G.corpses[i];
+    const k = clamp(cp.life / cp.maxLife, 0, 1);
+    const pulse = 0.5 + 0.5 * Math.sin(time * 6 + cp.x);
+
+    // Green nanite decay ring
+    c.strokeStyle = 'rgba(34, 197, 94, ' + (0.45 * k * pulse) + ')';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.arc(cp.x, cp.y, 16 + 4 * pulse, 0, TAU);
+    c.stroke();
+
+    // Alien carcass body
+    c.fillStyle = 'rgba(30, 41, 59, ' + (0.85 * k) + ')';
+    c.strokeStyle = 'rgba(71, 85, 105, ' + (0.95 * k) + ')';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.ellipse(cp.x, cp.y, 12, 7, Math.PI / 4, 0, TAU);
+    c.fill();
+    c.stroke();
+
+    // Nanite bio-luminescence
+    c.fillStyle = 'rgba(34, 197, 94, ' + (0.85 * k * pulse) + ')';
+    c.beginPath();
+    c.arc(cp.x - 3, cp.y - 2, 2.5, 0, TAU);
+    c.arc(cp.x + 3, cp.y + 2, 2, 0, TAU);
+    c.fill();
+
+    // Interactive prompt
+    c.fillStyle = '#4ade80';
+    c.font = '700 8.5px ' + FONT;
+    c.textAlign = 'center';
+    c.fillText('RECLAIM [CLICK]', cp.x, cp.y + 16);
+  }
+  c.restore();
+}
+
+function drawReclaimedMinions(c, time) {
+  if (!G || !G.reclaimedMinions || G.reclaimedMinions.length === 0) return;
+  c.save();
+  for (const m of G.reclaimedMinions) {
+    if (m.type === 'colossus') {
+      // Cyber-organic Colossus Bastion barrier
+      const hpPct = clamp(m.hp / m.maxHp, 0, 1);
+      c.fillStyle = '#1e293b';
+      c.strokeStyle = '#22c55e';
+      c.lineWidth = 2.5;
+      rr(c, m.x - 14, m.y - 14, 28, 28, 6);
+      c.fill();
+      c.stroke();
+
+      // Armor plating cross
+      c.fillStyle = '#334155';
+      c.fillRect(m.x - 10, m.y - 4, 20, 8);
+      c.fillRect(m.x - 4, m.y - 10, 8, 20);
+
+      // Nanite core
+      c.fillStyle = '#4ade80';
+      c.beginPath();
+      c.arc(m.x, m.y, 4, 0, TAU);
+      c.fill();
+
+      // Colossus HP Bar
+      c.fillStyle = 'rgba(0,0,0,0.8)';
+      c.fillRect(m.x - 16, m.y - 22, 32, 5);
+      c.fillStyle = '#22c55e';
+      c.fillRect(m.x - 15, m.y - 21, 30 * hpPct, 3);
+
+      c.fillStyle = '#86efac';
+      c.font = '800 8px ' + FONT;
+      c.textAlign = 'center';
+      c.fillText('COLOSSUS', m.x, m.y - 25);
+    } else if (m.type === 'hive') {
+      // Nanite Drone Hive
+      c.fillStyle = '#0f172a';
+      c.strokeStyle = '#06b6d4';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(m.x, m.y, 12, 0, TAU);
+      c.fill();
+      c.stroke();
+
+      // Orbiting Drones
+      const dCount = m.drones || 3;
+      for (let i = 0; i < dCount; i++) {
+        const ang = time * 4 + (i * TAU / dCount);
+        const dx = m.x + Math.cos(ang) * 20;
+        const dy = m.y + Math.sin(ang) * 20;
+        c.fillStyle = '#38bdf8';
+        c.beginPath();
+        c.arc(dx, dy, 3, 0, TAU);
+        c.fill();
+      }
+
+      c.fillStyle = '#67e8f9';
+      c.font = '800 8px ' + FONT;
+      c.textAlign = 'center';
+      c.fillText('HIVE (' + dCount + ')', m.x, m.y - 16);
+    } else if (m.type === 'bio_shield') {
+      // Bio-Shield Emitter Dome
+      const pulse = 0.5 + 0.5 * Math.sin(time * 5);
+      c.strokeStyle = 'rgba(168, 85, 247, ' + (0.5 + 0.3 * pulse) + ')';
+      c.lineWidth = 2;
+      c.setLineDash([6, 4]);
+      c.beginPath();
+      c.arc(m.x, m.y, m.r || 110, 0, TAU);
+      c.stroke();
+      c.setLineDash([]);
+
+      c.fillStyle = '#2e1065';
+      c.strokeStyle = '#a855f7';
+      c.lineWidth = 2;
+      rr(c, m.x - 10, m.y - 10, 20, 20, 4);
+      c.fill();
+      c.stroke();
+
+      c.fillStyle = '#c084fc';
+      c.font = '800 8px ' + FONT;
+      c.textAlign = 'center';
+      c.fillText('CLEANSE DOME', m.x, m.y - 14);
+    }
+  }
+  c.restore();
+}
+
+function drawNeuralSynapses(c, time) {
+  if (!G || !G.synapses || G.synapses.length === 0) return;
+  c.save();
+  for (const syn of G.synapses) {
+    const t1 = G.towers.find(t => t.id === syn.t1Id);
+    const t2 = G.towers.find(t => t.id === syn.t2Id);
+    if (!t1 || !t2) continue;
+
+    // Glowing double-helix sine wave
+    const dx = t2.x - t1.x;
+    const dy = t2.y - t1.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= 0) continue;
+    const nx = -dy / dist;
+    const ny = dx / dist;
+
+    // Strand 1 (Neon Pink/Magenta)
+    c.strokeStyle = 'rgba(236, 72, 153, 0.75)';
+    c.lineWidth = 2;
+    c.beginPath();
+    for (let step = 0; step <= 20; step++) {
+      const frac = step / 20;
+      const wave = Math.sin(frac * TAU * 2 - time * 6) * 5;
+      const px = t1.x + dx * frac + nx * wave;
+      const py = t1.y + dy * frac + ny * wave;
+      if (step === 0) c.moveTo(px, py); else c.lineTo(px, py);
+    }
+    c.stroke();
+
+    // Strand 2 (Electric Cyan / Purple)
+    c.strokeStyle = 'rgba(168, 85, 247, 0.75)';
+    c.lineWidth = 2;
+    c.beginPath();
+    for (let step = 0; step <= 20; step++) {
+      const frac = step / 20;
+      const wave = -Math.sin(frac * TAU * 2 - time * 6) * 5;
+      const px = t1.x + dx * frac + nx * wave;
+      const py = t1.y + dy * frac + ny * wave;
+      if (step === 0) c.moveTo(px, py); else c.lineTo(px, py);
+    }
+    c.stroke();
+
+    // Central Synapse Core Node
+    const mx = (t1.x + t2.x) / 2;
+    const my = (t1.y + t2.y) / 2;
+    c.fillStyle = '#ec4899';
+    c.beginPath();
+    c.arc(mx, my, 4.5, 0, TAU);
+    c.fill();
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.arc(mx, my, 2, 0, TAU);
+    c.fill();
+
+    // Synapse Label
+    const synConf = (typeof NEURAL_SYNAPSE_CONFIG !== 'undefined' && NEURAL_SYNAPSE_CONFIG.pairs[syn.pairKey]) ? NEURAL_SYNAPSE_CONFIG.pairs[syn.pairKey] : null;
+    const label = synConf ? synConf.name : 'SYNAPSE';
+    c.fillStyle = '#f472b6';
+    c.font = '800 8px ' + FONT;
+    c.textAlign = 'center';
+    c.fillText(label, mx, my - 9);
+  }
+  c.restore();
+}
+
+function drawGhostEchoes(c, time) {
+  if (!G || !G.ghostEchoes || G.ghostEchoes.length === 0) return;
+  c.save();
+  for (const ge of G.ghostEchoes) {
+    const alphaPulse = 0.45 + 0.25 * Math.sin(time * 10 + ge.x);
+    c.globalAlpha = alphaPulse;
+
+    // Cyan holographic base ring
+    c.strokeStyle = '#38bdf8';
+    c.lineWidth = 2;
+    c.setLineDash([4, 4]);
+    c.beginPath();
+    c.arc(ge.x, ge.y, 22, 0, TAU);
+    c.stroke();
+    c.setLineDash([]);
+
+    // Translucent tower silhouette
+    drawTowerSprite(c, ge.type, ge.tier, { x: ge.x, y: ge.y, angle: ge.angle, spin: time * 2, charge: 1 }, time);
+
+    // Cyan scanline overlay
+    c.fillStyle = 'rgba(56, 189, 248, 0.25)';
+    c.fillRect(ge.x - 18, ge.y - 18, 36, 36);
+
+    // Label & Time remaining
+    c.fillStyle = '#38bdf8';
+    c.font = '800 8.5px ' + FONT;
+    c.textAlign = 'center';
+    c.fillText('GHOST ECHO: ' + ge.life.toFixed(1) + 's', ge.x, ge.y - 25);
+  }
+  c.restore();
+}
+
+function drawSyndicateGunship(c, time) {
+  if (!G || !G.syndicateGunship || !G.syndicateGunship.active) return;
+  const sg = G.syndicateGunship;
+  c.save();
+  c.translate(sg.x, sg.y);
+
+  // Heavy mercenary shadow
+  c.fillStyle = 'rgba(0, 0, 0, 0.4)';
+  c.beginPath();
+  c.ellipse(0, 26, 34, 14, 0, 0, TAU);
+  c.fill();
+
+  // Thruster exhaust
+  const tFlicker = Math.random() * 4;
+  c.fillStyle = '#f59e0b';
+  c.beginPath();
+  c.ellipse(-24, 8, 4, 10 + tFlicker, 0, 0, TAU);
+  c.ellipse(24, 8, 4, 10 + tFlicker, 0, 0, TAU);
+  c.fill();
+
+  // Gunship Hull (Matte dark composite armor)
+  c.fillStyle = '#0f172a';
+  c.strokeStyle = sg.bribed ? '#10b981' : (sg.hostile ? '#ef4444' : '#f59e0b');
+  c.lineWidth = 2.5;
+  c.beginPath();
+  c.moveTo(0, -24);
+  c.lineTo(18, -8);
+  c.lineTo(28, 12);
+  c.lineTo(12, 18);
+  c.lineTo(0, 14);
+  c.lineTo(-12, 18);
+  c.lineTo(-28, 12);
+  c.lineTo(-18, -8);
+  c.closePath();
+  c.fill();
+  c.stroke();
+
+  // Cockpit canopy
+  c.fillStyle = sg.bribed ? '#34d399' : (sg.hostile ? '#f87171' : '#fbbf24');
+  c.beginPath();
+  c.ellipse(0, -6, 6, 12, 0, 0, TAU);
+  c.fill();
+
+  // HP Bar & Status Badge
+  const hpPct = clamp(sg.hp / sg.maxHp, 0, 1);
+  c.fillStyle = 'rgba(0,0,0,0.85)';
+  c.fillRect(-24, -36, 48, 6);
+  c.fillStyle = sg.bribed ? '#10b981' : (sg.hostile ? '#ef4444' : '#f59e0b');
+  c.fillRect(-23, -35, 46 * hpPct, 4);
+
+  c.fillStyle = sg.bribed ? '#6ee7b7' : (sg.hostile ? '#fca5a5' : '#fde68a');
+  c.font = '800 8.5px ' + FONT;
+  c.textAlign = 'center';
+  const tag = sg.bribed ? 'ALLIED GUNSHIP' : (sg.hostile ? 'RAIDING GUNSHIP' : 'SYNDICATE GUNSHIP [CLICK]');
+  c.fillText(tag, 0, -41);
+
+  c.restore();
+}
+
+function drawChronoRipple(c, time) {
+  if (!G) return;
+  // Reality Paradox Wave Distortion
+  if (G.timeRippleT > 0) {
+    const k = clamp(G.timeRippleT, 0, 1);
+    c.save();
+    // Cyan / Magenta Reality Distortion Rings
+    const r1 = (1 - k) * W * 0.7;
+    const r2 = (1 - k) * W * 0.4;
+    c.strokeStyle = 'rgba(56, 189, 248, ' + (0.6 * k) + ')';
+    c.lineWidth = 8 * k;
+    c.beginPath();
+    c.arc(W / 2, H / 2, r1, 0, TAU);
+    c.stroke();
+
+    c.strokeStyle = 'rgba(236, 72, 153, ' + (0.5 * k) + ')';
+    c.lineWidth = 5 * k;
+    c.beginPath();
+    c.arc(W / 2, H / 2, r2, 0, TAU);
+    c.stroke();
+
+    // Chromatic glitch lines
+    c.fillStyle = 'rgba(56, 189, 248, ' + (0.12 * k) + ')';
+    for (let i = 0; i < 4; i++) {
+      const gy = (G.anim * 400 + i * 140) % H;
+      c.fillRect(0, gy, W, 4);
+    }
+    c.restore();
+  }
+
+  // Paradox Entropy Glitch Vignette
+  if (G.paradoxEntropy && G.paradoxEntropy > 20) {
+    const pct = clamp(G.paradoxEntropy / 100, 0, 1);
+    c.save();
+    const glitchPulse = 0.5 + 0.5 * Math.sin(time * 16);
+    c.strokeStyle = 'rgba(168, 85, 247, ' + (0.35 * pct * glitchPulse) + ')';
+    c.lineWidth = 6 * pct;
+    c.strokeRect(2, 2, W - 4, H - 4);
+    c.restore();
   }
 }

@@ -447,6 +447,20 @@ function updateEnemy(e, dt) {
     }
   }
 
+  // 6.0 Reclaimed Nanite Colossus Bastion Blocking
+  if (G.reclaimedMinions && e.type !== 'boss') {
+    const colossus = G.reclaimedMinions.find(m => m.type === 'colossus' && m.hp > 0 && Math.hypot(m.x - e.x, m.y - e.y) <= (m.r + e.r + 4));
+    if (colossus) {
+      sp = 0;
+      colossus.hp -= (e.type === 'brute' ? 50 : 20) * dt;
+      if (Math.random() < 0.15) burst(colossus.x, colossus.y, 2, '#94a3b8', 50, 0.2, 2, false);
+      if (colossus.hp <= 0) {
+        burst(colossus.x, colossus.y, 16, '#94a3b8', 120, 0.4, 3, true);
+        addText(colossus.x, colossus.y - 18, 'COLOSSUS FALLEN', '#94a3b8', 12);
+      }
+    }
+  }
+
   // Spore Pod Confusion (Walk backwards)
   if (e.reversed > 0) {
     e.reversed -= dt;

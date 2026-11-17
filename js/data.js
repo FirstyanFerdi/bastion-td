@@ -711,6 +711,14 @@ const MODULAR_CHIPS = {
     icon: 'ff',
     color: '#34d399',
     desc: 'Setiap kali menara memicu Reaksi Elemen, cooldown seluruh skill Komandan terpotong 0.5 detik.'
+  },
+  quantum_singularity_chip: {
+    id: 'quantum_singularity_chip',
+    name: 'Forbidden Singularity Core',
+    target: 'any',
+    icon: 'atom',
+    color: '#c084fc',
+    desc: 'Tembakan menara memiliki 20% peluang menciptakan lubang hitam mikro yang menyedot dan melenyapkan musuh.'
   }
 };
 
@@ -1195,4 +1203,62 @@ const TACTICAL_MATRIX_PROTOCOLS = {
     desc: 'Once per wave, if Bastion lives drop below 6, triggers a 3.5s global EMP stun to all enemies.',
     req: 'thermal_purge_turbo', tier: 3
   }
+};
+
+/* ============================================================
+   BASTION TD 6.0: THE LIVING PARADOX & REALITY MANIPULATION
+   ============================================================ */
+const CHRONO_CONFIG = {
+  rewindDuration: 5.0,    // seconds
+  historyInterval: 0.1,   // sample every 100ms
+  historyCapacity: 50,    // 50 * 0.1s = 5.0s
+  cooldown: 35.0,         // seconds
+  entropyPerUse: 35,      // % entropy added
+  maxEntropy: 100,
+  entropyDecayRate: 2.5   // % decay per second
+};
+
+const NEURAL_SYNAPSE_CONFIG = {
+  maxSynapses: 3,
+  maxDistance: 4.2 * TILE,
+  pairs: {
+    'gatling+rail': {
+      id: 'gatling_rail',
+      name: 'Kinetic Ballistic Accelerator',
+      color: '#38bdf8',
+      desc: 'Gatling gains +2 Target Pierce; Railgun gains Spinup Acceleration (+50% Rate).'
+    },
+    'cryo+plasma': {
+      id: 'cryo_plasma',
+      name: 'Thermonuclear Permafrost',
+      color: '#c084fc',
+      desc: 'Cryo attacks leave boiling frost puddles that continuously trigger Thermal Shockwave.'
+    },
+    'tesla+relay': {
+      id: 'tesla_relay',
+      name: 'Conduit Perimeter Lightning',
+      color: '#facc15',
+      desc: 'Chain lightning propagates across all active Resonance Laser Beams on the map.'
+    }
+  }
+};
+
+const RECLAIMER_CONFIG = {
+  corpseLifetime: 14.0,
+  reclaimRange: 3.5 * TILE,
+  colossusHp: 850,
+  colossusDuration: 18.0,
+  droneCount: 4,
+  droneDmg: 90,
+  shieldAmount: 250
+};
+
+const SYNDICATE_CONFIG = {
+  spawnWaves: [6, 12, 18],
+  gunshipMaxHp: 900,
+  bribeCost: 120,
+  bribeDurationWaves: 1,
+  rewardGold: 220,
+  rewardCores: 30,
+  forbiddenChip: 'quantum_singularity_chip'
 };

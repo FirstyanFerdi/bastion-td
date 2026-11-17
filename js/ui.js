@@ -255,9 +255,31 @@ function renderInspector() {
     }
   }
 
+  let synapseHtml = '';
+  if (typeof getTowerSynapses === 'function') {
+    const syns = getTowerSynapses(t);
+    if (syns.length > 0) {
+      synapseHtml = '<div style="margin:4px 0;display:flex;flex-direction:column;gap:3px">' +
+        syns.map(s => {
+          const conf = (typeof NEURAL_SYNAPSE_CONFIG !== 'undefined' && NEURAL_SYNAPSE_CONFIG.pairs[s.pairKey]) ? NEURAL_SYNAPSE_CONFIG.pairs[s.pairKey] : null;
+          const otherId = s.t1Id === t.id ? s.t2Id : s.t1Id;
+          const otherT = G.towers.find(ot => ot.id === otherId);
+          const otherName = otherT ? TD[otherT.type].name : 'Tower';
+          return '<div style="background:rgba(236,72,153,0.12);border-left:3px solid #ec4899;padding:3px 6px;border-radius:2px">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:9.5px;font-weight:800;color:#f472b6">SYNAPSE ↔ ' + otherName.toUpperCase() + '</span>' +
+            '<button class="synapse-sever-btn" data-act="sever_synapse" data-syn="' + s.id + '" style="font-size:8px;padding:1px 4px;background:#471329;border:1px solid #ec4899;color:#fff;border-radius:2px;cursor:pointer">Sever</button></div>' +
+            '<div style="font-size:8.5px;color:#cbd5e1;margin-top:1px">' + (conf ? conf.desc : 'Cross-Breeding Boost Active') + '</div>' +
+            '</div>';
+        }).join('') + '</div>';
+    } else if (!isFusion && G.towers.length > 1) {
+      synapseHtml = '<button class="primary" data-act="start_synapse" style="width:100%;margin:4px 0;background:#4a044e;border-color:#ec4899;color:#f472b6;font-size:9.5px;font-weight:800">CONNECT NEURAL SYNAPSE [N]</button>';
+    }
+  }
+
   box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
     '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + (t.branch ? def.branches[t.branch].color : def.color) + '">' + (t.branch ? def.branches[t.branch].name : def.name) + '</h4><small>' + tierTitle + ' · ' + t.kills + ' KILLS</small></div></div>' +
     conduitHtml +
+    synapseHtml +
     thermalHtml +
     leylineHtml +
     actsHtml +
@@ -490,6 +512,21 @@ function refreshUI() {
       btnTp.textContent = 'PURGE [H]';
       btnTp.style.opacity = '1';
       btnTp.disabled = false;
+    }
+  }
+  const btnChr = $('btnChrono');
+  if (btnChr && G) {
+    if (G.chronoCd > 0) {
+      btnChr.textContent = 'CHRONO ' + Math.ceil(G.chronoCd) + 's';
+      btnChr.style.opacity = '0.5';
+      btnChr.disabled = true;
+    } else {
+      const entropy = Math.round(G.paradoxEntropy || 0);
+      btnChr.textContent = entropy > 0 ? 'CHRONO [Z] ' + entropy + '%' : 'CHRONO [Z]';
+      btnChr.style.opacity = '1';
+      btnChr.disabled = false;
+      btnChr.style.color = entropy > 60 ? '#f43f5e' : (entropy > 25 ? '#c084fc' : '#06b6d4');
+      btnChr.style.borderColor = entropy > 60 ? '#f43f5e' : (entropy > 25 ? '#c084fc' : 'rgba(6,182,212,0.4)');
     }
   }
   renderWaveCard();
@@ -887,6 +924,31 @@ function showOverlay(kind) {
       '<div style="display:flex;justify-content:center">' +
       '<button class="primary big" data-ov="close_matrix">Resume Perimeter Defense</button>' +
       '</div></div>';
+  } else if (kind === 'syndicate') {
+    const sg = G && G.syndicateGunship;
+    const canBribe = (G && G.gold >= 120);
+    h = '<div class="draft-box" style="border-top-color:#f59e0b;max-width:580px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<h2 style="margin:0;color:#f59e0b;letter-spacing:.12em">' + svg('target') + ' THE INFILTRATOR SYNDICATE</h2>' +
+      '<button class="ghost" data-ov="close_syndicate" style="padding:2px 8px;font-size:11px">✕ LEAVE</button>' +
+      '</div>' +
+      '<div class="sub">A neutral high-tech mercenary gunship has entered local airspace. Choose how to handle their intervention.</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0">' +
+      '<div class="draft-card" style="border-top-color:#10b981">' +
+      '<div style="font-size:10px;font-weight:800;color:#10b981;margin-bottom:4px">OPTION 1: MERCENARY CONTRACT</div>' +
+      '<div class="draft-name">Bribe Gunship (120 Gold)</div>' +
+      '<div class="draft-desc">Hire the gunship as an allied airborne weapons platform. Unleashes homing rocket salvos on the highest threat hostiles until wave ends.</div>' +
+      '<button class="draft-btn' + (canBribe ? ' primary' : '') + '" data-ov="bribe_syndicate"' + (!canBribe ? ' disabled' : '') + '>Authorize Bribe (120G)</button>' +
+      '</div>' +
+      '<div class="draft-card" style="border-top-color:#ef4444">' +
+      '<div style="font-size:10px;font-weight:800;color:#ef4444;margin-bottom:4px">OPTION 2: TACTICAL INTERCEPTION</div>' +
+      '<div class="draft-name">Raid Syndicate Gunship</div>' +
+      '<div class="draft-desc">Mark the gunship as hostile. Towers and skills can destroy it for massive bounties: <b style="color:#fbbf24">+220G</b>, <b style="color:#38bdf8">+30 Cores</b>, and the forbidden <b style="color:#c084fc">Singularity Collapse Chip</b>!</div>' +
+      '<button class="draft-btn" data-ov="raid_syndicate" style="background:#ef4444;color:#fff;font-weight:800">Initiate Raid</button>' +
+      '</div>' +
+      '</div>' +
+      '<div style="font-size:9.5px;color:#94a3b8;text-align:center">Ignoring the gunship causes syndicate raiders to extract 20% of alien bounty from this sector.</div>' +
+      '</div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
     const secLabel = sec ? ('SECTOR ' + sec.num + ': ' + sec.name) : 'BASTION';

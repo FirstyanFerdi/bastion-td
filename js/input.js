@@ -338,6 +338,46 @@ function onPointerDown(e) {
     }
   }
 
+  // Interactive Syndicate Gunship Clicking (6.0)
+  if (G.syndicateGunship && G.syndicateGunship.active && !G.casting) {
+    const p = canvasPos(e);
+    if (Math.hypot(p.x - G.syndicateGunship.x, p.y - G.syndicateGunship.y) <= 36) {
+      if (!G.syndicateGunship.bribed && !G.syndicateGunship.hostile) {
+        showOverlay('syndicate');
+        return;
+      }
+    }
+  }
+
+  // Interactive Alien Corpse Reclaiming (6.0)
+  if (G.corpses && G.corpses.length > 0 && !G.casting && !G.placing) {
+    const p = canvasPos(e);
+    for (let i = G.corpses.length - 1; i >= 0; i--) {
+      const cp = G.corpses[i];
+      if (Math.hypot(p.x - cp.x, p.y - cp.y) <= 22) {
+        reclaimCorpse(i);
+        G.uiDirty = true;
+        return;
+      }
+    }
+  }
+
+  // Neural Synapse Connecting (6.0)
+  if (G.synapseSource && G.hover) {
+    const { c, r } = G.hover;
+    const targetT = G.grid[r][c];
+    if (targetT && targetT !== G.synapseSource) {
+      createNeuralSynapse(G.synapseSource, targetT);
+      G.synapseSource = null;
+      G.uiDirty = true;
+      return;
+    } else if (targetT === G.synapseSource) {
+      G.synapseSource = null;
+      G.uiDirty = true;
+      return;
+    }
+  }
+
   if (!G.hover) return;
   const { c, r } = G.hover;
   if (G.placing) {
@@ -393,6 +433,17 @@ function onKey(e) {
     }
     case 'h': case 'H': if (typeof triggerThermalPurge === 'function') triggerThermalPurge(); break;
     case 'v': case 'V': if (typeof triggerCoreOverload === 'function') triggerCoreOverload(); break;
+    case 'z': case 'Z': if (typeof triggerChronoRewind === 'function') triggerChronoRewind(); break;
+    case 'n': case 'N': {
+      if (G.sel) {
+        G.synapseSource = G.synapseSource === G.sel ? null : G.sel;
+        if (G.synapseSource) {
+          addText(G.sel.x, G.sel.y - 25, 'SELECT TARGET TOWER [N]', '#ec4899', 12);
+        }
+        G.uiDirty = true;
+      }
+      break;
+    }
     case 'Escape': G.placing = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
     case 'p': case 'P': togglePause(); break;
     case 'm': case 'M': toggleMute(); break;

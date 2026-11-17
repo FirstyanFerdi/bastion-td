@@ -38,6 +38,20 @@ function startWave() {
   } else {
     G.mutator = null;
   }
+
+  // 6.0 Infiltrator Syndicate Dropship Encounter
+  if ([6, 12, 18].includes(n)) {
+    G.syndicateGunship = {
+      x: W - 140, y: 75, hp: (typeof SYNDICATE_CONFIG !== 'undefined' ? SYNDICATE_CONFIG.gunshipMaxHp : 900),
+      maxHp: (typeof SYNDICATE_CONFIG !== 'undefined' ? SYNDICATE_CONFIG.gunshipMaxHp : 900),
+      state: 'neutral', life: 60.0, droneCd: 1.0, r: 28, active: true
+    };
+    burst(G.syndicateGunship.x, G.syndicateGunship.y, 35, '#fbbf24', 160, 0.7, 4, true);
+    addRing(G.syndicateGunship.x, G.syndicateGunship.y, 10, 80, 0.6, '#fbbf24', 4);
+    shake(8);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('syndicate_drop');
+    addText(G.syndicateGunship.x, G.syndicateGunship.y - 30, 'MERCENARY GUNSHIP ARRIVED!', '#fbbf24', 16);
+  }
   let sub = boss ? 'Heavy hostile signature detected' : '';
   if (G.mutator) sub = (sub ? sub + ' · ' : '') + 'MUTATOR: ' + G.mutator.name;
   if (G.hiveMutation && typeof HIVE_MUTATIONS !== 'undefined' && HIVE_MUTATIONS[G.hiveMutation]) {
@@ -617,6 +631,130 @@ function update(dt) {
           addText(tgtT.x, tgtT.y - 20, 'SPORE SLUDGE (-3s)', '#84cc16', 12);
         }
       }
+    }
+  }
+
+  // 6.0 Chrono-Rewind Time Buffer Recording
+  if (G.state === 'active' && typeof recordTimeSnapshot === 'function') {
+    G.snapTimer = (G.snapTimer || 0) + dt;
+    if (G.snapTimer >= (typeof CHRONO_CONFIG !== 'undefined' ? CHRONO_CONFIG.historyInterval : 0.1)) {
+      G.snapTimer = 0;
+      recordTimeSnapshot();
+    }
+  }
+
+  // 6.0 Chrono Cooldowns & Paradox Entropy Decay
+  if (G.chronoCd > 0) G.chronoCd = Math.max(0, G.chronoCd - dt);
+  if (G.timeRippleT > 0) G.timeRippleT = Math.max(0, G.timeRippleT - dt * 2.5);
+  if (G.paradoxEntropy > 0) {
+    G.paradoxEntropy = Math.max(0, G.paradoxEntropy - dt * (typeof CHRONO_CONFIG !== 'undefined' ? CHRONO_CONFIG.entropyDecayRate : 2.5));
+  }
+
+  // 6.0 Ghost Echoes (Simultaneous Past-Timeline Firing)
+  if (G.ghostEchoes && G.ghostEchoes.length > 0) {
+    for (let i = G.ghostEchoes.length - 1; i >= 0; i--) {
+      const ge = G.ghostEchoes[i];
+      ge.life -= dt;
+      ge.fireCd -= dt;
+      if (ge.fireCd <= 0 && G.enemies.length > 0) {
+        ge.fireCd = 0.25;
+        const target = G.enemies.find(e => !e.dead && Math.hypot(e.x - ge.x, e.y - ge.y) <= 190);
+        if (target) {
+          addFx('tracer', ge.x, ge.y, target.x, target.y, 0.12, '#38bdf8', 2.5);
+          burst(target.x, target.y, 4, '#38bdf8', 85, 0.25, 2.5, true);
+          dealDamage(target, 24 * (1 + G.wave * 0.05), 'energy', null);
+        }
+      }
+      if (ge.life <= 0) G.ghostEchoes.splice(i, 1);
+    }
+  }
+
+  // 6.0 Corpse Persistence Lifetime Decay
+  if (G.corpses && G.corpses.length > 0) {
+    for (let i = G.corpses.length - 1; i >= 0; i--) {
+      G.corpses[i].life -= dt;
+      if (G.corpses[i].life <= 0) G.corpses.splice(i, 1);
+    }
+  }
+
+  // 6.0 Reclaimed Nanite Minions
+  if (G.reclaimedMinions && G.reclaimedMinions.length > 0) {
+    for (let i = G.reclaimedMinions.length - 1; i >= 0; i--) {
+      const m = G.reclaimedMinions[i];
+      m.life -= dt;
+      if (m.type === 'drone_hive') {
+        m.droneCd = (m.droneCd || 1.5) - dt;
+        if (m.droneCd <= 0 && G.enemies.length > 0) {
+          m.droneCd = 2.0;
+          const target = G.enemies.find(e => !e.dead && Math.hypot(e.x - m.x, e.y - m.y) <= 220);
+          if (target) {
+            addBolt(m.x, m.y, target.x, target.y, '#34d399');
+            burst(target.x, target.y, 8, '#34d399', 90, 0.35, 3, true);
+            dealDamage(target, 90, 'energy', null);
+            if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('hit');
+          }
+        }
+      } else if (m.type === 'shield_emitter') {
+        m.pulseCd = (m.pulseCd || 2.5) - dt;
+        if (m.pulseCd <= 0 && G.towers.length > 0) {
+          m.pulseCd = 3.5;
+          addRing(m.x, m.y, 10, 110, 0.5, '#6ee7b7', 3);
+          for (const t of G.towers) {
+            if (Math.hypot(t.x - m.x, t.y - m.y) <= 110) {
+              t.empT = 0;
+              burst(t.x, t.y, 6, '#6ee7b7', 60, 0.3, 2.5, true);
+            }
+          }
+        }
+      }
+      if (m.life <= 0 || m.hp <= 0) G.reclaimedMinions.splice(i, 1);
+    }
+  }
+
+  // 6.0 Infiltrator Syndicate Mercenary Gunship Logic
+  if (G.syndicateGunship) {
+    const gs = G.syndicateGunship;
+    gs.life -= dt;
+    if (gs.state === 'bribed') {
+      gs.droneCd = (typeof gs.droneCd === 'number' ? gs.droneCd : 1.0) - dt;
+      if (gs.droneCd <= 0 && G.enemies.length > 0) {
+        gs.droneCd = 1.2;
+        const target = G.enemies.find(e => !e.dead);
+        if (target) {
+          addFx('tracer', gs.x, gs.y, target.x, target.y, 0.15, '#fbbf24', 3.5);
+          burst(target.x, target.y, 10, '#fbbf24', 115, 0.4, 3, true);
+          dealDamage(target, 120, 'plasma', null);
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+        }
+      }
+    } else if (gs.state === 'hostile') {
+      gs.droneCd = (typeof gs.droneCd === 'number' ? gs.droneCd : 3.0) - dt;
+      if (gs.droneCd <= 0 && G.towers.length > 0) {
+        gs.droneCd = 3.0;
+        const targetTower = G.towers[Math.floor(Math.random() * G.towers.length)];
+        addFx('tracer', gs.x, gs.y, targetTower.x, targetTower.y, 0.2, '#f43f5e', 3);
+        targetTower.empT = Math.max(targetTower.empT || 0, 2.5);
+        burst(targetTower.x, targetTower.y, 12, '#f43f5e', 90, 0.4, 3, false);
+        addText(targetTower.x, targetTower.y - 20, 'SYNDICATE MISSILE (-2.5s)', '#f43f5e', 12);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+      }
+    }
+    // Check Gunship Destruction
+    if (gs.hp <= 0) {
+      burst(gs.x, gs.y, 60, '#f43f5e', 240, 1.0, 5, true);
+      burst(gs.x, gs.y, 35, '#fbbf24', 180, 0.7, 4, true);
+      addRing(gs.x, gs.y, 10, 120, 0.7, '#f43f5e', 6);
+      shake(16);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+      G.gold += (typeof SYNDICATE_CONFIG !== 'undefined' ? SYNDICATE_CONFIG.rewardGold : 220);
+      if (typeof addCores === 'function') addCores(typeof SYNDICATE_CONFIG !== 'undefined' ? SYNDICATE_CONFIG.rewardCores : 30);
+      if (typeof addChip === 'function') addChip('quantum_singularity_chip', 1);
+      addText(gs.x, gs.y - 30, 'GUNSHIP DESTROYED: +220G +30 CORES + FORBIDDEN CHIP!', '#38bdf8', 15);
+      G.syndicateGunship = null;
+    } else if (gs.life <= 0) {
+      burst(gs.x, gs.y, 20, '#94a3b8', 120, 0.5, 3, false);
+      addText(gs.x, gs.y - 25, 'GUNSHIP DEPARTED', '#94a3b8', 13);
+      G.syndicateGunship = null;
     }
   }
 }

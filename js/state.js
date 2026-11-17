@@ -91,7 +91,17 @@ function newGame(keepSpeed) {
     resonanceLines: [],
     thermalPurgeCd: 0,
     seismicPillars: [],
-    emergencyBlackoutUsed: false
+    emergencyBlackoutUsed: false,
+    // 6.0 Living Paradox & Reality Systems
+    timeHistory: [],
+    chronoCd: 0,
+    paradoxEntropy: 0,
+    timeRippleT: 0,
+    ghostEchoes: [],
+    synapses: [],
+    corpses: [],
+    reclaimedMinions: [],
+    syndicateGunship: null
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -435,6 +445,268 @@ function unlockMatrixProtocol(id) {
 }
 
 /* ============================================================
+   BASTION TD 6.0: THE LIVING PARADOX & REALITY SYSTEMS
+   ============================================================ */
+function recordTimeSnapshot() {
+  if (!G || G.state !== 'active' || !CHRONO_CONFIG) return;
+  G.timeHistory = G.timeHistory || [];
+  const enemySnaps = (G.enemies || []).map(e => ({
+    id: e.id, type: e.type, hp: e.hp, maxHp: e.maxHp, shield: e.shield, maxShield: e.maxShield,
+    d: e.d, x: e.x, y: e.y, pathId: e.pathId || 0, dead: e.dead, speed: e.speed
+  }));
+  G.timeHistory.push({
+    time: G.time, gold: G.gold, lives: G.lives, enemies: enemySnaps
+  });
+  if (G.timeHistory.length > (CHRONO_CONFIG.historyCapacity || 50)) {
+    G.timeHistory.shift();
+  }
+}
+
+function triggerChronoRewind() {
+  if (!G || (G.state !== 'active' && G.state !== 'prep') || G.drafting) return false;
+  if ((G.chronoCd || 0) > 0) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  if (!G.timeHistory || G.timeHistory.length < 5) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  const snap = G.timeHistory[0];
+  G.lives = Math.max(G.lives, snap.lives);
+  G.gold = Math.max(G.gold, snap.gold);
+
+  // Restore or resurrect enemies
+  const snapIds = new Set(snap.enemies.map(s => s.id));
+  for (const s of snap.enemies) {
+    let cur = (G.enemies || []).find(e => e.id === s.id);
+    if (!cur) {
+      if (typeof spawnEnemy === 'function') {
+        spawnEnemy(s.type, G.wave, null, null, s.pathId);
+        cur = G.enemies[G.enemies.length - 1];
+        if (cur) cur.id = s.id;
+      }
+    }
+    if (cur) {
+      cur.dead = false;
+      cur.hp = s.hp;
+      cur.maxHp = s.maxHp;
+      cur.shield = s.shield;
+      cur.maxShield = s.maxShield;
+      cur.d = s.d;
+      cur.x = s.x;
+      cur.y = s.y;
+    }
+  }
+  // Remove enemies that spawned after the snapshot
+  if (G.enemies) {
+    G.enemies = G.enemies.filter(e => snapIds.has(e.id));
+  }
+
+  // Create Ghost Echoes for all constructed defenses (they fire past timeline salvos!)
+  G.ghostEchoes = G.ghostEchoes || [];
+  if (G.towers) {
+    for (const t of G.towers) {
+      G.ghostEchoes.push({
+        x: t.x, y: t.y, type: t.type, tier: t.tier, branch: t.branch,
+        life: 5.0, maxLife: 5.0, fireCd: 0.15, angle: t.angle || 0, color: '#38bdf8'
+      });
+    }
+  }
+
+  // Paradox Entropy buildup
+  G.paradoxEntropy = Math.min(100, (G.paradoxEntropy || 0) + (CHRONO_CONFIG.entropyPerUse || 35));
+  if (G.paradoxEntropy >= 100 && typeof spawnEnemy === 'function') {
+    spawnEnemy('scout', G.wave, 'phase_shifter', null, 0);
+    const horror = G.enemies[G.enemies.length - 1];
+    if (horror) {
+      horror.isParadoxHorror = true;
+      horror.hp = Math.round(horror.hp * 2.5);
+      horror.maxHp = horror.hp;
+      horror.armor = 0.85;
+      burst(horror.x, horror.y, 30, '#c084fc', 180, 0.7, 4, true);
+      addText(horror.x, horror.y - 30, 'PARADOX HORROR MANIFESTED!', '#c084fc', 16);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boss');
+    }
+  }
+
+  G.chronoCd = CHRONO_CONFIG.cooldown || 35.0;
+  G.timeRippleT = 1.0;
+  shake(14);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('time_rewind');
+  burst(W / 2, H / 2, 45, '#38bdf8', 220, 0.8, 5, true);
+  addRing(W / 2, H / 2, 20, Math.max(W, H), 0.9, '#38bdf8', 6);
+  addText(W / 2, 85, 'CHRONO-REWIND ACTIVATED! (+GHOST ECHOES)', '#38bdf8', 18);
+  G.timeHistory = [];
+  G.uiDirty = true;
+  return true;
+}
+
+function createNeuralSynapse(t1, t2) {
+  if (!G || !t1 || !t2 || t1 === t2) return false;
+  G.synapses = G.synapses || [];
+  if (G.synapses.length >= (NEURAL_SYNAPSE_CONFIG.maxSynapses || 3)) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  const dist = Math.hypot(t1.x - t2.x, t1.y - t2.y);
+  if (dist > (NEURAL_SYNAPSE_CONFIG.maxDistance || 4.2 * TILE)) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  const id1 = t1.c + ',' + t1.r + '-' + t2.c + ',' + t2.r;
+  const id2 = t2.c + ',' + t2.r + '-' + t1.c + ',' + t1.r;
+  if (G.synapses.some(s => s.id === id1 || s.id === id2)) return false;
+
+  const pairKey = [t1.type, t2.type].sort().join('+');
+  let pairObj = NEURAL_SYNAPSE_CONFIG.pairs[pairKey];
+  if (!pairObj) {
+    pairObj = { id: 'generic_synapse', name: 'Neural Resonance Conduit', color: '#c084fc', desc: '+15% Attack Speed & shared targeting awareness.' };
+  }
+
+  const newSyn = {
+    id: id1,
+    t1Id: t1.id, t2Id: t2.id,
+    c1: t1.c, r1: t1.r, c2: t2.c, r2: t2.r,
+    x1: t1.x, y1: t1.y, x2: t2.x, y2: t2.y,
+    pairKey: pairKey,
+    pair: pairObj
+  };
+  G.synapses.push(newSyn);
+
+  shake(6);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('neural_link');
+  burst(t1.x, t1.y, 16, pairObj.color, 90, 0.45, 3, true);
+  burst(t2.x, t2.y, 16, pairObj.color, 90, 0.45, 3, true);
+  addRing((t1.x + t2.x) / 2, (t1.y + t2.y) / 2, 8, dist / 2, 0.5, pairObj.color, 3);
+  addText((t1.x + t2.x) / 2, (t1.y + t2.y) / 2 - 16, 'SYNAPSE LINK: ' + pairObj.name.toUpperCase(), pairObj.color, 14);
+  G.uiDirty = true;
+  return true;
+}
+
+function removeNeuralSynapse(id) {
+  if (!G || !G.synapses) return false;
+  const idx = G.synapses.findIndex(s => s.id === id);
+  if (idx >= 0) {
+    G.synapses.splice(idx, 1);
+    G.uiDirty = true;
+    return true;
+  }
+  return false;
+}
+
+function getTowerSynapses(t) {
+  if (!G || !G.synapses || !t) return [];
+  return G.synapses.filter(s => (s.c1 === t.c && s.r1 === t.r) || (s.c2 === t.c && s.r2 === t.r));
+}
+
+function reclaimCorpse(idx) {
+  if (!G || !G.corpses || !G.corpses[idx]) return false;
+  const c = G.corpses.splice(idx, 1)[0];
+  G.reclaimedMinions = G.reclaimedMinions || [];
+  let minion = null;
+  if (c.type === 'brute') {
+    minion = { type: 'colossus', x: c.x, y: c.y, hp: 850, maxHp: 850, life: 18.0, maxLife: 18.0, r: 22, color: '#94a3b8' };
+  } else if (c.type === 'carrier') {
+    minion = { type: 'drone_hive', x: c.x, y: c.y, hp: 450, maxHp: 450, life: 20.0, maxLife: 20.0, droneCd: 1.5, r: 18, color: '#34d399' };
+  } else if (c.type === 'healer') {
+    minion = { type: 'shield_emitter', x: c.x, y: c.y, hp: 500, maxHp: 500, life: 20.0, maxLife: 20.0, pulseCd: 2.5, r: 16, color: '#6ee7b7' };
+  } else {
+    minion = { type: 'colossus', x: c.x, y: c.y, hp: 500, maxHp: 500, life: 15.0, maxLife: 15.0, r: 16, color: '#38bdf8' };
+  }
+  G.reclaimedMinions.push(minion);
+  shake(6);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('corpse_reclaim');
+  burst(c.x, c.y, 25, '#10b981', 130, 0.55, 3.5, true);
+  addRing(c.x, c.y, 10, 60, 0.5, '#10b981', 4);
+  addText(c.x, c.y - 22, 'RECLAIMED: ' + minion.type.toUpperCase(), '#10b981', 14);
+  G.uiDirty = true;
+  return true;
+}
+
+function bribeSyndicate() {
+  if (!G || !G.syndicateGunship || G.gold < (SYNDICATE_CONFIG.bribeCost || 120)) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.gold -= SYNDICATE_CONFIG.bribeCost || 120;
+  G.syndicateGunship.state = 'bribed';
+  G.syndicateGunship.droneCd = 0.5;
+  shake(8);
+  if (typeof Sfx !== 'undefined' && Sfx.play) { Sfx.play('coin'); Sfx.play('victory'); }
+  burst(G.syndicateGunship.x, G.syndicateGunship.y, 30, '#fbbf24', 160, 0.6, 4, true);
+  addText(G.syndicateGunship.x, G.syndicateGunship.y - 25, 'SYNDICATE HIRED: ALLIED DRONES ACTIVE!', '#fbbf24', 16);
+  G.uiDirty = true;
+  return true;
+}
+
+function raidSyndicate() {
+  if (!G || !G.syndicateGunship) return false;
+  G.syndicateGunship.state = 'hostile';
+  shake(10);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+  burst(G.syndicateGunship.x, G.syndicateGunship.y, 25, '#f43f5e', 140, 0.5, 3.5, true);
+  addText(G.syndicateGunship.x, G.syndicateGunship.y - 25, 'GUNSHIP RAID INITIATED!', '#f43f5e', 16);
+  G.uiDirty = true;
+  return true;
+}
+
+function triggerTectonicShift(centerCol, centerRow) {
+  if (!G || (G.state !== 'prep' && G.state !== 'active')) return false;
+  const cc = centerCol !== undefined ? centerCol : Math.floor(COLS / 2);
+  const cr = centerRow !== undefined ? centerRow : Math.floor(ROWS / 2);
+  const radius = 2.5 * TILE;
+  const cx = cc * TILE + TILE / 2;
+  const cy = cr * TILE + TILE / 2;
+
+  shake(12);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('hit');
+  addRing(cx, cy, 10, radius, 0.65, '#f59e0b', 4);
+  burst(cx, cy, 28, '#f59e0b', 160, 0.6, 3.5, false);
+  addText(cx, cy - 25, 'TECTONIC MAG-LEV SHIFT!', '#f59e0b', 16);
+
+  // 1. Kinetic push & Centrifuge Loop Trap for hostiles in zone
+  let affectedEnemies = 0;
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    const dist = Math.hypot(e.x - cx, e.y - cy);
+    if (dist <= radius + e.r) {
+      affectedEnemies++;
+      // Knockback distance along path or drop into kinetic chasm if low HP
+      if (e.type !== 'boss' && e.hp < e.maxHp * 0.25) {
+        killEnemy(e);
+        burst(e.x, e.y, 16, '#0f172a', 120, 0.5, 3, true);
+        addText(e.x, e.y - 15, 'CHASM DROP (VOID)!', '#38bdf8', 13);
+      } else {
+        e.d = Math.max(0, e.d - 75);
+        const np = posAt(e.d, 0, e.pathId || 0);
+        e.x = np.x; e.y = np.y;
+        e.stunT = Math.max(e.stunT || 0, 1.2);
+        burst(e.x, e.y, 8, '#f59e0b', 90, 0.35, 2.5, true);
+        addText(e.x, e.y - 15, 'CENTRIFUGE LOOP!', '#f59e0b', 12);
+      }
+    }
+  }
+
+  // 2. Enemy AI Adaptation: Titan or Breacher implants Tectonic Spikes (Seismic Pillar)
+  if (G.enemies.some(e => !e.dead && (e.type === 'boss' || e.type === 'breacher'))) {
+    if (!G.seismicPillars) G.seismicPillars = [];
+    if (G.seismicPillars.length < 3) {
+      G.seismicPillars.push({
+        id: Date.now() + Math.random(),
+        c: cc, row: cr,
+        x: cx, y: cy,
+        hp: 350, maxHp: 350
+      });
+      addText(cx, cy + 25, 'TITAN COUNTER: TECTONIC SPIKE!', '#ef4444', 13);
+    }
+  }
+
+  G.uiDirty = true;
+  return true;
+}
+
+/* ============================================================
    EFFECTS
    ============================================================ */
 function burst(x, y, n, color, spd, life, size, round) {
@@ -618,6 +890,23 @@ function dealDamage(e, amount, type, src, opts) {
     a *= 0.5;
     burst(e.x, e.y, 3, '#94a3b8', 45, 0.2, 2, false);
     if (Math.random() < 0.2) addText(e.x, e.y - e.r - 18, 'DEFLECT -50%', '#94a3b8', 11);
+  }
+
+  // 6.0 Chrono-Horror Void Immunity (Physical damage phased into void)
+  if (e.isParadoxHorror && type === 'phys') {
+    burst(e.x, e.y, 4, '#c084fc', 60, 0.25, 2, false);
+    addText(e.x, e.y - e.r - 16, 'VOID IMMUNE', '#c084fc', 11);
+    return 0;
+  }
+
+  // 6.0 Modular Chip: Forbidden Singularity Core
+  if (src && src.chips && src.chips.includes('quantum_singularity_chip') && e.type !== 'boss') {
+    if (Math.random() < 0.20) {
+      a += e.maxHp * 0.40;
+      burst(e.x, e.y, 16, '#c084fc', 120, 0.4, 3.5, true);
+      addRing(e.x, e.y, 6, 50, 0.4, '#c084fc', 3);
+      addText(e.x, e.y - e.r - 20, 'SINGULARITY COLLAPSE!', '#c084fc', 13);
+    }
   }
 
   // Champion Affix: Anti-Projectile Dome
@@ -828,6 +1117,16 @@ function killEnemy(e, src) {
     burst(e.x, e.y, e.type === 'swarm' ? 6 : 14, col, 130, 0.5, e.type === 'brute' || e.type === 'carrier' ? 4 : 3, e.type === 'swarm');
     if (e.type !== 'swarm') addText(e.x, e.y - e.r - 6, '+' + e.reward, '#fbbf24', 13);
     Sfx.play('kill');
+  }
+
+  // 6.0 Corpse Persistence for Nanite Necromancy
+  if (e.type !== 'swarm' && G && G.corpses) {
+    if (G.corpses.length < 8) {
+      G.corpses.push({
+        type: e.type, x: e.x, y: e.y, r: e.r || 14,
+        life: (typeof RECLAIMER_CONFIG !== 'undefined' ? RECLAIMER_CONFIG.corpseLifetime : 14.0)
+      });
+    }
   }
 
   // Modular Chip: Vampiric Siphon (+1 Gold every 8 kills)

@@ -246,6 +246,9 @@ function sellTower(t) {
   }
   G.gold += v; G.grid[t.r][t.c] = null;
   G.towers.splice(G.towers.indexOf(t), 1);
+  if (G.synapses) {
+    G.synapses = G.synapses.filter(s => !(s.c1 === t.c && s.r1 === t.r) && !(s.c2 === t.c && s.r2 === t.r));
+  }
   if (G.sel === t) G.sel = null;
   burst(t.x, t.y, 22, '#fbbf24', 120, 0.6, 3, true);
   addText(t.x, t.y - 20, '+' + v, '#fbbf24', 16);
@@ -338,6 +341,16 @@ function updateTower(t, dt) {
     rateMult *= 0.75;
   }
 
+  // 6.0 Neural Synapse Network Boosts
+  const syns = typeof getTowerSynapses === 'function' ? getTowerSynapses(t) : [];
+  if (syns.length > 0) {
+    rateMult *= 1.15;
+    if (t.type === 'rail' && syns.some(s => s.pair && s.pair.id === 'gatling_rail')) {
+      rateMult *= 1.45; // Railgun Kinetic Acceleration
+    }
+  }
+  t.synapseRateMult = rateMult;
+
   // Power Grid: Brownout penalty
   const gp = getGridPowerStatus();
   if (gp.isBrownout) rateMult *= 0.65;
@@ -426,6 +439,23 @@ function fireGatling(t, st, e) {
   addFx('tracer', mx, my, e.x, e.y, 0.09, color, isFlak ? 3.5 : 2);
   burst(e.x, e.y, isFlak ? 8 : 2, color, isFlak ? 110 : 70, 0.25, isFlak ? 3 : 2, false);
   dealDamage(e, st.dmg, 'phys', t);
+
+  // 6.0 Neural Synapse: Gatling + Railgun Kinetic Piercing (+2 targets pierced)
+  const syns = typeof getTowerSynapses === 'function' ? getTowerSynapses(t) : [];
+  if (syns.some(s => s.pair && s.pair.id === 'gatling_rail') && typeof distToSeg === 'function') {
+    const dx = e.x - mx, dy = e.y - my, dLen = Math.hypot(dx, dy) || 1;
+    const nx = dx / dLen, ny = dy / dLen;
+    let pierced = 0;
+    for (const o of G.enemies) {
+      if (o.dead || o === e) continue;
+      if (distToSeg(o.x, o.y, mx, my, mx + nx * 280, my + ny * 280) <= (14 + o.r)) {
+        dealDamage(o, st.dmg * 0.75, 'phys', t);
+        burst(o.x, o.y, 3, '#38bdf8', 60, 0.2, 2, false);
+        pierced++;
+        if (pierced >= 2) break;
+      }
+    }
+  }
   if (isFlak && st.flakRadius) {
     const fr = st.flakRadius * TILE;
     addRing(e.x, e.y, 4, fr, 0.3, '#38bdf8', 2);
@@ -544,6 +574,17 @@ function cryoPulse(t, st, rangePx, effRate) {
     }
     dealDamage(e, st.dmg, 'energy', t);
   }
+
+  // 6.0 Neural Synapse: Cryo + Plasma (Thermonuclear Frost Puddles)
+  const cSyns = typeof getTowerSynapses === 'function' ? getTowerSynapses(t) : [];
+  if (cSyns.some(s => s.pair && s.pair.id === 'cryo_plasma')) {
+    G.hazards = G.hazards || [];
+    G.hazards.push({
+      type: 'frost_magma', x: t.x, y: t.y, r: rangePx * 0.75,
+      life: 3.5, maxLife: 3.5, dps: 28, color: '#c084fc', src: t
+    });
+    burst(t.x, t.y, 14, '#c084fc', 90, 0.4, 3, true);
+  }
 }
 const BOUNCE = 1.8;
 function fireTesla(t, st, e) {
@@ -590,6 +631,21 @@ function fireTesla(t, st, e) {
     dealDamage(h, st.dmg * Math.pow(0.88, i), 'energy', t, { shieldMult: st.sm });
     px = h.x; py = h.y;
   });
+
+  // 6.0 Neural Synapse: Tesla + Relay (Conduit Perimeter Lightning)
+  const tSyns = typeof getTowerSynapses === 'function' ? getTowerSynapses(t) : [];
+  if (tSyns.some(s => s.pair && s.pair.id === 'tesla_relay') && G.resonanceLines && G.resonanceLines.length > 0) {
+    for (const l of G.resonanceLines) {
+      addBolt(t.x, t.y, l.x2, l.y2, '#facc15');
+      burst(l.x2, l.y2, 5, '#facc15', 80, 0.3, 2.5, true);
+      for (const o of G.enemies) {
+        if (o.dead) continue;
+        if ((o.x - l.x2) ** 2 + (o.y - l.y2) ** 2 <= 75 * 75) {
+          dealDamage(o, st.dmg * 0.75, 'energy', t);
+        }
+      }
+    }
+  }
   Sfx.play('tesla');
 }
 function fireRail(t, st, e) {

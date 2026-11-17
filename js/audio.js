@@ -93,6 +93,10 @@ const Sfx = {
       case 'matrix_unlock': [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone('triangle', f, f * 1.04, 0.3, 0.18, i * 0.07)); break;
       case 'spore_burst': this.noise(0.35, 0.35, 480, 1, 'lowpass'); this.tone('sine', 180, 60, 0.3, 0.25); break;
       case 'drop': this.tone('square', 140, 60, 0.15, 0.2); this.noise(0.18, 0.25, 800, 1, 'lowpass'); break;
+      case 'time_rewind': [880, 659, 523, 440, 330, 220].forEach((f, i) => this.tone('sine', f, f * 0.85, 0.25, 0.18, i * 0.04)); this.noise(0.4, 0.3, 1600, 2, 'bandpass'); break;
+      case 'neural_link': [440, 554, 659, 830, 1108].forEach((f, i) => this.tone('triangle', f, f * 1.02, 0.25, 0.16, i * 0.05)); break;
+      case 'corpse_reclaim': this.noise(0.35, 0.3, 600, 1, 'lowpass'); this.tone('sawtooth', 120, 360, 0.35, 0.22); break;
+      case 'syndicate_drop': this.noise(0.6, 0.4, 250, 1, 'lowpass'); this.tone('sine', 140, 45, 0.55, 0.3); break;
     }
   }
 };
