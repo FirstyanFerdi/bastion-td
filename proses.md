@@ -582,7 +582,35 @@ Seluruh komponen diuji secara mendalam melalui 8 suite pengujian otomatis mandir
 
 ---
 
-## 13. Panduan Unggah ke GitHub
+## 13. Audit Kualitas & Perbaikan Bug Sistemik
+
+Telah dilakukan audit komprehensif terhadap seluruh file JavaScript, styling CSS, dan struktur HTML. Ditemukan dan diperbaiki 6 masalah kritis:
+
+1. **Perbaikan Hitungan Musuh Wave Card (`s.count` NaN Bug - [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js#L233)):**
+   - Sebelumnya `ev.forEach(s => cnt[s.type] = (cnt[s.type] || 0) + s.count);` menghasilkan `NaN` karena spawn list individu tidak memiliki properti `s.count`. Akibatnya semua badge musuh di preview wave menampilkan `×NaN` dan tag musuh (`STEALTH`, `CARRIER`, `BREACHER`, dll.) tidak pernah muncul.
+   - Diperbaiki menjadi `(cnt[s.type] || 0) + (s.count || 1);` sehingga jumlah musuh dan tag peringatan ancaman tampil akurat.
+
+2. **Penambahan Suara Synthesizer `'freeze'` ([`js/audio.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/audio.js#L9-L60)):**
+   - Detonasi Cryo Nitrogen Tank memanggil `Sfx.play('freeze')`, namun sebelumnya `Sfx.play()` belum memiliki kasus `'freeze'` sehingga hening.
+   - Ditambahkan sintesis audio Flash-Freeze (kristalisasi nada tinggi + white noise burst) dan gap rate-limit 200ms.
+
+3. **Tombol Navigasi Kembali ke Sector Dossier Menu ([`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js#L656), [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js#L129)):**
+   - Layar Game Over dan Victory sebelumnya hanya memiliki opsi "Play Again" (memulai ulang peta yang sama) dan "Workshop HQ", sehingga pemain terjebak tidak bisa kembali memilih sektor lain tanpa me-refresh browser.
+   - Ditambahkan tombol `Sector Dossier` (`data-ov="to_menu"`) untuk kembali ke menu ekspedisi kapan saja.
+
+4. **Navigasi Cepat Topbar Chip Sektor ([`index.html`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/index.html#L21), [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js#L87), [`css/style.css`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/css/style.css#L216)):**
+   - Mengklik chip `#chipSector` pada header permainan kini langsung membuka menu Sector Dossier untuk melihat status peta dan tantangan bintang.
+
+5. **Pengembalian Chip Modular Saat Menara Dijual ([`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js#L187)):**
+   - Menara yang telah dipasangi Modular Chip kini secara otomatis mengembalikan seluruh chip yang terpasang ke inventaris pemain saat dijual (`addChip`), mencegah hilangnya chip langka.
+
+6. **Proteksi Nilai Aman NaN & Bound Spawning Koordinat ([`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js#L254), [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js#L20), [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js#L437)):**
+   - Guard default `(e.armor || 0)`, `(e.shred || 0)`, dan `(e.brittle || 0.35)` di `dealDamage` untuk mencegah kontaminasi `NaN` ke HP musuh.
+   - Clamping koordinat radar mini-map dan proteksi spawn breach jika `PATH_BREACH` kosong.
+
+---
+
+## 14. Panduan Unggah ke GitHub
 
 ### Perintah Unggah (Terminal Pengguna):
 ```powershell
@@ -592,8 +620,8 @@ git add .
 # 2. Periksa status
 git status
 
-# 3. Lakukan commit perubahan Bastion TD Multi-Sector Expansion
-git commit -m "feat(v3.5): complete multi-sector expansion with 7 distinct environments, dual-front pathing, climate passives, interactive hazards, and 3-star mastery"
+# 3. Lakukan commit perubahan Bastion TD Multi-Sector Expansion & Bug Fixes
+git commit -m "feat(v3.5): complete multi-sector expansion with 7 environments, bug fixes for wave card counts, audio freeze synth, and navigation"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git

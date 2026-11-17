@@ -187,6 +187,10 @@ function upgradeTower(t, branch) {
 function sellTower(t) {
   if (!t) return;
   const v = Math.floor(t.invested * 0.75);
+  // Refund socketed modular chips back to inventory
+  if (t.chips && t.chips.length > 0 && typeof addChip === 'function') {
+    for (const chipId of t.chips) addChip(chipId, 1);
+  }
   G.gold += v; G.grid[t.r][t.c] = null;
   G.towers.splice(G.towers.indexOf(t), 1);
   if (G.sel === t) G.sel = null;

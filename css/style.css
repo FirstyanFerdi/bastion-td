@@ -213,6 +213,14 @@ button {
 #chipLives b { color: #f87171; }
 #chipPower b { color: #34d399; }
 #chipCores b { color: #38bdf8; }
+#chipSector {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+#chipSector:hover {
+  background: #1e293b;
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.2);
+}
 
 .chip.warn {
   border-color: var(--red);

@@ -230,7 +230,7 @@ function renderWaveCard() {
     wcWave = n;
     const ev = buildSpawns(n);
     const cnt = {};
-    ev.forEach(s => cnt[s.type] = (cnt[s.type] || 0) + s.count);
+    ev.forEach(s => cnt[s.type] = (cnt[s.type] || 0) + (s.count || 1));
     const badges = Object.keys(cnt).map(k => {
       const isB = k === 'boss';
       const name = (typeof ED !== 'undefined' && ED[k]) ? ED[k].name : k;
@@ -418,7 +418,7 @@ function renderSectorMiniPreview(canvasEl, secObj) {
     c.lineJoin = 'round';
     c.beginPath();
     const st0 = secObj.start0;
-    c.moveTo(Math.max(3, st0.x) * sx, st0.y * sy);
+    c.moveTo(clamp(st0.x * sx, 2, cw - 2), clamp(st0.y * sy, 2, ch - 2));
     for (const [col, row] of secObj.wp0) {
       c.lineTo((col * TILE + TILE / 2) * sx, (row * TILE + TILE / 2) * sy);
     }
@@ -434,7 +434,7 @@ function renderSectorMiniPreview(canvasEl, secObj) {
     c.setLineDash([4, 3]);
     c.beginPath();
     const st1 = secObj.start1;
-    c.moveTo(st1.x * sx, Math.max(3, st1.y) * sy);
+    c.moveTo(clamp(st1.x * sx, 2, cw - 2), clamp(st1.y * sy, 2, ch - 2));
     for (const [col, row] of secObj.wp1) {
       c.lineTo((col * TILE + TILE / 2) * sx, (row * TILE + TILE / 2) * sy);
     }
@@ -649,15 +649,15 @@ function showOverlay(kind) {
     h = '<div class="draft-box"><h2>' + svg('tag') + ' TACTICAL TECH REQUISITION</h2><div class="sub">Boss eliminated. Choose 1 experimental technology to reinforce your perimeter defenses.</div>' +
       '<div class="draft-grid">' + cards + '</div></div>';
   } else if (kind === 'over') {
-    const sec = (typeof MAP_SECTORS !== 'undefined' && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
+    const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
     const secLabel = sec ? ('SECTOR ' + sec.num + ': ' + sec.name) : 'BASTION';
-    h = '<div class="ov-box" style="border-top-color:#fb7185"><h2 style="color:#fb7185">BASE OVERRUN</h2><div class="sub">' + secLabel + ' breached at Wave ' + G.wave + '. Regroup and adapt defense layout.</div>' +
-      '<div class="ov-stats" style="grid-template-columns:repeat(4, 1fr);margin-bottom:12px"><div><label>WAVE</label><b>' + G.wave + '</b></div><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
-      '<div class="ov-btns"><button class="primary big" data-ov="again" tabindex="-1">' + svg('redo') + 'Play again</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
+    h = '<div class="ov-box" style="border-top-color:#fb7185"><h2 style="color:#fb7185">BASE OVERRUN</h2><div class="sub">' + secLabel + ' breached at Wave ' + (G ? G.wave : 0) + '. Regroup and adapt defense layout.</div>' +
+      '<div class="ov-stats" style="grid-template-columns:repeat(4, 1fr);margin-bottom:12px"><div><label>WAVE</label><b>' + (G ? G.wave : 0) + '</b></div><div><label>SCORE</label><b>' + (G ? G.score : 0) + '</b></div><div><label>CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + (G ? G.kills : 0) + '</b></div></div>' +
+      '<div class="ov-btns"><button class="primary big" data-ov="again" tabindex="-1">' + svg('redo') + 'Play again</button><button class="ghost" data-ov="to_menu" tabindex="-1">Sector Dossier</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button></div></div>';
   } else if (kind === 'win') {
     const curAsc = (G && G.ascension) || 0;
     const asc = typeof getAscensionData === 'function' ? getAscensionData(curAsc) : { badge: 'NORMAL', color: '#34d399' };
-    const sec = (typeof MAP_SECTORS !== 'undefined' && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
+    const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
     const secName = sec ? ('SECTOR ' + sec.num + ': ' + sec.name.toUpperCase()) : 'BASTION';
     const bountyText = (G && G.sectorVictoryResult && G.sectorVictoryResult.coresEarned > 0) ?
       '<div style="margin:8px 0;padding:6px;background:rgba(56,189,248,0.15);border:1px solid #38bdf8;border-radius:3px;color:#38bdf8;font-size:11px;font-weight:700">★ SECTOR MASTERY BOUNTY: +' + G.sectorVictoryResult.coresEarned + ' NANITE CORES! ★</div>' : '';
@@ -668,8 +668,8 @@ function showOverlay(kind) {
       'All 20 waves destroyed. Sector operational grid stabilized.';
     h = '<div class="ov-box" style="border-top-color:' + (curAsc > 0 ? asc.color : '#34d399') + '"><h2 style="color:' + (curAsc > 0 ? asc.color : '#34d399') + '">' + winTitle + '</h2><div class="sub">' + winSub + '</div>' +
       bountyText +
-      '<div class="ov-stats" style="grid-template-columns:repeat(4, 1fr);margin-bottom:12px"><div><label>SCORE</label><b>' + G.score + '</b></div><div><label>BEST</label><b>' + SAVE.bestScore + '</b></div><div><label>CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + G.kills + '</b></div></div>' +
-      '<div class="ov-btns"><button class="primary big" data-ov="endless" tabindex="-1">' + svg('inf') + 'Endless mode</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button><button class="ghost" data-ov="again" tabindex="-1">New Game</button></div></div>';
+      '<div class="ov-stats" style="grid-template-columns:repeat(4, 1fr);margin-bottom:12px"><div><label>SCORE</label><b>' + (G ? G.score : 0) + '</b></div><div><label>BEST</label><b>' + SAVE.bestScore + '</b></div><div><label>CORES</label><b style="color:#38bdf8">' + (SAVE.cores || 0) + '</b></div><div><label>KILLS</label><b>' + (G ? G.kills : 0) + '</b></div></div>' +
+      '<div class="ov-btns"><button class="primary big" data-ov="endless" tabindex="-1">' + svg('inf') + 'Endless mode</button><button class="ghost" data-ov="to_menu" tabindex="-1">Sector Dossier</button><button class="ghost" data-ov="open_workshop" tabindex="-1">Workshop HQ</button><button class="ghost" data-ov="again" tabindex="-1">New Game</button></div></div>';
   }
   ov.innerHTML = h; ov.classList.add('show');
   if (kind === 'menu' && curSecObj) {

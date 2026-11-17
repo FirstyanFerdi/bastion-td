@@ -85,6 +85,12 @@ function init() {
       showOverlay('workshop');
     });
   }
+  if ($('chipSector')) {
+    $('chipSector').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('menu');
+    });
+  }
   $('overlay').addEventListener('click', e => {
     const card = e.target.closest('[data-perk]');
     if (card && G.drafting) { selectPerk(card.dataset.perk); return; }
@@ -122,6 +128,7 @@ function init() {
     }
     if (a === 'start' || a === 'again') { begin(); Sfx.play('click'); }
     else if (a === 'endless') { showOverlay(null); G.endless = true; G.state = 'prep'; G.prepT = 15; G.uiDirty = true; wcWave = -1; Sfx.play('click'); }
+    else if (a === 'to_menu') { if (G) G.state = 'menu'; showOverlay('menu'); Sfx.play('click'); }
     else if (a === 'open_workshop') { showOverlay('workshop'); Sfx.play('click'); }
     else if (a === 'close_workshop') { showOverlay(G && G.state === 'menu' ? 'menu' : null); Sfx.play('click'); }
   });

@@ -17,7 +17,7 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
   const finalHp = isChamp ? Math.round(hp * 1.4) : hp;
   const finalReward = isChamp ? Math.round(d.reward * 1.4 * (1 + 0.03 * (n - 1))) : Math.max(1, Math.round(d.reward * (1 + 0.03 * (n - 1))));
   const pId = pathId || 0;
-  const startPt = pId === 1 ? PATH_BREACH[0] : PATH[0];
+  const startPt = (pId === 1 && PATH_BREACH.length > 0) ? PATH_BREACH[0] : PATH[0];
   const e = {
     type, id: ++eid, hp: finalHp, maxHp: finalHp, dispHp: finalHp, shield: 0, maxShield: 0, speed: spd, curSpeed: spd, r: isChamp ? Math.round(d.r * 1.15) : d.r,
     armor, shred: 0, slowAmt: 0, slowT: 0, brittle: 0, brittleT: 0, stunT: 0,
@@ -425,18 +425,8 @@ function updateEnemy(e, dt) {
     if (G.lives <= 0) { G.lives = 0; endGame(false); }
     return;
   }
-  if (e.d < 0) {
-    const startPt = e.pathId === 1 ? PATH_BREACH[0] : PATH[0];
-    if (e.pathId === 1) {
-      e.x = startPt.x + e.off;
-      e.y = startPt.y + e.d;
-    } else {
-      e.x = startPt.x + e.d;
-      e.y = startPt.y + e.off;
-    }
-  } else {
-    const p = posAt(e.d, e.seg, e.pathId); e.seg = p.seg;
-    e.ang += angDiff(e.ang, p.ang) * Math.min(1, dt * 10);
-    e.x = p.x - Math.sin(p.ang) * e.off; e.y = p.y + Math.cos(p.ang) * e.off;
-  }
+  if (e.d < 0) e.d = 0;
+  const p = posAt(e.d, e.seg, e.pathId); e.seg = p.seg;
+  e.ang += angDiff(e.ang, p.ang) * Math.min(1, dt * 10);
+  e.x = p.x - Math.sin(p.ang) * e.off; e.y = p.y + Math.cos(p.ang) * e.off;
 }

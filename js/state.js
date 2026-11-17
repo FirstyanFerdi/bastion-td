@@ -251,13 +251,13 @@ function dealDamage(e, amount, type, src, opts) {
   }
 
   if (type === 'phys') {
-    let effArmor = Math.max(0, e.armor - e.shred);
+    let effArmor = Math.max(0, (e.armor || 0) - (e.shred || 0));
     // Commander Skill: AP Sabot Rounds ignores 75% armor
     if (G && G.sabotRoundsT > 0) effArmor *= 0.25;
     if (src && src.type === 'gatling' && hasPerk('depleted_uranium')) effArmor = Math.max(0, effArmor - 0.25);
     a *= (1 - effArmor);
   }
-  if (e.brittleT > 0) a *= 1 + e.brittle;
+  if (e.brittleT > 0) a *= 1 + (e.brittle || 0.35);
   if (hasPerk('titan_hunter') && (e.type === 'boss' || e.type === 'brute' || e.type === 'carrier')) a *= 1.30;
   if (G.mutator && G.mutator.id === 'ion_storm' && (type === 'energy' || (src && src.type === 'tesla'))) a *= 1.25;
   if (e.shield > 0 && opts.shieldMult) a *= opts.shieldMult;

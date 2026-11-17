@@ -6,7 +6,7 @@
    ============================================================ */
 const Sfx = {
   ctx: null, master: null, noiseBuf: null, muted: SAVE.muted, last: {},
-  GAP: { gatling: 55, hit: 45, kill: 40, plasma: 90, boom: 70, cryo: 120, tesla: 80, rail: 120, heal: 300, shield: 200, click: 20, orbital: 300, overcharge: 200, caltrops: 150, shatter: 80, perk: 300, emp: 200, reaction: 110, shockwave: 130 },
+  GAP: { gatling: 55, hit: 45, kill: 40, plasma: 90, boom: 70, cryo: 120, freeze: 200, tesla: 80, rail: 120, heal: 300, shield: 200, click: 20, orbital: 300, overcharge: 200, caltrops: 150, shatter: 80, perk: 300, emp: 200, reaction: 110, shockwave: 130 },
   init() {
     if (this.ctx) return;
     try {
@@ -58,6 +58,7 @@ const Sfx = {
       case 'plasma': this.noise(0.22, 0.35, 700, 1, 'lowpass'); this.tone('sine', 150, 55, 0.25, 0.35); break;
       case 'boom': this.noise(0.45, 0.5, 380, 1, 'lowpass'); this.tone('sine', 95, 30, 0.4, 0.45); break;
       case 'cryo': this.tone('sine', 1300, 320, 0.4, 0.13); this.tone('triangle', 1900, 900, 0.25, 0.06, 0.03); break;
+      case 'freeze': this.tone('sine', 1600, 420, 0.45, 0.22); this.tone('triangle', 2200, 800, 0.35, 0.12, 0.04); this.noise(0.28, 0.22, 3600, 2, 'highpass'); break;
       case 'tesla': this.tone('sawtooth', 200 + rand(0, 90), 90, 0.14, 0.12); this.noise(0.14, 0.18, 3200, 2, 'bandpass'); break;
       case 'rail': this.tone('sawtooth', 2600, 60, 0.4, 0.2); this.noise(0.3, 0.28, 2000, 1, 'highpass'); this.tone('sine', 70, 40, 0.35, 0.35); break;
       case 'hit': this.tone('square', 230, 120, 0.04, 0.04); break;
