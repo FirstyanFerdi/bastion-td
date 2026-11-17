@@ -44,6 +44,20 @@ function triggerSkill(id) {
   }
   G.skillsUsedThisWave = (G.skillsUsedThisWave || 0) + 1;
 
+  // Workshop HQ: Command Protocol [R] - EMP Pulse when casting 4th skill slot [R]
+  const curDoc = (typeof COMMANDER_DOCTRINES !== 'undefined' && COMMANDER_DOCTRINES[G.doctrine]) || (typeof COMMANDER_DOCTRINES !== 'undefined' && COMMANDER_DOCTRINES.vanguard);
+  if (curDoc && curDoc.skills && id === curDoc.skills[3] && typeof getWorkshopLevel === 'function' && getWorkshopLevel('command_protocol') > 0) {
+    shake(8);
+    burst(BASE_PT.x, BASE_PT.y, 22, '#38bdf8', 160, 0.6, 3.5, true);
+    addRing(BASE_PT.x, BASE_PT.y, 10, 160, 0.5, '#38bdf8', 4);
+    addText(BASE_PT.x, BASE_PT.y - 25, 'COMMAND PROTOCOL: EMP WAVE', '#38bdf8', 14);
+    for (const en of G.enemies) {
+      if (en.dead) continue;
+      if (en.shield > 0) en.shield = Math.round(en.shield * 0.5);
+      if (en.type !== 'boss') en.stunT = Math.max(en.stunT || 0, 1.2);
+    }
+  }
+
   // Instant Cast Skills:
   if (id === 'emp_nuke') {
     sk.cd = COMMANDER_SKILLS.emp_nuke.cd;

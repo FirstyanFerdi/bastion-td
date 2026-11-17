@@ -848,10 +848,10 @@ const WORKSHOP_UPGRADES = {
     id: 'command_protocol',
     name: 'Command Protocol [R]',
     icon: 'spark',
-    desc: 'Membuka slot kemampuan taktis keempat [R]: Tactical EMP Nuke untuk situasi darurat.',
+    desc: 'Mempercepat pemulihan cooldown semua skill sebesar +25%, dan memberdayakan slot [R] dengan gelombang EMP sekunder saat diaktifkan.',
     maxLv: 1,
     costs: [30],
-    effectText: lv => (lv === 0 ? 'Terkunci' : 'Skill [R] Tactical EMP Nuke Aktif')
+    effectText: lv => (lv === 0 ? 'Terkunci' : '+25% CD Rate & EMP Pulse pada Skill [R]')
   }
 };
 

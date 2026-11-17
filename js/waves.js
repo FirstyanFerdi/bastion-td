@@ -211,9 +211,10 @@ function update(dt) {
 
   // Commander skills cooldown
   const scramblerSlow = (G.hiveMutation === 'scrambler') ? 0.70 : 1.0;
+  const commandProtoBoost = (typeof getWorkshopLevel === 'function' && getWorkshopLevel('command_protocol') > 0) ? 1.25 : 1.0;
   for (const k in G.skills) {
     if (G.skills[k] && G.skills[k].cd > 0) {
-      const cdRate = (hasPerk('orbital_salvo') && k === 'orbital' ? 1.5 : 1) * scramblerSlow;
+      const cdRate = (hasPerk('orbital_salvo') && k === 'orbital' ? 1.5 : 1) * scramblerSlow * commandProtoBoost;
       G.skills[k].cd = Math.max(0, G.skills[k].cd - dt * cdRate);
     }
   }
@@ -458,6 +459,22 @@ function update(dt) {
 
   // 5.0 Thermal Steam Purge Cooldown
   if (G.thermalPurgeCd > 0) G.thermalPurgeCd = Math.max(0, G.thermalPurgeCd - dt);
+
+  // Cursed Protocol: Entropy Conduit Periodic Radiation Flare (every 14s)
+  if (G.cursedProtocols && G.cursedProtocols.includes('entropy_conduit') && G.state === 'active') {
+    G.entropyRadiationCd = (G.entropyRadiationCd !== undefined ? G.entropyRadiationCd : 14.0) - dt;
+    if (G.entropyRadiationCd <= 0 && G.towers && G.towers.length > 0) {
+      G.entropyRadiationCd = 14.0;
+      const targetTower = G.towers[Math.floor(Math.random() * G.towers.length)];
+      targetTower.empT = Math.max(targetTower.empT || 0, 3.0);
+      if (typeof addTowerHeat === 'function') addTowerHeat(targetTower, 35.0);
+      burst(targetTower.x, targetTower.y, 18, '#10b981', 120, 0.5, 3.5, false);
+      addRing(targetTower.x, targetTower.y, 10, 65, 0.55, '#10b981', 4);
+      shake(6);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('reaction');
+      addText(targetTower.x, targetTower.y - 22, 'ENTROPY RADIATION OVERHEAT!', '#10b981', 13);
+    }
+  }
 
   // 5.0 Emergency Grid EMP (Logistics Protocol)
   if (typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('emergency_blackout') && !G.emergencyBlackoutUsed && G.lives <= 6 && G.lives > 0 && G.state === 'active') {

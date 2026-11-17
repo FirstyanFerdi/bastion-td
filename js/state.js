@@ -803,6 +803,20 @@ function killEnemy(e, src) {
       }
     }
   }
+
+  // Reactive Hive Counter-Trait: Spore Mortar Retaliation
+  if (e.counterTrait === 'spore_mortar' && G && G.towers && G.towers.length > 0) {
+    const nearestT = G.towers.find(t => Math.hypot(t.x - e.x, t.y - e.y) <= 140);
+    if (nearestT) {
+      nearestT.empT = Math.max(nearestT.empT || 0, 2.5);
+      if (typeof addBiomassCreep === 'function') addBiomassCreep(nearestT.c, nearestT.r);
+      addFx('tracer', e.x, e.y, nearestT.x, nearestT.y, 0.35, '#84cc16', 3.0);
+      burst(nearestT.x, nearestT.y, 14, '#84cc16', 90, 0.45, 3, false);
+      shake(5);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('spore_burst');
+      addText(nearestT.x, nearestT.y - 20, 'SPORE CORROSION', '#84cc16', 13);
+    }
+  }
   const col = e.type === 'scout' ? '#a3e635' : e.type === 'brute' ? '#94a3b8' : e.type === 'swarm' ? '#fb7185' : e.type === 'healer' ? '#6ee7b7' : e.type === 'stealth' ? '#38bdf8' : e.type === 'carrier' ? '#34d399' : e.type === 'breacher' ? '#fbbf24' : '#c084fc';
   if (e.type === 'boss') {
     burst(e.x, e.y, 70, col, 260, 1.1, 5, false); burst(e.x, e.y, 40, '#fff', 200, 0.7, 3, true);

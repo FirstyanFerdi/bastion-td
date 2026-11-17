@@ -717,21 +717,35 @@ Mengintegrasikan lima pilar mekanik baru yang saling terhubung erat (*interconne
 
 ---
 
-## 16. Hasil Verifikasi & Pengujian Otomatis
+## 16. Hasil Verifikasi, Audit Menyeluruh & Realisasi Efek (*Reality Check*)
 
-Seluruh 12 rangkaian pengujian unit test dan simulasi permainan telah dijalankan dan lulus 100%:
-1. `tests/audit_bugs.js`: **0 inkonsistensi statis ditemukan** (39 efek suara terhubung, 25 aksi UI, 30 elemen DOM HTML tervalidasi).
-2. `tests/smoke.js`: Lulus simulasi penuh 20 wave dengan status `victory`.
-3. `tests/test_deep_synergy.js`: **Lulus 100%** menguji seluruh 5 pilar sistem keterhubungan mendalam Bastion TD 5.0.
-4. `tests/test_overdrive_fusions.js`: Lulus 100% sistem fusi senjata super dan anomali kargo.
-5. `tests/test_sectors.js`: Lulus 100% validasi 7 sektor peta multi-ekspedisi dan variasi hazard.
-6. `tests/test_mastery.js`: Lulus 100% sistem power grid, doktrin komandan, dan socket chip modular.
-7. `tests/test_champions.js`: Lulus 100% kecerdasan adaptif Threat Director dan afiks champion.
-8. `tests/test_map_dynamics.js`: Lulus 100% node leyline dan rute bercabang flanking.
-9. `tests/test_ascension.js`: Lulus 100% protokol tantangan tingkat 0–5.
-10. `tests/test_reactions.js`: Lulus 100% empat reaksi kimia dan elemen.
-11. `tests/test_workshop.js`: Lulus 100% pohon peningkatan markas dan ekonomi Nanite Cores.
-12. `tests/test_browser_init.js`: Lulus 100% emulasi siklus render canvas browser 60 FPS tanpa kegagalan.
+Dilakukan audit mendalam terhadap seluruh data statis dan logika game untuk memastikan **100% efek tidak hanya berupa deskripsi teks (*text-only placebo*)**, melainkan memiliki implementasi nyata di canvas, kalkulasi damage, dan runtime game loop:
+
+### 16.1 Temuan & Perbaikan Audit Realisasi Efek:
+1. **`command_protocol` (Workshop HQ Upgrade):**
+   - *Sebelum:* Peningkatan dibeli dengan 30 Cores namun variabelnya tidak dipanggil di game loop.
+   - *Sesudah:* Diimplementasikan nyata di [`js/waves.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/waves.js) (memberikan akselerasi pemulihan cooldown semua skill sebesar **+25%**) dan di [`js/input.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/input.js) (ketika skill slot ke-4 $[R]$ diaktifkan, memancarkan gelombang pulsa EMP sekunder dari markas yang mengikis 50% perisai musuh dan melumpuhkan musuh selama 1.2 detik).
+2. **`entropy_conduit` (Cursed Black Market Protocol):**
+   - *Sebelum:* Memberikan kapasitas grid tak terbatas (9999 MW) dan overdrive permanen, namun penalti ubin radiasi periodik belum diaktifkan.
+   - *Sesudah:* Diintegrasikan ke loop pertempuran di [`js/waves.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/waves.js) di mana setiap 14 detik ubin radiasi meledak menyambar menara acak kawan dengan efek panas +35 Heat dan disrupsi EMP 3.0 detik.
+3. **`spore_mortar` (Reactive Hive Counter-Trait):**
+   - *Sebelum:* Musuh bermutasi dengan sifat `spore_mortar` namun saat mati tidak melancarkan tembakan balasan.
+   - *Sesudah:* Diimplementasikan di [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) di mana musuh dengan trait ini yang tereliminasi akan memuntahkan mortir spora korosif ke menara terdekat dalam radius 140px, melumpuhkan menara selama 2.5s dan mencemari petak tersebut dengan lendir biomassa.
+
+### 16.2 Hasil Pengujian Otomatis (13 Rangkaian Test Suites Lulus 100%):
+1. `tests/audit_bugs.js`: **0 inkonsistensi statis** (39 efek suara terhubung, 25 aksi UI, 30 elemen DOM HTML tervalidasi).
+2. `tests/test_effects_realization.js`: **Lulus 100%** menguji realisasi nyata Command Protocol [R], Entropy Conduit periodic radiation, dan Spore Mortar retaliation.
+3. `tests/smoke.js`: Lulus simulasi penuh 20 wave.
+4. `tests/test_deep_synergy.js`: **Lulus 100%** menguji seluruh 5 pilar Bastion TD 5.0 (Resonance Beams, Thermodynamics, Creep, TPP Matrix, Nemesis Boss AI).
+5. `tests/test_overdrive_fusions.js`: Lulus 100% sistem fusi 4 senjata super dan anomali medan tempur.
+6. `tests/test_sectors.js`: Lulus 100% validasi 7 sektor ekspedisi peta.
+7. `tests/test_mastery.js`: Lulus 100% doktrin komandan, power grid, dan modular chip sockets.
+8. `tests/test_champions.js`: Lulus 100% adaptive threat director dan afiks champion.
+9. `tests/test_map_dynamics.js`: Lulus 100% rute pergerakan dinamis dan leyline nodes.
+10. `tests/test_ascension.js`: Lulus 100% ascension protokol 0–5.
+11. `tests/test_reactions.js`: Lulus 100% empat kombo reaksi elemen.
+12. `tests/test_workshop.js`: Lulus 100% pohon meta-upgrade Markas & Nanite Cores.
+13. `tests/test_browser_init.js`: Lulus 100% render canvas 60 FPS dan inisialisasi browser.
 
 ---
 
@@ -745,8 +759,8 @@ git add .
 # 2. Periksa status
 git status
 
-# 3. Lakukan commit perubahan Bastion TD 5.0: Deep Interconnected Synergy Matrix
-git commit -m "feat(v5.0): implement deep interconnected synergy matrix with resonance conduits, thermodynamics, biomass creep, tactical protocol matrix, and dynamic nemesis AI"
+# 3. Lakukan commit perubahan Bastion TD 5.0: Deep Interconnected Synergy Matrix & Effects Realization
+git commit -m "feat(v5.0): implement deep interconnected synergy matrix, audit and realize 100% in-game effects and mechanics"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git
