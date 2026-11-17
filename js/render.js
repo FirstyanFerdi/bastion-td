@@ -458,6 +458,7 @@ function render() {
   drawSpawnBase(c);
   drawHazards(c, time);
   drawAtmosphericParticles(c, time);
+  drawFieldAnomalies(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -534,6 +535,29 @@ function render() {
     g.addColorStop(0, 'rgba(225,29,72,0)'); g.addColorStop(1, 'rgba(225,29,72,' + (G.dmgFlash * 0.4) + ')');
     c.fillStyle = g; c.fillRect(0, 0, W, H);
   }
+  // Golden Adrenaline Rush Screen Glow (4.0)
+  if (G.adrenalineT > 0) {
+    const aPulse = 0.5 + 0.5 * Math.sin(time * 8);
+    c.save();
+    c.strokeStyle = 'rgba(251,191,36,' + (0.35 + 0.25 * aPulse) + ')';
+    c.lineWidth = 6;
+    c.strokeRect(3, 3, W - 6, H - 6);
+    c.restore();
+  }
+  // Core Overload Hyper-Drive Screen Glow (4.0)
+  if (G.overloadT > 0) {
+    const oPulse = 0.5 + 0.5 * Math.sin(time * 15);
+    c.save();
+    c.strokeStyle = 'rgba(244,63,94,' + (0.45 + 0.35 * oPulse) + ')';
+    c.lineWidth = 8;
+    c.strokeRect(4, 4, W - 8, H - 8);
+    c.restore();
+  }
+  // Meltdown Brownout Flicker
+  if (G.meltdownT > 0 && Math.random() < 0.2) {
+    c.fillStyle = 'rgba(251,113,133,0.08)';
+    c.fillRect(0, 0, W, H);
+  }
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
     c.save(); c.globalAlpha = a; c.textAlign = 'center';
@@ -554,5 +578,51 @@ function render() {
     c.fillStyle = 'rgba(4,8,18,0.55)'; c.fillRect(0, 0, W, H);
     c.textAlign = 'center'; c.fillStyle = '#fff'; c.font = '900 44px ' + FONT; c.fillText('PAUSED', W / 2, H / 2 - 4);
     c.font = '600 15px ' + FONT; c.fillStyle = '#9fb0d8'; c.fillText('Press P or the pause button to resume', W / 2, H / 2 + 26);
+  }
+}
+
+function drawFieldAnomalies(c, time) {
+  if (!G || !G.anomalies) return;
+  for (const an of G.anomalies) {
+    if (an.type === 'supply_drop') {
+      glow(c, an.x, an.y, 22, '#fbbf24', 0.6 + 0.3 * Math.sin(time * 6));
+      c.fillStyle = '#1e293b'; c.strokeStyle = '#fbbf24'; c.lineWidth = 2;
+      rr(c, an.x - 14, an.y - 14, 28, 28, 4); c.fill(); c.stroke();
+      c.fillStyle = '#fbbf24';
+      c.fillRect(an.x - 2, an.y - 8, 4, 16);
+      c.fillRect(an.x - 8, an.y - 2, 16, 4);
+      const hpPct = clamp(an.hp / an.maxHp, 0, 1);
+      c.fillStyle = 'rgba(0,0,0,0.75)'; c.fillRect(an.x - 16, an.y - 22, 32, 5);
+      c.fillStyle = '#fbbf24'; c.fillRect(an.x - 15, an.y - 21, 30 * hpPct, 3);
+    } else if (an.type === 'ion_thunderstrike') {
+      c.save(); c.translate(an.x, an.y); c.rotate(time * 3);
+      c.strokeStyle = '#38bdf8'; c.lineWidth = 2; c.setLineDash([8, 6]);
+      c.beginPath(); c.arc(0, 0, an.r, 0, TAU); c.stroke();
+      c.beginPath(); c.moveTo(-an.r - 8, 0); c.lineTo(an.r + 8, 0); c.stroke();
+      c.beginPath(); c.moveTo(0, -an.r - 8); c.lineTo(0, an.r + 8); c.stroke();
+      c.restore();
+      c.fillStyle = '#38bdf8'; c.font = '800 11px ' + FONT; c.textAlign = 'center';
+      c.fillText('ION STRIKE: ' + an.life.toFixed(1) + 's', an.x, an.y - an.r - 10);
+    } else if (an.type === 'smuggler_drone') {
+      glow(c, an.x, an.y, 20, '#c084fc', 0.7);
+      c.fillStyle = '#2e1065'; c.strokeStyle = '#c084fc'; c.lineWidth = 2;
+      rr(c, an.x - 14, an.y - 8, 28, 16, 4); c.fill(); c.stroke();
+      for (const rx of [-12, 12]) {
+        for (const ry of [-8, 8]) {
+          c.fillStyle = '#38bdf8'; c.beginPath(); c.arc(an.x + rx, an.y + ry, 3, 0, TAU); c.fill();
+        }
+      }
+      c.fillStyle = '#fde047'; c.beginPath(); c.arc(an.x, an.y, 3, 0, TAU); c.fill();
+      c.fillStyle = '#e9d5ff'; c.font = '800 9.5px ' + FONT; c.textAlign = 'center';
+      c.fillText('SMUGGLER [CLICK]', an.x, an.y - 12);
+    } else if (an.type === 'chrono_rift') {
+      c.save(); c.translate(an.x, an.y); c.rotate(-time * 4);
+      glow(c, 0, 0, an.r, '#818cf8', 0.7);
+      c.strokeStyle = '#818cf8'; c.lineWidth = 2.5; c.setLineDash([10, 8]);
+      c.beginPath(); c.arc(0, 0, an.r, 0, TAU); c.stroke();
+      c.strokeStyle = '#c084fc'; c.lineWidth = 1.5;
+      c.beginPath(); c.arc(0, 0, an.r * 0.6, 0, TAU); c.stroke();
+      c.restore();
+    }
   }
 }

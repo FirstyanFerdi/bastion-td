@@ -116,6 +116,7 @@ for (const secId in MAP_SECTORS) {
 console.log('\n--- 4. Auditing Tower Definitions ---');
 for (const type in TD) {
   const def = TD[type];
+  if (def.isFusion) continue; // Super-weapons are apex fusions with unique mechanics
   if (!def.tiers || def.tiers.length < 2) {
     bugs.push({ category: 'TOWER_DEF', issue: `Tower ${type} has fewer than 2 tiers` });
   }

@@ -74,11 +74,24 @@ function canCall() {
 }
 function callWave() {
   if (!canCall()) return;
-  const b = earlyBonus();
-  if (b > 0) { G.gold += b; addText(W / 2, 80, '+' + b + ' early bonus', '#fbbf24', 18); Sfx.play('coin'); }
+  const isMultiWave = G.state === 'active' && G.enemies.length > 0;
+  if (isMultiWave) {
+    G.callStreak = Math.min(4, (G.callStreak || 1) + 1);
+    G.adrenalineT = 15.0; // 15s adrenaline rush
+    shake(8);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('streak');
+    addText(W / 2, 80, '🔥 ADRENALINE STREAK ' + G.callStreak + 'x! (+ ' + Math.round((G.callStreak - 1) * 40) + '% GOLD & +' + Math.round((G.callStreak - 1) * 50) + '% SCORE)', '#fbbf24', 20);
+    if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery('adrenaline_rush', 'anomaly');
+  } else {
+    G.callStreak = 1;
+  }
+  const b = earlyBonus() * (G.callStreak || 1);
+  if (b > 0) { G.gold += b; addText(W / 2, 108, '+' + b + ' early bonus', '#fbbf24', 18); Sfx.play('coin'); }
   startWave();
 }
 function onWaveClear() {
+  G.callStreak = 0;
+  G.adrenalineT = 0;
   const n = G.wave, bonus = 25 + n * 4;
   const isVC = hasPerk('venture_capital');
   const intRate = isVC ? 0.14 : 0.08, intCap = isVC ? 260 : 150;
@@ -112,6 +125,15 @@ function onWaveClear() {
     }
     G.activeContract = null;
     G.contractFailed = false;
+  }
+
+  // Cursed Black Market Terminal Offer (Waves 5, 10, 15)
+  if ((n === 5 || n === 10 || n === 15) && (!G.smugglerOffered || !G.smugglerOffered[n])) {
+    G.smugglerOffered = G.smugglerOffered || {};
+    G.smugglerOffered[n] = true;
+    setTimeout(() => {
+      if (G && !G.drafting) showOverlay('smuggler');
+    }, 1200);
   }
 
   saveBest();
@@ -319,7 +341,20 @@ function update(dt) {
   for (let i = G.proj.length - 1; i >= 0; i--) {
     const p = G.proj[i], dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy), step = PLASMA_SPD * dt;
     p.trail -= dt;
-    if (p.trail <= 0) { p.trail = 0.02; const q = partPool.get(); q.x = p.x; q.y = p.y; q.vx = rand(-12, 12); q.vy = rand(-12, 12); q.life = q.max = 0.3; q.size = 3.5; q.color = '#fb923c'; q.drag = 2; q.round = true; }
+    if (p.trail <= 0) {
+      p.trail = 0.02; const q = partPool.get(); q.x = p.x; q.y = p.y; q.vx = rand(-12, 12); q.vy = rand(-12, 12);
+      q.life = q.max = 0.3; q.size = 3.5; q.color = p.type === 'singularity_orb' ? '#818cf8' : '#fb923c'; q.drag = 2; q.round = true;
+    }
+    // Gravitational Singularity suction while flying
+    if (p.type === 'singularity_orb') {
+      for (const e of G.enemies) {
+        if (e.dead) continue;
+        const edist = Math.hypot(e.x - p.x, e.y - p.y);
+        if (edist <= 110 && edist > 8) {
+          e.d = Math.max(0, e.d - 45 * dt);
+        }
+      }
+    }
     if (d <= step) { p.x = p.tx; p.y = p.ty; explode(p); G.proj.splice(i, 1); }
     else { p.x += dx / d * step; p.y += dy / d * step; }
   }
@@ -341,5 +376,166 @@ function update(dt) {
     if (G.prepT <= 0 && canCall()) startWave();
   } else if (G.state === 'active' && G.queue.length === 0 && G.enemies.length === 0) {
     onWaveClear();
+  }
+
+  // Core Overload & Meltdown Timers (4.0)
+  if (G.overloadT > 0) {
+    G.overloadT -= dt;
+    if (G.overloadT <= 0) {
+      G.overloadT = 0;
+      G.meltdownT = 12.0;
+      shake(10);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+      addText(W / 2, 75, 'REACTOR MELTDOWN BROWNOUT! (-50% FIRE RATE)', '#fb7185', 18);
+    }
+  }
+  if (G.meltdownT > 0) G.meltdownT -= dt;
+  if (G.overloadCd > 0) G.overloadCd -= dt;
+  if (G.adrenalineT > 0) G.adrenalineT -= dt;
+
+  // Reactive Hivemind Dynamic Evolution (4.0)
+  if (G.hivePressure && !G.hiveCounterTrait) {
+    const hp = G.hivePressure;
+    if (hp.phys >= 1200) { G.hiveCounterTrait = 'reflective'; addText(W / 2, 85, 'HIVE ADAPTATION: REFLECTIVE CARAPACE EVOLVED!', '#f43f5e', 16); }
+    else if (hp.cryo >= 1000) { G.hiveCounterTrait = 'insulated'; addText(W / 2, 85, 'HIVE ADAPTATION: THERMAL MOLTEN CORE EVOLVED!', '#f97316', 16); }
+    else if (hp.energy >= 1200) { G.hiveCounterTrait = 'carbon_weave'; addText(W / 2, 85, 'HIVE ADAPTATION: INSULATED CARBON WEAVE EVOLVED!', '#38bdf8', 16); }
+    else if (hp.cluster >= 1200) { G.hiveCounterTrait = 'spore_mortar'; addText(W / 2, 85, 'HIVE ADAPTATION: SPORE MORTARS EVOLVED!', '#a3e635', 16); }
+  }
+
+  // Field Anomalies spawn and update (4.0)
+  if (G.state === 'active') {
+    G.anomalySpawnCd = (G.anomalySpawnCd || 25) - dt;
+    if (G.anomalySpawnCd <= 0 && (!G.anomalies || G.anomalies.length < 2)) {
+      G.anomalySpawnCd = rand(22, 35);
+      spawnFieldAnomaly();
+    }
+  }
+  if (G.anomalies) {
+    for (let i = G.anomalies.length - 1; i >= 0; i--) {
+      const an = G.anomalies[i];
+      an.life -= dt;
+      if (an.type === 'supply_drop') {
+        if (an.life <= 0) {
+          G.anomalies.splice(i, 1);
+          burst(an.x, an.y, 16, '#94a3b8', 100, 0.4, 2.5, false);
+          addText(an.x, an.y - 20, 'CARGO EXPIRED', '#94a3b8', 12);
+        }
+      } else if (an.type === 'ion_thunderstrike') {
+        if (an.life <= 0) {
+          G.anomalies.splice(i, 1);
+          detonateIonStrike(an);
+        }
+      } else if (an.type === 'smuggler_drone') {
+        an.x += an.vx * dt;
+        an.y += Math.sin(G.time * 4) * 0.8;
+        if (an.x > W + 40 || an.x < -40 || an.life <= 0) {
+          G.anomalies.splice(i, 1);
+        }
+      } else if (an.type === 'chrono_rift') {
+        for (const e of G.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - an.x, e.y - an.y) <= an.r + e.r) {
+            e.d = Math.max(0, e.d - 75 * dt);
+            e.slowAmt = Math.max(e.slowAmt, 0.75); e.slowT = 1.0;
+          }
+        }
+        if (an.life <= 0) {
+          G.anomalies.splice(i, 1);
+          burst(an.x, an.y, 20, '#818cf8', 110, 0.5, 3, true);
+        }
+      }
+    }
+  }
+}
+
+/* ============================================================
+   FIELD ANOMALIES SYSTEM (4.0)
+   ============================================================ */
+function spawnFieldAnomaly(forcedType) {
+  if (!G) return;
+  G.anomalies = G.anomalies || [];
+  const types = ['supply_drop', 'ion_thunderstrike', 'smuggler_drone', 'chrono_rift'];
+  const t = forcedType || types[Math.floor(Math.random() * types.length)];
+  if (t === 'supply_drop') {
+    const valid = [];
+    for (let r = 1; r < ROWS - 1; r++) {
+      for (let c = 1; c < COLS - 1; c++) {
+        if (!pathTile[r][c] && !G.grid[r][c]) valid.push({ r, c });
+      }
+    }
+    if (valid.length > 0) {
+      const cell = valid[Math.floor(Math.random() * valid.length)];
+      const an = {
+        type: 'supply_drop',
+        c: cell.c, r: cell.r,
+        x: cell.c * TILE + TILE / 2, y: cell.r * TILE + TILE / 2,
+        r: 16, hp: 120, maxHp: 120, life: 20.0, maxLife: 20.0, color: '#fbbf24'
+      };
+      G.anomalies.push(an);
+      burst(an.x, an.y, 20, '#fbbf24', 120, 0.5, 3, true);
+      addRing(an.x, an.y, 10, 45, 0.4, '#fbbf24', 3);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('drop');
+      addText(an.x, an.y - 24, 'ORBITAL SUPPLY DROP!', '#fbbf24', 14);
+      if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery('supply_drop', 'anomaly');
+    }
+  } else if (t === 'ion_thunderstrike') {
+    const p = posAt(rand(40, Math.max(50, (typeof PLEN !== 'undefined' ? PLEN : 500) - 40)), 0, 0);
+    const an = {
+      type: 'ion_thunderstrike',
+      x: p.x, y: p.y, r: 75,
+      life: 3.5, maxLife: 3.5, color: '#38bdf8'
+    };
+    G.anomalies.push(an);
+    addRing(an.x, an.y, 12, an.r, 0.6, '#38bdf8', 3);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+    addText(an.x, an.y - 24, 'ION STRIKE RETICLE!', '#38bdf8', 14);
+    if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery('ion_thunderstrike', 'anomaly');
+  } else if (t === 'smuggler_drone') {
+    const an = {
+      type: 'smuggler_drone',
+      x: -25, y: rand(70, H - 100),
+      vx: 130, r: 18,
+      life: 14.0, maxLife: 14.0, color: '#c084fc'
+    };
+    G.anomalies.push(an);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('coin');
+    addText(an.x + 40, an.y - 15, 'SMUGGLER DRONE APPROACHING!', '#c084fc', 13);
+    if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery('smuggler_drone', 'anomaly');
+  } else if (t === 'chrono_rift') {
+    const p = posAt(rand(50, Math.max(60, (typeof PLEN !== 'undefined' ? PLEN : 500) - 50)), 0, 0);
+    const an = {
+      type: 'chrono_rift',
+      x: p.x, y: p.y, r: 55,
+      life: 7.5, maxLife: 7.5, color: '#818cf8'
+    };
+    G.anomalies.push(an);
+    burst(an.x, an.y, 25, '#818cf8', 140, 0.6, 3.5, true);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('freeze');
+    addText(an.x, an.y - 24, 'CHRONO-RIFT DETECTED!', '#818cf8', 14);
+    if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery('chrono_rift', 'anomaly');
+  }
+}
+
+function detonateIonStrike(an) {
+  burst(an.x, an.y, 60, '#38bdf8', 250, 0.8, 5, true);
+  burst(an.x, an.y, 30, '#ffffff', 200, 0.5, 4, true);
+  addRing(an.x, an.y, 10, an.r * 1.3, 0.6, '#38bdf8', 5);
+  shake(14);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('strike');
+  addText(an.x, an.y - 30, 'COSMIC ION THUNDERSTRIKE!', '#38bdf8', 18);
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    const d = Math.hypot(e.x - an.x, e.y - an.y);
+    if (d <= an.r + e.r) {
+      e.shield = 0;
+      dealDamage(e, 1500, 'energy', null);
+    }
+  }
+  for (const t of G.towers) {
+    const d = Math.hypot(t.x - an.x, t.y - an.y);
+    if (d <= an.r * 0.7) {
+      t.empT = 2.5;
+      addText(t.x, t.y - 18, 'ION STUN', '#38bdf8', 12);
+    }
   }
 }

@@ -151,6 +151,81 @@ function drawTowerSprite(c, type, tier, o, time) {
       }
       break;
     }
+    case 'fusion_hellfire': {
+      c.rotate(a);
+      // Heavy twin Gatling chassis
+      c.fillStyle = '#1c1917'; rr(c, -12, -14, 15, 28, 4); c.fill();
+      c.strokeStyle = '#f97316'; c.lineWidth = 2; c.stroke();
+      // Twin rotary barrel banks
+      for (const offset of [-7, 7]) {
+        for (let i = 0; i < 4; i++) {
+          const ang = (o.spin || 0) * 2 + i * TAU / 4;
+          const by = offset + Math.sin(ang) * 4.5;
+          c.fillStyle = '#44403c'; c.fillRect(2, by - 1.5, 24, 3);
+          c.fillStyle = '#f97316'; c.fillRect(23, by - 1.5, 3, 3);
+        }
+      }
+      // Magma combustion chamber
+      const heatPulse = 0.5 + 0.5 * Math.sin(time * 12);
+      glow(c, 0, 0, 14, '#f97316', heatPulse * 0.8);
+      c.fillStyle = '#fb923c'; c.beginPath(); c.arc(0, 0, 6, 0, TAU); c.fill();
+      if (fl > 0) {
+        glow(c, 28, -7, 16, '#fed7aa', fl);
+        glow(c, 28, 7, 16, '#fed7aa', fl);
+      }
+      break;
+    }
+    case 'fusion_deathray': {
+      c.rotate(a);
+      // Rail accelerators
+      c.fillStyle = '#0f172a'; rr(c, -14, -12, 16, 24, 4); c.fill();
+      c.fillStyle = '#1e1b4b'; c.fillRect(2, -11, 28, 5); c.fillRect(2, 6, 28, 5);
+      c.strokeStyle = '#a855f7'; c.lineWidth = 1.8; c.strokeRect(2, -11, 28, 5); c.strokeRect(2, 6, 28, 5);
+      // Central focusing crystal
+      const rayPulse = 0.6 + 0.4 * Math.sin(time * 16);
+      glow(c, 10, 0, 16, '#c084fc', rayPulse);
+      c.fillStyle = '#e9d5ff'; c.beginPath(); c.arc(10, 0, 5, 0, TAU); c.fill();
+      // Arc coils
+      c.strokeStyle = '#38bdf8'; c.lineWidth = 1.5;
+      c.beginPath(); c.moveTo(6, -8); c.lineTo(10, 0); c.lineTo(6, 8); c.stroke();
+      if (fl > 0) glow(c, 30, 0, 22, '#c084fc', fl);
+      break;
+    }
+    case 'fusion_zero': {
+      // Hex permafrost base
+      c.fillStyle = '#083344'; c.strokeStyle = '#06b6d4'; c.lineWidth = 2.2;
+      c.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const q = i * TAU / 6 + (o.spin || 0) * 0.15;
+        const rx = Math.cos(q) * 18, ry = Math.sin(q) * 18;
+        i ? c.lineTo(rx, ry) : c.moveTo(rx, ry);
+      }
+      c.closePath(); c.fill(); c.stroke();
+      // Absolute Zero core
+      const zPulse = 0.5 + 0.5 * Math.sin(time * 8);
+      glow(c, 0, 0, 20, '#22d3ee', zPulse * 0.9);
+      c.fillStyle = '#cffafe'; c.beginPath(); c.arc(0, 0, 8, 0, TAU); c.fill();
+      // Counter-rotating cryo rings
+      c.save(); c.rotate(time * 2);
+      c.strokeStyle = '#67e8f9'; c.lineWidth = 1.5; c.setLineDash([6, 4]);
+      c.beginPath(); c.arc(0, 0, 13, 0, TAU); c.stroke();
+      c.restore();
+      break;
+    }
+    case 'fusion_antimatter': {
+      c.rotate(a);
+      // Gravitational horns
+      c.fillStyle = '#1e1b4b'; rr(c, -12, -15, 14, 30, 4); c.fill();
+      c.strokeStyle = '#818cf8'; c.lineWidth = 2; c.stroke();
+      c.fillStyle = '#312e81';
+      c.beginPath(); c.moveTo(2, -14); c.lineTo(26, -6); c.lineTo(2, -2); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(2, 14); c.lineTo(26, 6); c.lineTo(2, 2); c.closePath(); c.fill();
+      // Event horizon singularity
+      glow(c, 12, 0, 18, '#818cf8', 0.8 + 0.2 * Math.sin(time * 10));
+      c.fillStyle = '#020617'; c.beginPath(); c.arc(12, 0, 6.5, 0, TAU); c.fill();
+      c.strokeStyle = '#c084fc'; c.lineWidth = 1.5; c.stroke();
+      break;
+    }
   }
   c.restore();
 }

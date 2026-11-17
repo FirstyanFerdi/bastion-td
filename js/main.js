@@ -68,6 +68,12 @@ function init() {
     else if (act === 'sell') sellTower(G.sel);
     else if (act === 'prio') { G.sel.prio = b.dataset.prio; G.uiDirty = true; Sfx.play('click'); }
     else if (act === 'overdrive') { triggerOverdrive(G.sel); }
+    else if (act === 'fuse') {
+      const eligible = typeof getEligibleFusion === 'function' ? getEligibleFusion(G.sel) : null;
+      if (eligible && typeof fuseTowers === 'function') {
+        fuseTowers(G.sel, eligible.partner);
+      }
+    }
     else if (act === 'socket') {
       if (typeof socketChip === 'function') socketChip(G.sel, b.dataset.chip);
       G.uiDirty = true;
@@ -83,6 +89,18 @@ function init() {
     $('btnWorkshop').addEventListener('click', () => {
       Sfx.init(); Sfx.resume(); Sfx.play('click');
       showOverlay('workshop');
+    });
+  }
+  if ($('btnCodex')) {
+    $('btnCodex').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('codex');
+    });
+  }
+  if ($('btnOverload')) {
+    $('btnOverload').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume();
+      if (typeof triggerCoreOverload === 'function') triggerCoreOverload();
     });
   }
   if ($('chipSector')) {
@@ -131,6 +149,16 @@ function init() {
     else if (a === 'to_menu') { if (G) G.state = 'menu'; showOverlay('menu'); Sfx.play('click'); }
     else if (a === 'open_workshop') { showOverlay('workshop'); Sfx.play('click'); }
     else if (a === 'close_workshop') { showOverlay(G && G.state === 'menu' ? 'menu' : null); Sfx.play('click'); }
+    else if (a === 'accept_protocol') {
+      if (b.dataset.protocol && typeof applyCursedProtocol === 'function') {
+        applyCursedProtocol(b.dataset.protocol);
+        showOverlay(null);
+      }
+    }
+    else if (a === 'close_smuggler' || a === 'close_codex' || a === 'close') {
+      showOverlay(G && G.state === 'menu' ? 'menu' : null);
+      Sfx.play('click');
+    }
   });
   last = performance.now();
   requestAnimationFrame(frame);
@@ -138,4 +166,4 @@ function init() {
 init();
 
 // Small debug/test hook (harmless in production)
-window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive, MAP_SECTORS, loadSector, setSector, getSectorMastery, recordSectorProgress, isSectorUnlocked };
+window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive, MAP_SECTORS, loadSector, setSector, getSectorMastery, recordSectorProgress, isSectorUnlocked, FUSION_RECIPES, CURSED_PROTOCOLS, FIELD_ANOMALIES, HIVE_COUNTER_TRAITS, fuseTowers, triggerCoreOverload, applyCursedProtocol, getEligibleFusion, isCodexDiscovered, recordCodexDiscovery, getCodexProgress, spawnFieldAnomaly };

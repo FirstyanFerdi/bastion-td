@@ -54,7 +54,8 @@ const SAVE = {
     arc_resonance: 2,
     executioner_nanites: 2,
     feedback_chrono: 2
-  })
+  }),
+  codex: Store.get('nb_codex', {})
 };
 
 function setDoctrine(id) {
@@ -79,7 +80,10 @@ function addChip(id, count) {
 }
 
 function addCores(n) {
-  const mult = (typeof G !== 'undefined' && G && G.ascension > 0) ? (1 + G.ascension * 0.25) : 1;
+  let mult = (typeof G !== 'undefined' && G && G.ascension > 0) ? (1 + G.ascension * 0.25) : 1;
+  if (typeof G !== 'undefined' && G && G.cursedProtocols && G.cursedProtocols.includes('blood_pact')) {
+    mult *= 2.0; // Blood-Pact: +100% cores
+  }
   const finalCores = Math.round(n * mult);
   SAVE.cores = (SAVE.cores || 0) + finalCores;
   Store.set('nb_cores', SAVE.cores);
@@ -185,4 +189,33 @@ function setSector(secId) {
   }
   if (typeof refreshUI === 'function') refreshUI();
   return true;
+}
+
+/* ============================================================
+   CLASSIFIED TECH CODEX (4.0)
+   ============================================================ */
+function recordCodexDiscovery(id, category) {
+  SAVE.codex = SAVE.codex || {};
+  if (SAVE.codex[id]) return false; // Already discovered
+  SAVE.codex[id] = { id, category, time: Date.now() };
+  Store.set('nb_codex', SAVE.codex);
+  // Discovery bounty: +15 Nanite Cores
+  addCores(15);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('victory');
+  if (typeof addText === 'function' && typeof W !== 'undefined') {
+    addText(W / 2, 75, 'CODEX UNLOCKED: ' + String(id).toUpperCase().replace('_', ' ') + ' (+15 CORES)!', '#38bdf8', 16);
+  }
+  if (typeof refreshUI === 'function') refreshUI();
+  return true;
+}
+
+function isCodexDiscovered(id) {
+  return !!(SAVE.codex && SAVE.codex[id]);
+}
+
+function getCodexProgress() {
+  SAVE.codex = SAVE.codex || {};
+  const total = 4 + 4 + 4 + 7; // 4 fusions + 4 cursed + 4 anomalies + 7 sectors
+  const discovered = Object.keys(SAVE.codex).length;
+  return { discovered, total, pct: Math.min(100, Math.round((discovered / total) * 100)) };
 }

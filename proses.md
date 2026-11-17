@@ -610,7 +610,60 @@ Telah dilakukan audit komprehensif terhadap seluruh file JavaScript, styling CSS
 
 ---
 
-## 14. Panduan Unggah ke GitHub
+## 14. Tahap 13: Eksekusi Penuh Addictive Loop & Super-Weapon Fusions (Bastion TD 4.0)
+
+Berdasarkan blueprint yang telah disetujui pengguna ([`bastion_td_addictive_loop_blueprint.md`](file:///C:/Users/User/.gemini/antigravity/brain/3483d84c-61da-4d36-985d-fb72d3571a51/bastion_td_addictive_loop_blueprint.md)), seluruh 5 pilar adiktif dieksekusi secara terintegrasi:
+
+### 14.1 Pilar 1: Sistem Risk-and-Reward Ekstrem
+1. **Adrenaline Multi-Wave Calling Streak:**
+   - Memanggil gelombang lebih awal saat gelombang sebelumnya masih aktif meningkatkan *Streak Multiplier* hingga 4x (`G.callStreak`).
+   - Memberikan bonus hingga +120% Gold per kill dan +150% Score per kill selama 15 detik, disertai efek visual perbatasan layar emas menyala (*Adrenaline rush screen border*).
+2. **Reactor Core Overload Gamble ($[V]$ / `#btnOverload`):**
+   - Menekan tombol Overload melipatgandakan kecepatan tembak seluruh menara sebesar **+250% (3.5x fire rate)** selama 8 detik.
+   - Selesai durasi Overload, reaktor masuk ke masa *Brownout Meltdown Hangover* selama 12 detik di mana kecepatan tembak terpotong -50% (0.5x fire rate), menuntut timing presisi dari pemain.
+3. **Cursed Black Market Protocols:**
+   - Protokol terlarang ditawarkan di Terminal Pasar Gelap pada akhir Wave 5, 10, dan 15:
+     * `blood_pact`: +200% Gold dari setiap eliminasi musuh, tetapi 1 kebocoran musuh langsung memicu kekalahan instan.
+     * `glass_singularity`: Semua serangan menara 100% Critical Hit, namun musuh meledak mengeluarkan gelombang EMP yang melumpuhkan menara ramah sejauh 85px selama 2 detik.
+     * `tachyon_overclock`: Railgun menembak 3.5x lebih cepat dengan daya tembus tak terbatas, namun kehilangan 5 Gold jika sebuah tembakan gagal mengeliminasi target.
+     * `entropy_conduit`: Kapasitas grid daya menjadi tak terbatas (9999 MW), namun tidak ada hadiah Gold pasif saat membersihkan wave.
+
+### 14.2 Pilar 2: Anomali Medan Tempur Interaktif (Live Field Anomalies)
+Objek dinamis yang jatuh ke medan perang dan dapat diinteraksikan secara langsung di atas canvas:
+1. `supply_drop`: Kargo jatuh dengan 120 HP. Pemain harus mengkliknya beberapa kali untuk membuka hadiah +160 Gold & +10 Nanite Cores sebelum waktu 20 detik habis.
+2. `ion_thunderstrike`: Retikel peringatan orbital yang berdetik selama 3.5 detik. Saat meledak, menembus perisai dan melancarkan 1500 AoE Energy Damage ke seluruh musuh di dalamnya.
+3. `smuggler_drone`: Drone penyelundup yang melayang melintasi medan tempur. Mengkliknya langsung membuka terminal Cursed Black Market.
+4. `chrono_rift`: Vorteks gravitasi yang memperlambat laju musuh sebesar 70% di area pusaran selama 7.5 detik.
+
+### 14.3 Pilar 3: Super-Weapon Synergy Fusions
+Penggabungan dua menara Tier 3 yang berdampingan menjadi Senjata Super Apex:
+1. **Hellfire Rotary Cannon (`fusion_hellfire`):**
+   - Resep: Gatling T3 + Plasma T3 (Biaya: 180G).
+   - Efek: Tembakan autocannon berkecepatan tinggi yang meremukkan armor musuh dan membakar tanah menjadi kubangan magma panas bertahan lama.
+2. **Death-Ray Discharger (`fusion_deathray`):**
+   - Resep: Railgun T3 + Tesla T3 (Biaya: 220G).
+   - Efek: Sinar laser ionik piercing selebar medan tempur yang menyambar seluruh musuh sebaris dengan petir berantai simultan.
+3. **Absolute Zero Core (`fusion_zero`):**
+   - Resep: Cryo T3 + Relay T3 (Biaya: 160G).
+   - Efek: Generator permafrost dingin abadi yang menyuplai **+50 MW Clean Power** ke grid dan secara periodik menghentikan waktu musuh (*Global Absolute Freeze*).
+4. **Antimatter Obliterator (`fusion_antimatter`):**
+   - Resep: Plasma T3 + Railgun T3 (Biaya: 240G).
+   - Efek: Peluru singularitas gravitasi yang menyedot musuh di sekitarnya dan langsung mengeksekusi musuh dengan HP di bawah 25%.
+
+### 14.4 Pilar 4: Hivemind Adaptif & Counter-Traits
+Living Hive kini secara dinamis mengembangkan counter-trait spesifik sesuai pola kerusakan pemain:
+- `reflective`: 25% pantulan proyektil kembali ke area sekitar jika pemain bias serangan fisik.
+- `insulated`: Kebal terhadap efek freeze dan slow cryo.
+- `carbon_weave`: 50% ketahanan terhadap serangan berenergi/laser.
+- `spore_mortar`: Menembakkan spora perusak ke menara ramah saat musuh tereliminasi.
+
+### 14.5 Pilar 5: Classified Tech Codex & Archive ($[C]$ / `#btnCodex`)
+- Modal arsip holografik berdesain *cyberpunk* yang melacak 19 entri rahasia (4 Super-Weapons, 4 Cursed Protocols, 4 Field Anomalies, Titan Bosses, dan Reaksi Elemen).
+- Setiap entri yang baru pertama kali ditemukan di dalam pertempuran memberikan hadiah **+15 Nanite Cores** dan mencatat status penemuan secara persisten di `localStorage`.
+
+---
+
+## 15. Panduan Unggah ke GitHub
 
 ### Perintah Unggah (Terminal Pengguna):
 ```powershell
@@ -620,8 +673,8 @@ git add .
 # 2. Periksa status
 git status
 
-# 3. Lakukan commit perubahan Bastion TD Multi-Sector Expansion & Bug Fixes
-git commit -m "feat(v3.5): complete multi-sector expansion with 7 environments, bug fixes for wave card counts, audio freeze synth, and navigation"
+# 3. Lakukan commit perubahan Bastion TD 4.0: Addictive Loop & Super-Weapon Fusions
+git commit -m "feat(v4.0): implement addictive loop with super-weapon fusions, core overload gamble, cursed protocols, field anomalies, and classified tech codex"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git

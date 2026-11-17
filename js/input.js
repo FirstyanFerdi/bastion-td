@@ -258,6 +258,40 @@ function onPointerDown(e) {
     }
   }
 
+  // Interactive Field Anomalies Clicking (4.0)
+  if (G.anomalies && !G.casting) {
+    const p = canvasPos(e);
+    for (let i = G.anomalies.length - 1; i >= 0; i--) {
+      const an = G.anomalies[i];
+      if (an.type === 'supply_drop' && Math.hypot(p.x - an.x, p.y - an.y) <= an.r + 10) {
+        an.hp -= 30;
+        burst(an.x, an.y, 6, '#fbbf24', 80, 0.25, 2.5, true);
+        addText(an.x, an.y - 18, '-30 CRACK!', '#fbbf24', 12);
+        Sfx.play('hit');
+        if (an.hp <= 0) {
+          G.anomalies.splice(i, 1);
+          G.gold += 160;
+          if (typeof addCores === 'function') addCores(10);
+          burst(an.x, an.y, 35, '#fbbf24', 180, 0.7, 4, true);
+          addRing(an.x, an.y, 10, 60, 0.5, '#fbbf24', 4);
+          shake(8);
+          Sfx.play('victory');
+          addText(an.x, an.y - 25, 'SUPPLY DROP CRACKED: +160G +10 CORES!', '#fbbf24', 16);
+        }
+        G.uiDirty = true;
+        return;
+      } else if (an.type === 'smuggler_drone' && Math.hypot(p.x - an.x, p.y - an.y) <= an.r + 14) {
+        G.anomalies.splice(i, 1);
+        burst(an.x, an.y, 25, '#c084fc', 160, 0.6, 3.5, true);
+        addRing(an.x, an.y, 8, 45, 0.45, '#c084fc', 4);
+        shake(6);
+        Sfx.play('coin');
+        showOverlay('smuggler');
+        return;
+      }
+    }
+  }
+
   if (!G.hover) return;
   const { c, r } = G.hover;
   if (G.placing) {
@@ -299,6 +333,13 @@ function onKey(e) {
       showOverlay(isOpen ? (G && G.state === 'menu' ? 'menu' : null) : 'workshop');
       break;
     }
+    case 'c': case 'C': {
+      const ov = $('overlay');
+      const isOpen = ov && ov.classList.contains('show') && ov.innerHTML.includes('CODEX');
+      showOverlay(isOpen ? (G && G.state === 'menu' ? 'menu' : null) : 'codex');
+      break;
+    }
+    case 'v': case 'V': if (typeof triggerCoreOverload === 'function') triggerCoreOverload(); break;
     case 'Escape': G.placing = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
     case 'p': case 'P': togglePause(); break;
     case 'm': case 'M': toggleMute(); break;

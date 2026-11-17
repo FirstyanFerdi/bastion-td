@@ -47,11 +47,17 @@ function getGridPowerStatus() {
   if (typeof getWorkshopLevel === 'function') {
     capacity += getWorkshopLevel('treasury') * 5;
   }
+  // Cursed Protocol: Entropy Conduit gives unlimited capacity
+  if (G && G.cursedProtocols && G.cursedProtocols.includes('entropy_conduit')) {
+    capacity = 9999;
+  }
   for (const t of G.towers) {
     if (t.type === 'relay') {
       if (t.shutdownT > 0) continue; // In thermal shutdown, provides 0 MW
       const st = getTierData(t);
       capacity += st.powerSupply || 25;
+    } else if (t.type === 'fusion_zero') {
+      capacity += 50; // Absolute Zero Core clean power supply
     } else {
       used += getTowerPower(t.type, t.tier);
     }
@@ -79,10 +85,35 @@ function triggerOverdrive(relayTower) {
   return true;
 }
 
-function maxChipsForTier(tier) {
+function maxChipsForTier(tier, type) {
+  if (type && TD[type] && TD[type].isFusion) return 2;
   if (tier <= 0) return 0;
   if (tier === 1) return 1;
   return 2; // tier >= 2
+}
+
+/* ============================================================
+   SUPER-WEAPON FUSION ELIGIBILITY (4.0)
+   ============================================================ */
+function getEligibleFusion(t) {
+  if (!G || !t || !G.towers || (t.tier < 2 && !t.branch)) return null;
+  if (typeof FUSION_RECIPES === 'undefined') return null;
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = t.r + dr, nc = t.c + dc;
+      if (nr < 0 || nc < 0 || nr >= ROWS || nc >= COLS) continue;
+      const partner = G.grid[nr][nc];
+      if (partner && partner !== t && (partner.tier >= 2 || partner.branch)) {
+        const recipe = FUSION_RECIPES.find(r =>
+          (t.type === r.towerA && partner.type === r.towerB) ||
+          (t.type === r.towerB && partner.type === r.towerA)
+        );
+        if (recipe) return { recipe, partner };
+      }
+    }
+  }
+  return null;
 }
 
 function socketChip(tower, chipId) {
@@ -167,6 +198,7 @@ function placeTower(col, row, type) {
 function upgradeTower(t, branch) {
   if (!t || t.tier >= 2) return;
   const def = TD[t.type];
+  if (def && def.isFusion) return;
   let cost = 0;
   if (t.tier === 0) {
     cost = getUpgradeCost(def.tiers[1].upg);
@@ -240,6 +272,9 @@ function updateTower(t, dt) {
 
   let rateMult = 1, rangeMult = 1;
   if (t.overchargeT > 0) rateMult *= 2.0;
+  // Core Overload & Meltdown Hangover (4.0)
+  if (G && G.overloadT > 0) rateMult *= 3.5;
+  if (G && G.meltdownT > 0) rateMult *= 0.5;
   if (hasPerk('targeting_matrix')) { rangeMult *= 1.15; }
   if (G.mutator && G.mutator.id === 'emp_jam') rangeMult *= 0.88;
   if (G.mutator && G.mutator.id === 'solar_flare') rangeMult *= 0.85;
@@ -290,8 +325,13 @@ function updateTower(t, dt) {
     }
     return;
   }
+  if (t.type === 'fusion_zero') {
+    t.spin += dt * 1.4;
+    updateZeroCore(t, st, dt);
+    return;
+  }
   const target = acquire(t, rangePx);
-  t.spinV = lerp(t.spinV, target && t.type === 'gatling' ? 26 : 3, Math.min(1, dt * 6));
+  t.spinV = lerp(t.spinV, target && (t.type === 'gatling' || t.type === 'fusion_hellfire') ? 30 : 3, Math.min(1, dt * 6));
   t.spin += t.spinV * dt;
 
   if (t.type === 'gatling' && t.branch === 'A') {
@@ -304,6 +344,11 @@ function updateTower(t, dt) {
     if (target && t.cd <= 0) { fireTesla(t, st, target); t.cd = 1 / effRate; }
     return;
   }
+  if (t.type === 'fusion_deathray') {
+    t.spin += dt * 1.5;
+    if (target && t.cd <= 0) { fireDeathRay(t, st, target); t.cd = 1 / effRate; }
+    return;
+  }
   if (!target) return;
   const desired = Math.atan2(target.y - t.y, target.x - t.x), diff = angDiff(t.angle, desired);
   const maxTurn = (t.type === 'rail' ? 7 : 11) * dt;
@@ -313,6 +358,8 @@ function updateTower(t, dt) {
     if (t.type === 'gatling') fireGatling(t, st, target);
     else if (t.type === 'plasma') firePlasma(t, st, target);
     else if (t.type === 'rail') fireRail(t, st, target);
+    else if (t.type === 'fusion_hellfire') fireHellfire(t, st, target);
+    else if (t.type === 'fusion_antimatter') fireAntimatter(t, st, target);
   }
 }
 function fireGatling(t, st, e) {
@@ -354,6 +401,29 @@ function firePlasma(t, st, e) {
   Sfx.play('plasma');
 }
 function explode(p) {
+  if (p.type === 'singularity_orb') {
+    addFx('blast', p.x, p.y, p.x, p.y, 0.45, '#818cf8', 1).r1 = p.splash;
+    addRing(p.x, p.y, 10, p.splash, 0.6, '#818cf8', 5);
+    burst(p.x, p.y, 40, '#818cf8', 220, 0.75, 4.5, true);
+    burst(p.x, p.y, 20, '#c084fc', 160, 0.5, 3.5, true);
+    shake(12); Sfx.play('boom');
+    addText(p.x, p.y - 25, 'ANTIMATTER COLLAPSE!', '#818cf8', 18);
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - p.x, e.y - p.y);
+      if (d <= p.splash + e.r) {
+        if (e.type !== 'boss' && (e.hp / e.maxHp) <= (p.execThresh || 0.25)) {
+          e.hp = 0;
+          addText(e.x, e.y - e.r - 16, 'DISINTEGRATED', '#818cf8', 14);
+          killEnemy(e, p.src);
+        } else {
+          e.d = Math.max(0, e.d - (p.pullDist || 70));
+          dealDamage(e, p.dmg, 'plasma', p.src, { crit: true, isSplash: true });
+        }
+      }
+    }
+    return;
+  }
   addFx('blast', p.x, p.y, p.x, p.y, 0.35, '#fb923c', 1).r1 = p.splash;
   addRing(p.x, p.y, 6, p.splash, 0.4, '#fdba74', 3);
   burst(p.x, p.y, 22, '#fb923c', 190, 0.6, 4, true);
@@ -525,4 +595,103 @@ function fireRail(t, st, e) {
   t.recoil = 1; t.flash = 1; shake(1.2);
   burst(mx, my, 10, '#fb7185', 160, 0.4, 3, true);
   Sfx.play('rail');
+
+  // Cursed Protocol: Tachyon Overclock non-kill penalty
+  if (G && G.cursedProtocols && G.cursedProtocols.includes('tachyon_overclock')) {
+    const killedCount = hits.slice(0, n).filter(h => h.o.dead || h.o.hp <= 0).length;
+    if (killedCount === 0) {
+      G.gold = Math.max(0, G.gold - 5);
+      addText(t.x, t.y - 20, '-5G MISSED KILL', '#fb7185', 12);
+    }
+  }
+}
+
+/* ============================================================
+   SUPER-WEAPON FIRING ROUTINES (4.0)
+   ============================================================ */
+function fireHellfire(t, st, e) {
+  const a = t.angle;
+  const mx1 = t.x + Math.cos(a - 0.22) * 32, my1 = t.y + Math.sin(a - 0.22) * 32;
+  const mx2 = t.x + Math.cos(a + 0.22) * 32, my2 = t.y + Math.sin(a + 0.22) * 32;
+  t.recoil = 1; t.flash = 1;
+  addFx('tracer', mx1, my1, e.x + rand(-6, 6), e.y + rand(-6, 6), 0.08, '#f97316', 3.5);
+  addFx('tracer', mx2, my2, e.x + rand(-6, 6), e.y + rand(-6, 6), 0.08, '#38bdf8', 3.5);
+  dealDamage(e, st.dmg, 'phys', t);
+  dealDamage(e, st.dmg, 'plasma', t, { isSplash: true });
+  if (e.armor > 0) e.shred = Math.min(e.armor, e.shred + st.shred);
+  // Thermite magma pool
+  if (Math.random() < 0.35) {
+    G.hazards.push({ type: 'radiation', x: e.x, y: e.y, r: 38, life: 2.5, max: 2.5, dps: st.magmaDps || 35, shred: 0.15, src: t });
+    burst(e.x, e.y, 6, '#f97316', 90, 0.3, 2.5, true);
+  }
+  Sfx.play('gatling');
+}
+
+function fireDeathRay(t, st, e) {
+  const a = t.angle, dx = Math.cos(a), dy = Math.sin(a);
+  const ex = t.x + dx * (st.range * TILE), ey = t.y + dy * (st.range * TILE);
+  t.flash = 1; t.recoil = 1;
+  addFx('rail', t.x, t.y, ex, ey, 0.24, '#c084fc', 6);
+  addFx('beam', t.x, t.y, e.x, e.y, 0.22, '#38bdf8', 3.5);
+  dealDamage(e, st.dmg, 'energy', t, { crit: true });
+
+  // 5-target chain lightning
+  const hit = [e];
+  for (let k = 1; k < (st.targets || 5); k++) {
+    const cur = hit[hit.length - 1]; let best = null, bd = (2.5 * TILE) ** 2;
+    for (const o of G.enemies) {
+      if (o.dead || hit.includes(o)) continue;
+      const d = (o.x - cur.x) ** 2 + (o.y - cur.y) ** 2;
+      if (d < bd) { bd = d; best = o; }
+    }
+    if (!best) break;
+    hit.push(best);
+    addBolt(cur.x, cur.y, best.x, best.y, '#38bdf8');
+    best.stunT = Math.max(best.stunT || 0, st.chainStun || 1.2);
+    dealDamage(best, st.chainDmg || 120, 'energy', t);
+    burst(best.x, best.y, 6, '#38bdf8', 85, 0.3, 2.5, true);
+  }
+  shake(2.0);
+  Sfx.play('rail');
+  Sfx.play('tesla');
+}
+
+function updateZeroCore(t, st, dt) {
+  const rangePx = st.range * TILE;
+  // Permanent blizzard aura
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    if ((e.x - t.x) ** 2 + (e.y - t.y) ** 2 <= (rangePx + e.r) ** 2) {
+      e.slowAmt = Math.max(e.slowAmt, st.slow || 0.65); e.slowT = 0.5;
+      e.brittle = Math.max(e.brittle, st.brittle || 0.50); e.brittleT = 1.0;
+    }
+  }
+  // Screen-Wide Time-Stop Freeze pulse every 12 seconds
+  t.pulseT = (t.pulseT || 12.0) - dt;
+  if (t.pulseT <= 0) {
+    t.pulseT = 12.0;
+    shake(12);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('freeze');
+    addRing(t.x, t.y, 20, Math.max(W, H), 0.8, '#38bdf8', 6);
+    addText(W / 2, 75, 'ABSOLUTE ZERO: GLOBAL TIME-STOP!', '#38bdf8', 20);
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      e.stunT = Math.max(e.stunT || 0, st.freezeDur || 3.5);
+      burst(e.x, e.y, 8, '#e0f2fe', 90, 0.4, 3, true);
+      dealDamage(e, st.freezeDmg || 200, 'cryo', t);
+    }
+  }
+}
+
+function fireAntimatter(t, st, e) {
+  const mx = t.x + Math.cos(t.angle) * 32, my = t.y + Math.sin(t.angle) * 32;
+  t.recoil = 1; t.flash = 1;
+  G.proj.push({
+    type: 'singularity_orb',
+    x: mx, y: my, tx: e.x, ty: e.y,
+    dmg: st.dmg, splash: st.splash * TILE, src: t,
+    pullDist: st.pullDist || 70, execThresh: st.execThresh || 0.25
+  });
+  burst(mx, my, 12, '#818cf8', 130, 0.4, 3.5, true);
+  Sfx.play('plasma');
 }

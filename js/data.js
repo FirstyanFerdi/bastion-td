@@ -402,20 +402,174 @@ const TD = {
       A: { branch: 'A', name: 'Fusion Reactor', role: '+60 MW Clean Power', color: '#059669', dmg: 0, rate: 0, range: 2.8, upg: 140, powerSupply: 60, power: 0, tip: 'Advanced fusion core providing massive clean power (+60 MW capacity).' },
       B: { branch: 'B', name: 'Overcharge Pylon', role: 'Surge Emitter / +35 MW', color: '#34d399', dmg: 0, rate: 0, range: 3.0, upg: 140, powerSupply: 35, power: 0, overdriveBoost: 1.0, tip: 'Amplifies Sector Overdrive to +100% Fire Rate for nearby defenses.' }
     }
+  },
+  fusion_hellfire: {
+    id: 'fusion_hellfire', name: 'Hellfire Rotary Cannon', color: '#f97316', cost: 180, role: 'Inferno Autocannon / Hybrid', power: [12, 16, 20], isFusion: true,
+    tip: 'Super-weapon fusion of Gatling and Plasma. High-caliber explosive rounds shred armor and ignite ground into lasting thermite magma.',
+    tiers: [
+      { dmg: 28, pDmg: 28, rate: 9.0, range: 3.5, splash: 1.4, shred: 0.40, magmaDur: 3.5, magmaDps: 35, upg: 0, power: 12 }
+    ],
+    branches: {}
+  },
+  fusion_deathray: {
+    id: 'fusion_deathray', name: 'Death-Ray Discharger', color: '#38bdf8', cost: 220, role: 'Piercing Ion Lance / Energy', power: [16, 20, 24], isFusion: true,
+    tip: 'Super-weapon fusion of Railgun and Tesla. High-density piercing laser cuts entire screen and violently chains lightning to nearby foes.',
+    tiers: [
+      { dmg: 280, rate: 0.65, range: 9.0, pierce: 99, chainDmg: 120, chains: 5, stun: 1.2, upg: 0, power: 16 }
+    ],
+    branches: {}
+  },
+  fusion_zero: {
+    id: 'fusion_zero', name: 'Absolute Zero Core', color: '#06b6d4', cost: 160, role: 'Cryogenic Stasis / Sub-Reactor', power: [0, 0, 0], isFusion: true,
+    tip: 'Super-weapon fusion of Cryo and Relay. Provides +50 MW clean power. Emits continuous blizzard and periodically triggers screen-wide Time-Stop freeze.',
+    tiers: [
+      { dmg: 0, rate: 0, range: 3.6, slow: 0.65, brittle: 0.35, pulseInterval: 12.0, pulseFreeze: 3.5, pulseDmg: 200, powerSupply: 50, upg: 0, power: 0 }
+    ],
+    branches: {}
+  },
+  fusion_antimatter: {
+    id: 'fusion_antimatter', name: 'Antimatter Obliterator', color: '#818cf8', cost: 240, role: 'Singularity Cannon / Heavy Siege', power: [18, 22, 26], isFusion: true,
+    tip: 'Super-weapon fusion of Plasma and Railgun. Launches a gravitational singularity orb that pulls in enemies, executes under 25% HP, and implodes.',
+    tiers: [
+      { dmg: 500, rate: 0.38, range: 6.8, splash: 2.2, pullRadius: 2.5, execThresh: 0.25, upg: 0, power: 18 }
+    ],
+    branches: {}
   }
 };
 // Backward compatibility fallback for tier 2
-for (const k of Object.keys(TD)) TD[k].tiers[2] = TD[k].branches.A;
+for (const k of Object.keys(TD)) {
+  if (TD[k].branches && TD[k].branches.A) TD[k].tiers[2] = TD[k].branches.A;
+}
 
 function getTierData(t) {
   const def = TD[t.type];
   if (!def) return { dmg: 0, rate: 0, range: 2.5 };
-  if (t.branch && def.branches[t.branch]) return def.branches[t.branch];
-  return def.tiers[t.tier] || def.tiers[0];
+  if (t.branch && def.branches && def.branches[t.branch]) return def.branches[t.branch];
+  return (def.tiers && (def.tiers[t.tier] || def.tiers[0])) || { dmg: 0, rate: 0, range: 2.5 };
 }
 
-const TKEYS = ['gatling', 'plasma', 'cryo', 'tesla', 'rail', 'relay'];
+const TKEYS = ['gatling', 'plasma', 'cryo', 'tesla', 'rail', 'relay', 'fusion_hellfire', 'fusion_deathray', 'fusion_zero', 'fusion_antimatter'];
 const PRIOS = [['first', 'First'], ['last', 'Last'], ['strongest', 'Strongest'], ['weakest', 'Weakest']];
+
+/* ============================================================
+   SUPER-WEAPON FUSION PROTOCOLS (4.0)
+   ============================================================ */
+const FUSION_RECIPES = [
+  { id: 'fusion_hellfire', towerA: 'gatling', towerB: 'plasma', name: 'Hellfire Rotary Cannon', cost: 180, color: '#f97316', desc: 'Gatling + Plasma: Peluru plasma berapi menghujani musuh dan membakar tanah menjadi lahar panas.' },
+  { id: 'fusion_deathray', towerA: 'rail', towerB: 'tesla', name: 'Death-Ray Discharger', cost: 220, color: '#38bdf8', desc: 'Railgun + Tesla: Laser penembus layar penuh yang memancarkan kilatan petir ionik simultan.' },
+  { id: 'fusion_zero', towerA: 'cryo', towerB: 'relay', name: 'Absolute Zero Core', cost: 160, color: '#06b6d4', desc: 'Cryo + Relay: Generator permafrost +50 MW yang secara periodik menghentikan waktu musuh (Global Freeze).' },
+  { id: 'fusion_antimatter', towerA: 'plasma', towerB: 'rail', name: 'Antimatter Obliterator', cost: 240, color: '#818cf8', desc: 'Plasma + Railgun: Peluru singularitas gravitasi yang menyedot musuh dan mengeksekusi HP di bawah 25%.' }
+];
+
+/* ============================================================
+   CURSED BLACK MARKET PROTOCOLS (4.0)
+   ============================================================ */
+const CURSED_PROTOCOLS = {
+  blood_pact: {
+    id: 'blood_pact',
+    name: 'Blood-Pact Nanites',
+    icon: 'target',
+    color: '#f43f5e',
+    buff: '+200% Gold & +100% Nanite Cores earned.',
+    penalty: 'Citadel Lives locked at 1 HP (Single leak = Instant Loss!).',
+    desc: 'Semua perolehan Gold dan Cores berlipat ganda, namun nyawa markas dikunci permanen pada 1. Satu kebocoran musuh berarti tamat.'
+  },
+  glass_singularity: {
+    id: 'glass_singularity',
+    name: 'Glass Singularity',
+    icon: 'spark',
+    color: '#a855f7',
+    buff: '+100% Critical Strike Chance & 2x Splash Radius for all towers.',
+    penalty: 'Enemy kill detonations EMP-stun friendly towers for 2.0s.',
+    desc: 'Setiap tembakan menara kawan dijamin serangan kritis dengan radius ledakan dobel, tetapi musuh yang mati meledak melumpuhkan menara sekitar.'
+  },
+  tachyon_overclock: {
+    id: 'tachyon_overclock',
+    name: 'Tachyon Overclock',
+    icon: 'ff',
+    color: '#38bdf8',
+    buff: 'Railguns fire 3.5x faster with Infinite Target Pierce.',
+    penalty: 'Every shot that fails to kill a target drains -5 Gold.',
+    desc: 'Menara Railgun menembak 3.5x lebih cepat dan menembus musuh tanpa batas, namun setiap tembakan yang luput atau tidak membunuh menguras 5 Gold.'
+  },
+  entropy_conduit: {
+    id: 'entropy_conduit',
+    name: 'Entropy Conduit',
+    icon: 'bolt',
+    color: '#10b981',
+    buff: 'Unlimited Power Grid MW capacity & permanent Sector Overdrive.',
+    penalty: 'Periodic radiation tiles ignite every 14s, damaging towers.',
+    desc: 'Kapasitas Grid Power menjadi tak terbatas dan seluruh menara mendapat Overdrive permanen, tetapi ubin radiasi periodik membakar menara.'
+  }
+};
+
+/* ============================================================
+   LIVE IN-GAME TACTICAL FIELD ANOMALIES (4.0)
+   ============================================================ */
+const FIELD_ANOMALIES = {
+  supply_drop: {
+    id: 'supply_drop',
+    name: 'Orbital Supply Drop',
+    color: '#fbbf24',
+    icon: 'coin',
+    desc: 'Kargo militer jatuh dari orbit. Hancurkan kargo dalam 18 detik untuk merebut 200 Gold dan chip langka sebelum diserap musuh!'
+  },
+  ion_thunderstrike: {
+    id: 'ion_thunderstrike',
+    name: 'Cosmic Ion Thunderstrike',
+    color: '#38bdf8',
+    icon: 'bolt',
+    desc: 'Badai ionik bersiap menyambar. Musuh di dalam reticle menerima 1500 True Damage dan kehilangan seluruh shield; menara kawan lumpuh 3s.'
+  },
+  smuggler_drone: {
+    id: 'smuggler_drone',
+    name: 'Wandering Smuggler Drone',
+    color: '#c084fc',
+    icon: 'tag',
+    desc: 'Drone penyelundup melintas di atas arena tempur. Klik drone sebelum kabur untuk membuka Flash-Sale Pasar Gelap!'
+  },
+  chrono_rift: {
+    id: 'chrono_rift',
+    name: 'Chrono-Rift Vortex',
+    color: '#818cf8',
+    icon: 'ff',
+    desc: 'Retakan kuantum terbuka di jalur. Musuh yang melintas memiliki 50% peluang dibekukan 3.5s atau dilempar mundur 180px.'
+  }
+};
+
+/* ============================================================
+   REACTIVE HIVEMIND COUNTER-TRAITS (4.0)
+   ============================================================ */
+const HIVE_COUNTER_TRAITS = {
+  reflective: {
+    id: 'reflective',
+    name: 'Reflective Carapace',
+    desc: 'Berevolusi melawan proyektil balistik: 25% peluang memantulkan peluru.',
+    color: '#f43f5e',
+    thresholdBias: 'phys'
+  },
+  insulated: {
+    id: 'insulated',
+    name: 'Thermal Molten Core',
+    desc: 'Berevolusi melawan pembekuan Cryo: Kebal beku dan mencairkan es sekutu terdekat.',
+    color: '#f97316',
+    thresholdBias: 'cryo'
+  },
+  carbon_weave: {
+    id: 'carbon_weave',
+    name: 'Insulated Carbon Weave',
+    desc: 'Berevolusi melawan serangan energi: Perisai beregenerasi 2x lebih cepat.',
+    color: '#38bdf8',
+    thresholdBias: 'energy'
+  },
+  spore_mortar: {
+    id: 'spore_mortar',
+    name: 'Corrosive Spore Artillery',
+    desc: 'Berevolusi melawan klaster menara: Meluncurkan mortir asam melumpuhkan pertahanan.',
+    color: '#a3e635',
+    thresholdBias: 'cluster'
+  }
+};
 
 /* ============================================================
    ELEMENTAL REACTION MATRIX (Fase 1)

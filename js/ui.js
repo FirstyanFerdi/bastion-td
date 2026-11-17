@@ -45,6 +45,10 @@ function statRows(type, i, branch) {
     case 'cryo': return [['SLOW', Math.round(s.slow * 100) + '%'], ['BRITTLE', '+' + Math.round(s.brittle * 100) + '% dmg'], ['RANGE', f1(s.range) + ' t'], ['POWER', '-' + (s.power || 4) + ' MW']];
     case 'tesla': return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + '/s'], ['RANGE', f1(s.range) + ' t'], ['POWER', '-' + (s.power || 6) + ' MW']];
     case 'relay': return [['SUPPLY', '+' + (s.powerSupply || 25) + ' MW'], ['RANGE', f1(s.range) + ' t'], ['OVERDRIVE', s.overdriveBoost ? '+100% Rate' : '+75% Rate'], ['ROLE', 'Power Grid']];
+    case 'fusion_hellfire': return [['DMG', s.dmg + ' × 2'], ['RATE', f1(s.rate) + '/s'], ['SPLASH', f1(s.splash) + ' t'], ['MAGMA', s.magmaDps + ' DPS (' + s.magmaDur + 's)']];
+    case 'fusion_deathray': return [['DMG', String(s.dmg)], ['PIERCE', 'Screen-Wide'], ['CHAIN', s.chainDmg + ' (' + s.chains + 'x)'], ['STUN', s.stun + 's EMP']];
+    case 'fusion_zero': return [['SUPPLY', '+' + (s.powerSupply || 50) + ' MW'], ['SLOW', Math.round((s.slow || 0.65) * 100) + '% Blizzard'], ['STASIS', s.pulseFreeze + 's Freeze'], ['INTERVAL', 'Every ' + s.pulseInterval + 's']];
+    case 'fusion_antimatter': return [['DMG', String(s.dmg)], ['EXECUTE', '<25% HP'], ['VORTEX', f1(s.pullRadius) + ' t Gravity'], ['RATE', f1(s.rate) + '/s']];
     default: return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + '/s'], ['RANGE', f1(s.range) + ' t'], ['POWER', '-' + (s.power || 8) + ' MW']];
   }
 }
@@ -116,12 +120,13 @@ function renderInspector() {
   }
 
   const def = TD[t.type], tier = t.tier;
+  const isFusion = Boolean(def && def.isFusion);
   const cur = statRows(t.type, tier, t.branch);
   const rows = cur.map(r => '<div class="srow"><span>' + r[0] + '</span><span class="sv">' + r[1] + '</span></div>').join('');
   const sell = Math.floor(t.invested * 0.75);
-  const isCryo = t.type === 'cryo';
+  const isCryo = t.type === 'cryo' || t.type === 'fusion_zero';
   const isRelay = t.type === 'relay';
-  const tierTitle = t.tier === 0 ? 'TIER I' : (t.tier === 1 ? 'TIER II' : 'SPEC: ' + (t.branch ? def.branches[t.branch].name.toUpperCase() : 'TIER III'));
+  const tierTitle = isFusion ? '★ SUPER-WEAPON' : (t.tier === 0 ? 'TIER I' : (t.tier === 1 ? 'TIER II' : 'SPEC: ' + (t.branch ? def.branches[t.branch].name.toUpperCase() : 'TIER III')));
 
   let leylineHtml = '';
   if (t.leyline) {
@@ -132,10 +137,12 @@ function renderInspector() {
 
   // Primary Action Area: Upgrade & Sell immediately accessible
   let upgHtml = '';
-  if (t.tier === 0) {
+  if (isFusion) {
+    upgHtml = '<button class="primary" id="btnUpg" tabindex="-1" disabled style="width:100%;background:linear-gradient(90deg, ' + def.color + ', #818cf8);border-color:' + def.color + ';color:#0f172a;font-weight:800;letter-spacing:0.04em">★ APEX SUPER-WEAPON</button>';
+  } else if (t.tier === 0 && def.tiers[1]) {
     const cost = getUpgradeCost(def.tiers[1].upg);
     upgHtml = '<button class="primary" id="btnUpg" tabindex="-1" data-act="upgrade" data-cost="' + cost + '" style="width:100%">' + svg('up') + 'Upgrade T2 <i class="coin"></i>' + cost + '</button>';
-  } else if (t.tier === 1) {
+  } else if (t.tier === 1 && def.branches) {
     const bA = def.branches.A, bB = def.branches.B;
     const cA = getUpgradeCost(bA.upg), cB = getUpgradeCost(bB.upg);
     upgHtml = '<div class="branch-grid">' +
@@ -148,9 +155,22 @@ function renderInspector() {
 
   const sellBtnHtml = '<button class="sell" tabindex="-1" data-act="sell">' + svg('tag') + 'Sell <i class="coin"></i>' + sell + '</button>';
 
-  const actsHtml = t.tier === 1 ?
+  const actsHtml = (t.tier === 1 && !isFusion) ?
     upgHtml + '<div style="margin-bottom:6px">' + sellBtnHtml + '</div>' :
     '<div class="tower-actions">' + upgHtml + sellBtnHtml + '</div>';
+
+  const eligible = typeof getEligibleFusion === 'function' ? getEligibleFusion(t) : null;
+  let fusionHtml = '';
+  if (eligible) {
+    const rec = eligible.recipe;
+    const partnerName = (TD[eligible.partner.type] ? TD[eligible.partner.type].name : eligible.partner.type);
+    fusionHtml = '<div class="fusion-box" style="margin:5px 0;padding:6px;background:rgba(129,140,248,0.12);border-left:3px solid ' + rec.color + ';border-radius:2px">' +
+      '<div style="font-size:9.5px;font-weight:800;color:' + rec.color + ';letter-spacing:0.08em">★ SUPER-WEAPON FUSION AVAILABLE:</div>' +
+      '<div style="font-size:11.5px;font-weight:800;color:#fff;margin:2px 0">' + rec.name + '</div>' +
+      '<div style="font-size:9.5px;color:#94a3b8;line-height:1.2;margin-bottom:5px">' + rec.desc + ' <span style="color:#e2a72e">(Consumes adjacent ' + partnerName + ')</span></div>' +
+      '<button class="btn-fuse" data-act="fuse" style="width:100%;padding:4px 8px;background:' + rec.color + ';color:#0f172a;border:none;border-radius:3px;font-weight:800;font-size:11px;cursor:pointer">★ ACTIVATE FUSION (' + rec.cost + 'G)</button>' +
+      '</div>';
+  }
 
   let relayHtml = '';
   if (isRelay) {
@@ -161,8 +181,8 @@ function renderInspector() {
 
   let chipsHtml = '';
   if (!isRelay) {
-    const maxChips = typeof maxChipsForTier === 'function' ? maxChipsForTier(t.tier) : (t.tier === 0 ? 0 : (t.tier === 1 ? 1 : 2));
-    if (t.tier === 0) {
+    const maxChips = isFusion ? 2 : (typeof maxChipsForTier === 'function' ? maxChipsForTier(t.tier) : (t.tier === 0 ? 0 : (t.tier === 1 ? 1 : 2)));
+    if (!isFusion && t.tier === 0) {
       chipsHtml = '<div class="chips-panel" style="color:#64748b;font-size:9.5px">Upgrade to Tier II to unlock Modular Chip Sockets.</div>';
     } else {
       const inv = (typeof SAVE !== 'undefined' && SAVE.chipsInventory) || {};
@@ -178,7 +198,7 @@ function renderInspector() {
       if ((t.chips || []).length < maxChips) {
         const available = typeof MODULAR_CHIPS !== 'undefined' ? Object.keys(MODULAR_CHIPS).filter(cId => {
           const cDef = MODULAR_CHIPS[cId];
-          const matchesType = cDef.target === 'any' || cDef.target === t.type;
+          const matchesType = cDef.target === 'any' || cDef.target === t.type || isFusion;
           const hasCount = (inv[cId] || 0) > 0;
           return matchesType && hasCount;
         }) : [];
@@ -204,15 +224,21 @@ function renderInspector() {
     }
   }
 
+  const fusionNote = isFusion ?
+    '<div class="note" style="border-left:3px solid ' + def.color + ';background:' + def.color + '15;color:#e2e8f0;font-size:9.5px;line-height:1.25;margin-top:4px">' +
+    '<b style="color:' + def.color + '">★ ' + def.name.toUpperCase() + ':</b> ' + def.tip + '</div>' : '';
+
   box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
     '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + (t.branch ? def.branches[t.branch].color : def.color) + '">' + (t.branch ? def.branches[t.branch].name : def.name) + '</h4><small>' + tierTitle + ' · ' + t.kills + ' KILLS</small></div></div>' +
     leylineHtml +
     actsHtml +
+    fusionHtml +
     '<div class="stats-grid">' + rows + '</div>' +
     relayHtml +
     '<div class="prio' + (isCryo || isRelay ? ' off' : '') + '" id="prioBox">' + PRIOS.map(p => '<button tabindex="-1" data-act="prio" data-prio="' + p[0] + '" class="' + (t.prio === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') + '</div>' +
     chipsHtml +
-    (isCryo ? '<div class="note">Cryo pulses affect all enemies in radius.</div>' : '') +
+    fusionNote +
+    (isCryo && !isFusion ? '<div class="note">Cryo pulses affect all enemies in radius.</div>' : '') +
     (isRelay ? '<div class="note">Relay supplies MW power to sustain defense grid.</div>' : '');
 
   const ic = $('inspIcon');
@@ -253,6 +279,10 @@ function renderWaveCard() {
     if (G.hiveMutation && typeof HIVE_MUTATIONS !== 'undefined' && HIVE_MUTATIONS[G.hiveMutation]) {
       const hm = HIVE_MUTATIONS[G.hiveMutation];
       tags.push('<span class="tag" style="background:#4c0519;border-color:' + hm.color + ';color:' + hm.color + '">HIVE: ' + hm.badge + '</span>');
+    }
+    if (G.hiveCounterTrait && typeof HIVE_COUNTER_TRAITS !== 'undefined' && HIVE_COUNTER_TRAITS[G.hiveCounterTrait]) {
+      const hct = HIVE_COUNTER_TRAITS[G.hiveCounterTrait];
+      tags.push('<span class="tag" style="background:#450a0a;border-color:' + hct.color + ';color:' + hct.color + '">ADAPT: ' + hct.name.toUpperCase() + '</span>');
     }
     const threat = getThreatDirectorAnalysis();
     if (n >= 5 && threat) tags.push('<span class="tag orange">THREAT: ' + threat.name.toUpperCase() + '</span>');
@@ -295,8 +325,10 @@ function renderWaveCard() {
   else if (G.state === 'prep') {
     const b = earlyBonus();
     label = G.wave === 0 ? svg('play') + 'Start wave 1' : svg('play') + 'Call wave ' + n + ' (+' + b + ' gold) / ' + Math.ceil(G.prepT) + 's';
-  } else if (G.state === 'active') label = svg('ff') + 'Call wave ' + n + ' early (+' + earlyBonus() + ' gold)';
-  else label = 'Standby';
+  } else if (G.state === 'active') {
+    const streak = G.callStreak && G.callStreak > 1 ? ' [' + G.callStreak + 'x STREAK]' : '';
+    label = svg('ff') + 'Call wave ' + n + ' early (+' + (earlyBonus() * (G.callStreak || 1)) + ' gold)' + streak;
+  } else label = 'Standby';
   if (hud.call !== label) { hud.call = label; btn.innerHTML = label; }
   if (btn.disabled !== dis) btn.disabled = dis;
 }
@@ -373,7 +405,9 @@ function refreshUI() {
   if (G.uiDirty) { G.uiDirty = false; renderInspector(); }
   else if (G.sel) {
     const u = $('btnUpg');
-    if (u && G.sel.tier === 0) u.disabled = G.gold < getUpgradeCost(TD[G.sel.type].tiers[1].upg);
+    if (u && G.sel.tier === 0 && !TD[G.sel.type].isFusion && TD[G.sel.type].tiers[1]) {
+      u.disabled = G.gold < getUpgradeCost(TD[G.sel.type].tiers[1].upg);
+    }
     if (G.sel.tier === 1) {
       document.querySelectorAll('.branch-btn').forEach(b => {
         b.disabled = G.gold < Number(b.dataset.cost);
@@ -395,6 +429,26 @@ function refreshUI() {
     $('vSector').textContent = curSecObj.num + ' ' + curSecObj.shortName;
     $('vSector').style.color = curSecObj.color;
     if ($('chipSector')) $('chipSector').style.borderColor = curSecObj.color + '66';
+  }
+  const btnOv = $('btnOverload');
+  if (btnOv && G) {
+    if (G.overloadT > 0) {
+      btnOv.textContent = 'OVERLOAD ' + Math.ceil(G.overloadT) + 's';
+      btnOv.style.color = '#f43f5e';
+      btnOv.style.borderColor = '#f43f5e';
+    } else if (G.meltdownT > 0) {
+      btnOv.textContent = 'BROWNOUT ' + Math.ceil(G.meltdownT) + 's';
+      btnOv.style.color = '#f59e0b';
+      btnOv.style.borderColor = '#f59e0b';
+    } else if (G.overloadCd > 0) {
+      btnOv.textContent = 'CD ' + Math.ceil(G.overloadCd) + 's';
+      btnOv.style.color = '#94a3b8';
+      btnOv.style.borderColor = '#475569';
+    } else {
+      btnOv.textContent = 'OVERLOAD (V)';
+      btnOv.style.color = '#f43f5e';
+      btnOv.style.borderColor = 'rgba(244,63,94,0.4)';
+    }
   }
   renderWaveCard();
   renderSkillsAndPerks();
@@ -648,6 +702,89 @@ function showOverlay(kind) {
     }).join('');
     h = '<div class="draft-box"><h2>' + svg('tag') + ' TACTICAL TECH REQUISITION</h2><div class="sub">Boss eliminated. Choose 1 experimental technology to reinforce your perimeter defenses.</div>' +
       '<div class="draft-grid">' + cards + '</div></div>';
+  } else if (kind === 'smuggler') {
+    const cards = Object.values(CURSED_PROTOCOLS).map(cp => {
+      const isSigned = G && G.cursedProtocols && G.cursedProtocols.includes(cp.id);
+      const btn = isSigned ?
+        '<button class="draft-btn" disabled style="background:#334155;color:#94a3b8">PROTOCOL ACTIVE</button>' :
+        '<button class="draft-btn" data-ov="accept_protocol" data-protocol="' + cp.id + '" style="background:' + cp.color + ';color:#0f172a;font-weight:800">ACCEPT PACT</button>';
+      return '<div class="draft-card" style="border-top-color:' + cp.color + '">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+        '<span class="draft-tag" style="background:#31151e;color:' + cp.color + ';border:1px solid ' + cp.color + '">CURSED TECH</span>' +
+        '</div>' +
+        '<div class="draft-name" style="color:#f8fafc">' + cp.name + '</div>' +
+        '<div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:3px">BUFF: ' + cp.buff + '</div>' +
+        '<div style="font-size:10px;font-weight:700;color:#f43f5e;margin-bottom:6px">PENALTY: ' + cp.penalty + '</div>' +
+        '<div class="draft-desc" style="font-size:9.5px;color:#94a3b8;margin-bottom:8px">' + cp.desc + '</div>' +
+        btn +
+        '</div>';
+    }).join('');
+
+    h = '<div class="draft-box" style="border-top-color:#c084fc;max-width:760px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+      '<h2 style="margin:0;color:#c084fc;letter-spacing:.12em">' + svg('tag') + ' BLACK MARKET SMUGGLER TERMINAL</h2>' +
+      '<button class="ghost" data-ov="close_smuggler" style="padding:2px 8px;font-size:11px">✕ PASS</button>' +
+      '</div>' +
+      '<div class="sub">High-Stakes Cursed Protocols. Tremendous tactical power balanced by perilous operational penalties.</div>' +
+      '<div class="draft-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px">' + cards + '</div>' +
+      '<div style="display:flex;justify-content:center">' +
+      '<button class="ghost" data-ov="close_smuggler">Decline All Protocols (Proceed)</button>' +
+      '</div></div>';
+  } else if (kind === 'codex') {
+    const progress = typeof getCodexProgress === 'function' ? getCodexProgress() : { discovered: 0, total: 19, pct: 0 };
+    const fusionsHtml = (typeof FUSION_RECIPES !== 'undefined' ? FUSION_RECIPES : []).map(f => {
+      const disc = typeof isCodexDiscovered === 'function' && isCodexDiscovered(f.id);
+      return '<div class="codex-item' + (disc ? ' discovered' : ' locked') + '">' +
+        '<div class="codex-icon" style="color:' + (disc ? f.color : '#64748b') + '">' + (disc ? '★' : '?') + '</div>' +
+        '<div class="codex-meta">' +
+        '<b style="color:' + (disc ? f.color : '#94a3b8') + '">' + (disc ? f.name : '??? CLASSIFIED FUSION') + '</b>' +
+        '<small>' + (disc ? f.desc : 'Merge Tier 3 ' + f.towerA.toUpperCase() + ' with adjacent Tier 3 ' + f.towerB.toUpperCase()) + '</small>' +
+        '</div>' +
+        '<span class="codex-bounty">' + (disc ? 'DISCOVERED' : '+15 CORES') + '</span>' +
+        '</div>';
+    }).join('');
+
+    const cursedHtml = (typeof CURSED_PROTOCOLS !== 'undefined' ? Object.values(CURSED_PROTOCOLS) : []).map(c => {
+      const disc = typeof isCodexDiscovered === 'function' && isCodexDiscovered(c.id);
+      return '<div class="codex-item' + (disc ? ' discovered' : ' locked') + '">' +
+        '<div class="codex-icon" style="color:' + (disc ? c.color : '#64748b') + '">' + (disc ? '☣' : '?') + '</div>' +
+        '<div class="codex-meta">' +
+        '<b style="color:' + (disc ? c.color : '#94a3b8') + '">' + (disc ? c.name : '??? CURSED PROTOCOL') + '</b>' +
+        '<small>' + (disc ? c.buff + ' ' + c.penalty : 'Sign pact at Black Market terminal after wave 5/10/15') + '</small>' +
+        '</div>' +
+        '<span class="codex-bounty">' + (disc ? 'DISCOVERED' : '+15 CORES') + '</span>' +
+        '</div>';
+    }).join('');
+
+    const anomaliesHtml = (typeof FIELD_ANOMALIES !== 'undefined' ? Object.values(FIELD_ANOMALIES) : []).map(a => {
+      const disc = typeof isCodexDiscovered === 'function' && isCodexDiscovered(a.id);
+      return '<div class="codex-item' + (disc ? ' discovered' : ' locked') + '">' +
+        '<div class="codex-icon" style="color:' + (disc ? a.color : '#64748b') + '">' + (disc ? '⚡' : '?') + '</div>' +
+        '<div class="codex-meta">' +
+        '<b style="color:' + (disc ? a.color : '#94a3b8') + '">' + (disc ? a.name : '??? TACTICAL ANOMALY') + '</b>' +
+        '<small>' + (disc ? a.desc : 'Encounter and interact with tactical anomaly in combat') + '</small>' +
+        '</div>' +
+        '<span class="codex-bounty">' + (disc ? 'DISCOVERED' : '+15 CORES') + '</span>' +
+        '</div>';
+    }).join('');
+
+    h = '<div class="draft-box" style="border-top-color:#c084fc;max-width:820px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<h2 style="margin:0;color:#c084fc;letter-spacing:.15em">' + svg('target') + ' CLASSIFIED TECH CODEX</h2>' +
+      '<div class="chip" style="background:#1e1b4b;border:1px solid #a855f7;padding:4px 10px;display:flex;align-items:center;gap:6px">' +
+      '<span style="font-size:10px;color:#c084fc;font-weight:800">ARCHIVE PROGRESS: ' + progress.discovered + ' / ' + progress.total + ' (' + progress.pct + '%)</span>' +
+      '</div>' +
+      '</div>' +
+      '<div class="sub">Decrypted database of advanced weaponry, forbidden black market protocols, and tactical anomalies. First discovery of each entry awards +15 Nanite Cores.</div>' +
+      '<div style="font-size:10px;font-weight:800;color:#818cf8;margin:8px 0 4px;letter-spacing:0.08em">SUPER-WEAPON FUSIONS:</div>' +
+      '<div class="codex-grid">' + fusionsHtml + '</div>' +
+      '<div style="font-size:10px;font-weight:800;color:#f43f5e;margin:10px 0 4px;letter-spacing:0.08em">CURSED BLACK MARKET PROTOCOLS:</div>' +
+      '<div class="codex-grid">' + cursedHtml + '</div>' +
+      '<div style="font-size:10px;font-weight:800;color:#38bdf8;margin:10px 0 4px;letter-spacing:0.08em">TACTICAL FIELD ANOMALIES:</div>' +
+      '<div class="codex-grid">' + anomaliesHtml + '</div>' +
+      '<div style="display:flex;justify-content:center;margin-top:12px">' +
+      '<button class="primary big" data-ov="close_codex">Close Archive</button>' +
+      '</div></div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
     const secLabel = sec ? ('SECTOR ' + sec.num + ': ' + sec.name) : 'BASTION';

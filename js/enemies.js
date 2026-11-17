@@ -31,8 +31,14 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     noDmgT: 0, phaseCd: 0, avengerStacks: 0, thawCd: rand(1.5, 2.5), artilleryCd: rand(4.0, 7.0),
     pathId: pId, titanId: titanId || null,
     chitinHits: 0, insulation: false, grounded: false, speedBoostT: 0,
+    counterTrait: null,
     hijackedT: 0, hijackFireCd: 0, reversed: 0
   };
+
+  // Reactive Hivemind Counter-Traits (4.0)
+  if (G && G.hiveCounterTrait && type !== 'boss' && Math.random() < 0.65) {
+    e.counterTrait = G.hiveCounterTrait;
+  }
 
   // Named Titan Boss stats
   if (titanId && typeof TITAN_BOSSES !== 'undefined' && TITAN_BOSSES[titanId]) {
@@ -416,6 +422,14 @@ function updateEnemy(e, dt) {
       addRing(BASE_PT.x, BASE_PT.y, 10, 60, 0.45, '#38bdf8', 4);
       addText(BASE_PT.x - 20, BASE_PT.y - 30, 'FORCEFIELD BLOCKED', '#38bdf8', 15);
       Sfx.play('shield');
+      return;
+    }
+    if (G.cursedProtocols && G.cursedProtocols.includes('blood_pact')) {
+      G.lives = 0;
+      shake(20);
+      Sfx.play('gameover');
+      addText(BASE_PT.x - 40, BASE_PT.y - 30, 'BLOOD-PACT BREACHED! INSTANT LOSS!', '#f43f5e', 22);
+      endGame(false);
       return;
     }
     G.lives -= e.leak; G.baseFlash = 1; G.dmgFlash = 1; shake(e.type === 'boss' ? 16 : 7 + e.leak);

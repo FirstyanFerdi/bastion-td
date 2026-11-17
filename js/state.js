@@ -73,7 +73,17 @@ function newGame(keepSpeed) {
     sabotRoundsT: 0,
     liquidationT: 0,
     skillsUsedThisWave: 0,
-    swapSource: null
+    swapSource: null,
+    callStreak: 0,
+    adrenalineT: 0,
+    cursedProtocols: [],
+    overloadT: 0,
+    overloadCd: 0,
+    meltdownT: 0,
+    anomalies: [],
+    anomalySpawnCd: 22,
+    hivePressure: { phys: 0, energy: 0, cryo: 0, cluster: 0 },
+    smugglerOffered: {}
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -184,6 +194,89 @@ function detonateFuelCell(fc) {
 }
 
 /* ============================================================
+   HIGH-STAKES OVERDRIVE & SUPER-WEAPONS (4.0)
+   ============================================================ */
+function triggerCoreOverload() {
+  if (!G || G.state === 'menu' || G.overloadT > 0 || G.overloadCd > 0 || G.meltdownT > 0) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.overloadT = 8.0;
+  G.overloadCd = 45.0;
+  shake(14);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overload');
+  addRing(BASE_PT.x, BASE_PT.y, 16, 220, 0.75, '#f43f5e', 5);
+  burst(BASE_PT.x, BASE_PT.y, 45, '#fb7185', 200, 0.8, 4.5, true);
+  burst(BASE_PT.x, BASE_PT.y, 25, '#fbbf24', 160, 0.6, 3.5, true);
+  addText(W / 2, 75, 'CORE OVERLOAD: +250% HYPER-DRIVE!', '#fbbf24', 20);
+  if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery('core_overload', 'anomaly');
+  G.uiDirty = true;
+  return true;
+}
+
+function applyCursedProtocol(protoId) {
+  if (!G || typeof CURSED_PROTOCOLS === 'undefined' || !CURSED_PROTOCOLS[protoId]) return false;
+  G.cursedProtocols = G.cursedProtocols || [];
+  if (G.cursedProtocols.includes(protoId)) return false;
+  G.cursedProtocols.push(protoId);
+  const def = CURSED_PROTOCOLS[protoId];
+  if (protoId === 'blood_pact') {
+    G.lives = 1;
+    shake(12);
+  }
+  shake(8);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('strike');
+  burst(W / 2, H / 2, 35, def.color, 180, 0.7, 4, true);
+  addRing(W / 2, H / 2, 12, 160, 0.65, def.color, 4);
+  addText(W / 2, 75, 'CURSED PROTOCOL ACCEPTED: ' + def.name.toUpperCase(), def.color, 18);
+  if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery(protoId, 'cursed');
+  G.uiDirty = true;
+  return true;
+}
+
+function fuseTowers(t1, t2) {
+  if (!G || !t1 || !t2 || t1 === t2) return false;
+  if (typeof FUSION_RECIPES === 'undefined') return false;
+  const recipe = FUSION_RECIPES.find(r =>
+    (t1.type === r.towerA && t2.type === r.towerB) ||
+    (t1.type === r.towerB && t2.type === r.towerA)
+  );
+  if (!recipe) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  const cost = recipe.cost || 200;
+  if (G.gold < cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.gold -= cost;
+  t1.type = recipe.id;
+  t1.tier = 0;
+  t1.branch = null;
+  t1.invested = (t1.invested || 0) + (t2.invested || 0) + cost;
+  t1.chips = [...(t1.chips || []), ...(t2.chips || [])].slice(0, 2);
+  t1.heat = 0;
+  t1.recoil = 1;
+  t1.flash = 1;
+  t1.fusionPulseT = 0;
+  G.grid[t2.r][t2.c] = null;
+  const idx = G.towers.indexOf(t2);
+  if (idx >= 0) G.towers.splice(idx, 1);
+  if (G.sel === t2) G.sel = t1;
+  shake(14);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('fusion');
+  burst(t1.x, t1.y, 40, recipe.color, 220, 0.8, 5, true);
+  burst(t2.x, t2.y, 30, recipe.color, 180, 0.6, 4, true);
+  addRing(t1.x, t1.y, 14, 110, 0.7, recipe.color, 5);
+  addRing(t2.x, t2.y, 10, 80, 0.5, recipe.color, 4);
+  addText(t1.x, t1.y - 32, 'SUPER-WEAPON FUSED: ' + recipe.name.toUpperCase() + '!', recipe.color, 16);
+  if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery(recipe.id, 'fusion');
+  G.uiDirty = true;
+  return true;
+}
+
+/* ============================================================
    EFFECTS
    ============================================================ */
 function burst(x, y, n, color, spd, life, size, round) {
@@ -226,6 +319,35 @@ function dealDamage(e, amount, type, src, opts) {
   let a = amount;
   if (G && G.damageTrack && G.damageTrack[type] !== undefined) {
     G.damageTrack[type] += amount;
+  }
+
+  // Cursed Protocol: Glass Singularity (Guaranteed Critical Strikes)
+  if (G && G.cursedProtocols && G.cursedProtocols.includes('glass_singularity')) {
+    opts.crit = true;
+  }
+
+  // Reactive Hivemind Evolutionary Pressure Tracking (4.0)
+  if (G && G.hivePressure) {
+    if (type === 'phys') G.hivePressure.phys += a;
+    else if (type === 'energy' || type === 'plasma') G.hivePressure.energy += a;
+    else if (type === 'cryo') G.hivePressure.cryo += a;
+    if (opts.isSplash) G.hivePressure.cluster += a;
+  }
+
+  // Reactive Hivemind Counter-Traits (4.0)
+  if (e.counterTrait === 'reflective' && type === 'phys' && Math.random() < 0.25) {
+    burst(e.x, e.y, 6, '#f43f5e', 80, 0.3, 2, true);
+    addText(e.x, e.y - e.r - 18, 'REFLECTED!', '#f43f5e', 12);
+    return 0;
+  }
+  if (e.counterTrait === 'carbon_weave' && (type === 'energy' || type === 'plasma')) {
+    a *= 0.50;
+    burst(e.x, e.y, 4, '#38bdf8', 60, 0.25, 2, true);
+  }
+  if (e.counterTrait === 'insulated' && type === 'cryo') {
+    e.slowT = 0; e.slowAmt = 0; e.freezeT = 0;
+    a *= 0.35;
+    burst(e.x, e.y, 4, '#f97316', 70, 0.25, 2, false);
   }
 
   // Hive Mutation: Chitin Armor Plating (deflects first 4 physical hits)
@@ -433,8 +555,25 @@ function dealDamage(e, amount, type, src, opts) {
 function killEnemy(e, src) {
   if (e.dead) return;
   e.dead = true;
-  G.gold += e.reward; G.score += e.reward * 10; G.kills++;
+  const streakMult = (G && G.callStreak && G.callStreak > 1) ? (1 + (G.callStreak - 1) * 0.4) : 1;
+  const scoreStreakMult = (G && G.callStreak && G.callStreak > 1) ? (1 + (G.callStreak - 1) * 0.5) : 1;
+  const isBloodPact = G && G.cursedProtocols && G.cursedProtocols.includes('blood_pact');
+  const bloodMult = isBloodPact ? 3.0 : 1.0;
+  const finalReward = Math.round(e.reward * streakMult * bloodMult);
+  const finalScore = Math.round(e.reward * 10 * scoreStreakMult);
+  G.gold += finalReward; G.score += finalScore; G.kills++;
   if (src) src.kills++;
+
+  // Cursed Protocol: Glass Singularity penalty on kill
+  if (G && G.cursedProtocols && G.cursedProtocols.includes('glass_singularity')) {
+    burst(e.x, e.y, 14, '#a855f7', 120, 0.4, 3, true);
+    for (const t of G.towers) {
+      if ((t.x - e.x) ** 2 + (t.y - e.y) ** 2 <= 85 * 85) {
+        t.empT = Math.max(t.empT || 0, 2.0);
+        addText(t.x, t.y - 18, 'GLASS EMP', '#a855f7', 11);
+      }
+    }
+  }
   const col = e.type === 'scout' ? '#a3e635' : e.type === 'brute' ? '#94a3b8' : e.type === 'swarm' ? '#fb7185' : e.type === 'healer' ? '#6ee7b7' : e.type === 'stealth' ? '#38bdf8' : e.type === 'carrier' ? '#34d399' : e.type === 'breacher' ? '#fbbf24' : '#c084fc';
   if (e.type === 'boss') {
     burst(e.x, e.y, 70, col, 260, 1.1, 5, false); burst(e.x, e.y, 40, '#fff', 200, 0.7, 3, true);
