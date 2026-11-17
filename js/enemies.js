@@ -276,6 +276,21 @@ function updateEnemy(e, dt) {
       }
     }
 
+    // 5.0 Titan Boss Goliath: Raise Line-of-Sight blocking Seismic Pillars
+    if (e.titanId === 'goliath' && !e.dead) {
+      e.pillarCd = (e.pillarCd !== undefined ? e.pillarCd : 5.0) - dt;
+      if (e.pillarCd <= 0 && (!G.seismicPillars || G.seismicPillars.length < 3)) {
+        e.pillarCd = 8.0;
+        G.seismicPillars = G.seismicPillars || [];
+        const px = clamp(e.x + (Math.random() < 0.5 ? -45 : 45), 40, W - 40);
+        const py = clamp(e.y + (Math.random() < 0.5 ? -45 : 45), 40, H - 40);
+        G.seismicPillars.push({ x: px, y: py, r: 24, hp: 450, maxHp: 450 });
+        burst(px, py, 20, '#78716c', 120, 0.5, 3.5, false);
+        shake(6);
+        addText(px, py - 24, 'SEISMIC PILLAR RAISED', '#a8a29e', 13);
+      }
+    }
+
     // Titan Boss: Chrono-Weaver (Temporal Rewind at 75%, 50%, 25% HP)
     if (e.titanId === 'chronoweaver' && e.rewindThresholds && e.rewindThresholds.length > 0) {
       if (e.hp <= e.maxHp * e.rewindThresholds[0]) {
@@ -290,9 +305,18 @@ function updateEnemy(e, dt) {
       }
     }
 
+    // 5.0 Titan Boss Chrono-Weaver: Time Inversion against Cryo
+    if (e.titanId === 'chronoweaver' && (e.slowT > 0 || e.stunT > 0)) {
+      e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
+      e.speedBoostT = 2.0;
+      burst(e.x, e.y, 14, '#38bdf8', 130, 0.45, 3, true);
+      addText(e.x, e.y - e.r - 24, 'TIME INVERSION SURGE!', '#38bdf8', 15);
+      shake(4);
+    }
+
     // Titan Boss: Apex Swarm-Mother (Brood, Kamikaze Drones, Berserk)
     if (e.titanId === 'swarm_mother' && !e.dead) {
-      e.broodCd = (e.broodCd || 5.0) - dt;
+      e.broodCd = (e.broodCd !== undefined ? e.broodCd : 5.0) - dt;
       if (e.broodCd <= 0) {
         e.broodCd = 5.0;
         for (let k = 0; k < 3; k++) {
@@ -345,6 +369,33 @@ function updateEnemy(e, dt) {
           if (esc2) { esc2.d = Math.max(0, e.d - 50); esc2.isEscort = true; }
         }
       }
+
+      // 5.0 Titan Boss Apex Mother: Bio-Regeneration from Creep (Phase 2)
+      if (e.hp <= e.maxHp * 0.50 && G && G.creep) {
+        e.creepAbsorbCd = (e.creepAbsorbCd !== undefined ? e.creepAbsorbCd : 3.0) - dt;
+        if (e.creepAbsorbCd <= 0) {
+          e.creepAbsorbCd = 3.5;
+          let absorbed = 0;
+          for (const key in G.creep) {
+            const [cr, cc] = key.split(',').map(Number);
+            const cx = cc * TILE + TILE / 2, cy = cr * TILE + TILE / 2;
+            if (Math.hypot(e.x - cx, e.y - cy) <= 2.2 * TILE) {
+              delete G.creep[key];
+              absorbed++;
+              burst(cx, cy, 6, '#84cc16', 70, 0.3, 2, false);
+              if (absorbed >= 3) break;
+            }
+          }
+          if (absorbed > 0) {
+            const healAmt = absorbed * 80;
+            e.hp = Math.min(e.maxHp, e.hp + healAmt);
+            e.dispHp = e.hp;
+            burst(e.x, e.y, 16, '#84cc16', 110, 0.5, 3, true);
+            addText(e.x, e.y - e.r - 26, '+' + healAmt + ' BIO-DEVOUR!', '#84cc16', 15);
+            if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('spore_burst');
+          }
+        }
+      }
     }
   }
   let sp = e.speed;
@@ -352,13 +403,20 @@ function updateEnemy(e, dt) {
   if (G.mutator && G.mutator.id === 'frenzy' && e.hp < e.maxHp * 0.4) sp *= 1.35;
   if (G.mutator && G.mutator.id === 'cryo_lockdown') sp *= 0.80;
   if (G.mutator && G.mutator.id === 'overcharge_anomaly') sp *= 1.25;
+
+  // 5.0 Biomass Creep Speed Multiplier (+30% speed)
+  const tileC = Math.floor(e.x / TILE), tileR = Math.floor(e.y / TILE);
+  if (G && G.creep && G.creep[tileR + ',' + tileC] && e.stunT <= 0) {
+    sp *= (typeof BIOMASS_CONFIG !== 'undefined' ? BIOMASS_CONFIG.creepSpeedMult : 1.30);
+  }
+
   if (e.stunT > 0) sp = 0; else if (e.slowT > 0) sp *= 1 - e.slowAmt;
 
   // Cyber-Hijacked minion AI
   if (e.hijackedT > 0) {
     e.hijackedT -= dt;
     sp = 0;
-    e.hijackFireCd = (e.hijackFireCd || 0.6) - dt;
+    e.hijackFireCd = (e.hijackFireCd !== undefined ? e.hijackFireCd : 0.6) - dt;
     if (e.hijackFireCd <= 0) {
       e.hijackFireCd = 0.6;
       let bestTar = null, bestDist = 120 * 120;

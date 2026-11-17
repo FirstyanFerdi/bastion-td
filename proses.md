@@ -663,7 +663,79 @@ Living Hive kini secara dinamis mengembangkan counter-trait spesifik sesuai pola
 
 ---
 
-## 15. Panduan Unggah ke GitHub
+## 15. Bastion TD 5.0: Deep Interconnected Synergy Matrix & Adaptive Systems
+
+Mengintegrasikan lima pilar mekanik baru yang saling terhubung erat (*interconnected systems*), di mana setiap keputusan penempatan menara, manajemen energi, pembersihan lingkungan, dan pemilihan protokol taktis saling mempengaruhi kalkulasi medan tempur secara dinamis:
+
+### 15.1 Pilar 1: Topologi Grid & Konduit Sinar Resonansi (Resonance Beam Conduits)
+* **Koneksi Garis Pandang Relai:** Fission Relay yang ditempatkan segaris (*collinear/unobstructed line-of-sight*) dengan menara lain dalam radius $\le 4.5$ petak secara otomatis membentuk konduit laser aktif permanen.
+* **Tipe Konduit Laser:**
+  1. `ion_plasma` (Relay $\leftrightarrow$ Tesla): Sinar busur petir berkecepatan tinggi yang menyambar target di jalurnya (contact DPS) dan menyebarkan lonjakan listrik ke musuh terdekat.
+  2. `stasis_line` (Relay $\leftrightarrow$ Cryo): Sinar laser kriogenik yang membekukan musuh yang memotong garis, menerapkan 55% slow dan 25% Brittle amplification.
+  3. `sensor_wire` (Relay $\leftrightarrow$ Gatling): Kawat sensor kinetik yang mengekspos unit stealth dan merobek (*shred*) armor musuh secara berkelanjutan.
+  4. `incinerator_beam` (Relay $\leftrightarrow$ Plasma): Berkas plasma panas tinggi yang membakar musuh dan membersihkan creep biomassa.
+  5. `hyper_bridge` (Relay $\leftrightarrow$ Super-Weapon): Mempercepat laju tembak senjata super sebesar +20% dan mengurangi produksi panas sebesar 25%.
+  6. `singularity_cord` (Relay $\leftrightarrow$ Relay): Menghubungkan dua relai untuk memperluas jangkauan transmisi energi grid.
+* **Pembersihan Biomassa:** Sinar laser konduit yang melintasi petak tanah yang terinfeksi biomassa akan membakar dan membersihkannya secara otomatis (*cleansing*), sekaligus memberikan bonus salvage +3 Gold.
+
+### 15.2 Pilar 2: Termodinamika & Jaringan Pertukaran Panas (Thermodynamics Network)
+* **Akumulasi Panas (Heat Gauge):** Setiap menara menghasilkan panas saat menembak (0–100%). Menara yang mencapai $\ge 100\%$ mengalami *Overheat Throttle* yang memangkas laju tembak sebesar -40% hingga suhu turun di bawah 50%.
+* **Pendinginan Pasif Kriogenik:** Menara Cryo yang ditempatkan berdampingan (*adjacent orthogonally*) memberikan transfer pendinginan konduktif, melipatgandakan laju disipasi panas menara di sekitarnya.
+* **Thermal Steam Purge ($[H]$ / Tombol Purge):** Kemampuan aktif komandan darurat untuk mengosongkan seluruh akumulasi panas menara seketika, melepaskan ledakan uap mendidih (*boiling steam blast*) ke seluruh canvas yang melukai seluruh musuh di layar.
+
+### 15.3 Pilar 3: Biomassa Hidup & Pilon Spora Musuh (Living Biomass Creep & Spore Spires)
+* **Penyebaran Creep:** Musuh bertipe Brute, Healer, dan Carrier yang tewas akan meninggalkan tumpahan lendir organik (*Biomass Creep*) selama 25 detik.
+* **Pengaruh Lingkungan:**
+  - Musuh yang melintas di atas creep mendapatkan akselerasi kecepatan gerak sebesar **+30%**.
+  - Menara pertahanan yang terjerat creep mengalami penalti laju tembak sebesar **-25%**.
+* **Spore Spires (Wave 7+):** Pilon biomassa parasitik yang tumbuh di petak tepi medan tempur. Spora ini menembakkan mortir lendir ke menara pemain dan memancarkan gelombang penyembuh ke musuh di sekitarnya.
+* **Interaksi Pemain:** Pemain dapat mengklik langsung Spore Spire untuk merusaknya. Menghancurkan Spore Spire memberikan hadiah taktis **+45 Gold & +5 Nanite Cores**.
+
+### 15.4 Pilar 4: Matriks Protokol Taktis In-Run (Tactical Protocol Matrix - $[T]$)
+* **Ekonomi TPP (Tactical Protocol Points):** Pemain mendapatkan poin TPP selama pertempuran melalui:
+  - Flawless Wave Clear: +1 TPP
+  - Mengeliminasi Elite Champion: +1 TPP
+  - Mengeliminasi Titan Boss: +2 TPP
+* **Cabang Spesialisasi:**
+  1. *Warfare Overclock:*
+     - Tier 1: `sabot_pierce` (+20% Armor Shred, +15% Physical Damage).
+     - Tier 2: `critical_cascade` (Serangan kritikal memicu ledakan sekunder berantai).
+     - Tier 3: `execution_protocol` (Menara langsung mengeksekusi musuh non-boss di bawah 15% HP).
+  2. *Grid Architecture:*
+     - Tier 1: `prism_beam_width` (Memperlebar diameter konduit laser resonansi sebesar 80% dan meningkatkan DPS +50%).
+     - Tier 2: `zero_point_relay` (+20 MW kapasitas tambahan per Fission Relay dan imunitas brownout).
+     - Tier 3: `superconductor_conduit` (Menara yang terhubung konduit memperoleh imunitas penuh terhadap efek EMP musuh).
+  3. *Logistics & Recon:*
+     - Tier 1: `contraband_scavenger` (Menggandakan drop Nanite Cores dari Elite dan Spore Spire).
+     - Tier 2: `thermal_purge_turbo` (Mengurangi waktu cooldown Thermal Steam Purge sebesar 35%).
+     - Tier 3: `emergency_blackout` (Saat nyawa pangkalan $\le 6$, seketika melepaskan EMP grid global yang melumpuhkan seluruh musuh selama 3.5 detik).
+
+### 15.5 Pilar 5: AI Bos Nemesis Dinamis & Adaptif
+* **Wave 10 Goliath Excavator:** Menancapkan pilar seismik (*Seismic Pillars* berkekuatan 450 HP) di medan tempur yang menghalangi garis pandang (*line-of-sight*) tembakan menara ramah, memaksa pemain mengklik atau menembak pilar tersebut untuk membuka kembali koridor tembak.
+* **Wave 15 Chrono-Weaver:** Menghadapi menara kriogenik dengan membalikkan efek dingin (*Time Inversion*); saat dibekukan atau diperlambat, Chrono-Weaver mengubah efek tersebut menjadi lonjakan akselerasi kecepatan temporal.
+* **Wave 20 Apex Swarm-Mother (Phase 2):** Ketika HP berada di bawah 50%, Apex Mother secara aktif memangsa petak-petak creep biomassa di sekitarnya untuk meregenerasi HP-nya (+80 HP per petak creep yang dikonsumsi).
+
+---
+
+## 16. Hasil Verifikasi & Pengujian Otomatis
+
+Seluruh 12 rangkaian pengujian unit test dan simulasi permainan telah dijalankan dan lulus 100%:
+1. `tests/audit_bugs.js`: **0 inkonsistensi statis ditemukan** (39 efek suara terhubung, 25 aksi UI, 30 elemen DOM HTML tervalidasi).
+2. `tests/smoke.js`: Lulus simulasi penuh 20 wave dengan status `victory`.
+3. `tests/test_deep_synergy.js`: **Lulus 100%** menguji seluruh 5 pilar sistem keterhubungan mendalam Bastion TD 5.0.
+4. `tests/test_overdrive_fusions.js`: Lulus 100% sistem fusi senjata super dan anomali kargo.
+5. `tests/test_sectors.js`: Lulus 100% validasi 7 sektor peta multi-ekspedisi dan variasi hazard.
+6. `tests/test_mastery.js`: Lulus 100% sistem power grid, doktrin komandan, dan socket chip modular.
+7. `tests/test_champions.js`: Lulus 100% kecerdasan adaptif Threat Director dan afiks champion.
+8. `tests/test_map_dynamics.js`: Lulus 100% node leyline dan rute bercabang flanking.
+9. `tests/test_ascension.js`: Lulus 100% protokol tantangan tingkat 0–5.
+10. `tests/test_reactions.js`: Lulus 100% empat reaksi kimia dan elemen.
+11. `tests/test_workshop.js`: Lulus 100% pohon peningkatan markas dan ekonomi Nanite Cores.
+12. `tests/test_browser_init.js`: Lulus 100% emulasi siklus render canvas browser 60 FPS tanpa kegagalan.
+
+---
+
+## 17. Panduan Unggah ke GitHub
 
 ### Perintah Unggah (Terminal Pengguna):
 ```powershell
@@ -673,8 +745,8 @@ git add .
 # 2. Periksa status
 git status
 
-# 3. Lakukan commit perubahan Bastion TD 4.0: Addictive Loop & Super-Weapon Fusions
-git commit -m "feat(v4.0): implement addictive loop with super-weapon fusions, core overload gamble, cursed protocols, field anomalies, and classified tech codex"
+# 3. Lakukan commit perubahan Bastion TD 5.0: Deep Interconnected Synergy Matrix
+git commit -m "feat(v5.0): implement deep interconnected synergy matrix with resonance conduits, thermodynamics, biomass creep, tactical protocol matrix, and dynamic nemesis AI"
 
 # 4. Hubungkan ke repository GitHub Anda (jika belum)
 git remote add origin https://github.com/USERNAME/REPO_NAME.git
@@ -682,5 +754,6 @@ git remote add origin https://github.com/USERNAME/REPO_NAME.git
 # 5. Unggah ke branch main
 git push -u origin main
 ```
+
 
 

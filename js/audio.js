@@ -88,6 +88,10 @@ const Sfx = {
       case 'overload': this.tone('sawtooth', 180, 920, 0.6, 0.28); this.tone('sine', 90, 45, 0.7, 0.4); this.noise(0.5, 0.3, 2400, 2, 'bandpass'); break;
       case 'streak': [659, 880, 1318].forEach((f, i) => this.tone('sine', f, f * 1.05, 0.2, 0.14, i * 0.06)); break;
       case 'strike': this.noise(0.7, 0.6, 140, 1, 'lowpass'); this.tone('sawtooth', 1200, 40, 0.5, 0.35); this.tone('sine', 60, 20, 0.8, 0.5); break;
+      case 'laser_beam': this.tone('sawtooth', 720, 360, 0.22, 0.16); this.noise(0.18, 0.15, 2600, 2, 'bandpass'); break;
+      case 'steam_purge': this.noise(0.65, 0.45, 1400, 1, 'highpass'); this.tone('sine', 280, 80, 0.5, 0.25); break;
+      case 'matrix_unlock': [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone('triangle', f, f * 1.04, 0.3, 0.18, i * 0.07)); break;
+      case 'spore_burst': this.noise(0.35, 0.35, 480, 1, 'lowpass'); this.tone('sine', 180, 60, 0.3, 0.25); break;
       case 'drop': this.tone('square', 140, 60, 0.15, 0.2); this.noise(0.18, 0.25, 800, 1, 'lowpass'); break;
     }
   }

@@ -453,12 +453,16 @@ function render() {
   c.drawImage(mapCanvas, 0, 0, W, H);
   const time = G.anim;
   drawFlow(c);
+  drawBiomassCreep(c, time);
   drawLeylineNodes(c, time);
   drawFuelCells(c, time);
   drawSpawnBase(c);
   drawHazards(c, time);
   drawAtmosphericParticles(c, time);
+  drawResonanceBeams(c, time);
   drawFieldAnomalies(c, time);
+  drawSporeSpires(c, time);
+  drawSeismicPillars(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -503,6 +507,7 @@ function render() {
     c.strokeStyle = '#fff'; c.lineWidth = 2; rr(c, t.x - 28, t.y - 28, 56, 56, 10); c.stroke();
   }
   for (const t of G.towers) drawTowerSprite(c, t.type, t.tier, t, time);
+  drawTowerHeatGauges(c, time);
   for (const e of G.enemies) if (e.type !== 'boss' && e.x > -30) drawEnemy(c, e, time);
   for (const e of G.enemies) if (e.type === 'boss' && e.x > -40) drawEnemy(c, e, time);
   for (const e of G.enemies) if (e.x > -10) drawBars(c, e);
@@ -623,6 +628,152 @@ function drawFieldAnomalies(c, time) {
       c.strokeStyle = '#c084fc'; c.lineWidth = 1.5;
       c.beginPath(); c.arc(0, 0, an.r * 0.6, 0, TAU); c.stroke();
       c.restore();
+    }
+  }
+}
+
+/* ============================================================
+   BASTION TD 5.0 DEEP SYNERGY CANVAS RENDERING
+   ============================================================ */
+
+function drawBiomassCreep(c, time) {
+  if (!G || !G.creep) return;
+  c.save();
+  for (const key in G.creep) {
+    const [row, col] = key.split(',').map(Number);
+    const x = col * TILE, y = row * TILE;
+    const pulse = 0.6 + 0.4 * Math.sin(time * 3 + col * 1.5 + row * 2);
+    c.fillStyle = 'rgba(63, 98, 18, 0.45)';
+    c.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+    c.strokeStyle = '#84cc16';
+    c.lineWidth = 1.5;
+    c.strokeRect(x + 3, y + 3, TILE - 6, TILE - 6);
+
+    c.fillStyle = '#a3e635';
+    c.globalAlpha = pulse * 0.8;
+    c.beginPath();
+    c.arc(x + 16, y + 16, 3.5, 0, TAU);
+    c.arc(x + 44, y + 42, 4, 0, TAU);
+    c.arc(x + 42, y + 18, 3, 0, TAU);
+    c.arc(x + 18, y + 44, 3, 0, TAU);
+    c.fill();
+    c.globalAlpha = 1.0;
+  }
+  c.restore();
+}
+
+function drawResonanceBeams(c, time) {
+  if (!G || !G.resonanceLines || G.resonanceLines.length === 0) return;
+  const isWide = typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('prism_beam_width');
+  const baseW = isWide ? 4.5 : 2.5;
+
+  c.save();
+  for (const l of G.resonanceLines) {
+    const col = (l.conf && l.conf.color) || '#38bdf8';
+    const pulse = 0.7 + 0.3 * Math.sin(time * 8 + l.x1);
+
+    c.strokeStyle = col;
+    c.globalAlpha = 0.35 * pulse;
+    c.lineWidth = baseW * 3.5;
+    c.beginPath();
+    c.moveTo(l.x1, l.y1);
+    c.lineTo(l.x2, l.y2);
+    c.stroke();
+
+    c.globalAlpha = 0.95;
+    c.lineWidth = baseW;
+    c.beginPath();
+    c.moveTo(l.x1, l.y1);
+    c.lineTo(l.x2, l.y2);
+    c.stroke();
+
+    const tProg = (time * 1.8) % 1.0;
+    const sparkX = lerp(l.x1, l.x2, tProg);
+    const sparkY = lerp(l.y1, l.y2, tProg);
+    c.fillStyle = '#fff';
+    c.beginPath();
+    c.arc(sparkX, sparkY, baseW * 1.4, 0, TAU);
+    c.fill();
+  }
+  c.restore();
+}
+
+function drawSporeSpires(c, time) {
+  if (!G || !G.sporeSpires) return;
+  for (const sp of G.sporeSpires) {
+    if (sp.dead) continue;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 5 + sp.x);
+    glow(c, sp.x, sp.y, 24, '#84cc16', 0.6 * pulse);
+    c.fillStyle = '#365314';
+    c.strokeStyle = '#a3e635';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(sp.x - 14, sp.y + 16);
+    c.lineTo(sp.x, sp.y - 18);
+    c.lineTo(sp.x + 14, sp.y + 16);
+    c.closePath();
+    c.fill(); c.stroke();
+
+    c.fillStyle = '#84cc16';
+    c.beginPath();
+    c.arc(sp.x, sp.y - 10, 6 + 2 * pulse, 0, TAU);
+    c.fill();
+
+    const hpPct = clamp(sp.hp / sp.maxHp, 0, 1);
+    c.fillStyle = 'rgba(0,0,0,0.7)';
+    c.fillRect(sp.x - 16, sp.y - 28, 32, 5);
+    c.fillStyle = '#84cc16';
+    c.fillRect(sp.x - 15, sp.y - 27, 30 * hpPct, 3);
+  }
+}
+
+function drawSeismicPillars(c, time) {
+  if (!G || !G.seismicPillars) return;
+  for (const p of G.seismicPillars) {
+    if (p.hp <= 0) continue;
+    c.fillStyle = '#44403c';
+    c.strokeStyle = '#a8a29e';
+    c.lineWidth = 2;
+    rr(c, p.x - 14, p.y - 18, 28, 36, 4);
+    c.fill(); c.stroke();
+
+    c.strokeStyle = '#f59e0b';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.moveTo(p.x - 6, p.y - 10);
+    c.lineTo(p.x + 4, p.y);
+    c.lineTo(p.x - 2, p.y + 12);
+    c.stroke();
+
+    const hpPct = clamp(p.hp / p.maxHp, 0, 1);
+    c.fillStyle = 'rgba(0,0,0,0.75)';
+    c.fillRect(p.x - 16, p.y - 27, 32, 5);
+    c.fillStyle = '#f59e0b';
+    c.fillRect(p.x - 15, p.y - 26, 30 * hpPct, 3);
+  }
+}
+
+function drawTowerHeatGauges(c, time) {
+  if (!G || !G.towers) return;
+  for (const t of G.towers) {
+    if (t.type === 'relay') continue;
+    const heat = t.heat || 0;
+    if (heat < 15) continue;
+    const maxH = typeof THERMAL_CONFIG !== 'undefined' ? THERMAL_CONFIG.maxHeat : 100;
+    const pct = clamp(heat / maxH, 0, 1);
+    const col = pct >= 1 ? '#ef4444' : (pct >= 0.75 ? '#f97316' : '#f59e0b');
+
+    c.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    c.fillRect(t.x - 16, t.y + 20, 32, 4);
+    c.fillStyle = col;
+    c.fillRect(t.x - 15, t.y + 21, 30 * pct, 2);
+
+    if (pct >= 1) {
+      const flash = 0.5 + 0.5 * Math.sin(time * 12);
+      c.fillStyle = 'rgba(239, 68, 68, ' + (0.4 * flash) + ')';
+      c.beginPath();
+      c.arc(t.x, t.y, 26, 0, TAU);
+      c.fill();
     }
   }
 }

@@ -228,8 +228,37 @@ function renderInspector() {
     '<div class="note" style="border-left:3px solid ' + def.color + ';background:' + def.color + '15;color:#e2e8f0;font-size:9.5px;line-height:1.25;margin-top:4px">' +
     '<b style="color:' + def.color + '">★ ' + def.name.toUpperCase() + ':</b> ' + def.tip + '</div>' : '';
 
+  let thermalHtml = '';
+  if (!isRelay) {
+    const heat = Math.round(t.heat || 0);
+    const maxH = typeof THERMAL_CONFIG !== 'undefined' ? THERMAL_CONFIG.maxHeat : 100;
+    const isOverheated = heat >= maxH;
+    const heatColor = isOverheated ? '#ef4444' : (heat >= 75 ? '#f97316' : '#f59e0b');
+    thermalHtml = '<div style="margin:5px 0;padding:5px 8px;background:rgba(15,23,42,0.6);border:1px solid ' + (isOverheated ? '#ef4444' : 'rgba(255,255,255,0.1)') + ';border-radius:3px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-bottom:3px">' +
+      '<span style="color:#94a3b8">THERMAL HEAT</span>' +
+      '<span style="color:' + heatColor + '">' + heat + ' / ' + maxH + (isOverheated ? ' (THROTTLED -40%)' : '') + '</span>' +
+      '</div>' +
+      '<div style="width:100%;height:4px;background:#1e293b;border-radius:2px;overflow:hidden">' +
+      '<div style="width:' + Math.min(100, (heat / maxH) * 100) + '%;height:100%;background:' + heatColor + '"></div>' +
+      '</div>' +
+      '</div>';
+  }
+
+  let conduitHtml = '';
+  if (G && G.resonanceLines) {
+    const activeConduits = G.resonanceLines.filter(l => l.target === t || l.relay === t);
+    if (activeConduits.length > 0) {
+      conduitHtml = '<div style="margin:4px 0;display:flex;flex-wrap:wrap;gap:4px">' +
+        activeConduits.map(l => '<span class="tag" style="background:rgba(56,189,248,0.15);border:1px solid ' + l.conf.color + ';color:' + l.conf.color + ';font-size:8.5px">⚡ ' + l.conf.name.toUpperCase() + '</span>').join('') +
+        '</div>';
+    }
+  }
+
   box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
     '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + (t.branch ? def.branches[t.branch].color : def.color) + '">' + (t.branch ? def.branches[t.branch].name : def.name) + '</h4><small>' + tierTitle + ' · ' + t.kills + ' KILLS</small></div></div>' +
+    conduitHtml +
+    thermalHtml +
     leylineHtml +
     actsHtml +
     fusionHtml +
@@ -448,6 +477,19 @@ function refreshUI() {
       btnOv.textContent = 'OVERLOAD (V)';
       btnOv.style.color = '#f43f5e';
       btnOv.style.borderColor = 'rgba(244,63,94,0.4)';
+    }
+  }
+  if ($('vTpp')) $('vTpp').textContent = String((G && G.tpp) || 0);
+  const btnTp = $('btnThermalPurge');
+  if (btnTp && G) {
+    if (G.thermalPurgeCd > 0) {
+      btnTp.textContent = 'PURGE ' + Math.ceil(G.thermalPurgeCd) + 's';
+      btnTp.style.opacity = '0.5';
+      btnTp.disabled = true;
+    } else {
+      btnTp.textContent = 'PURGE [H]';
+      btnTp.style.opacity = '1';
+      btnTp.disabled = false;
     }
   }
   renderWaveCard();
@@ -784,6 +826,66 @@ function showOverlay(kind) {
       '<div class="codex-grid">' + anomaliesHtml + '</div>' +
       '<div style="display:flex;justify-content:center;margin-top:12px">' +
       '<button class="primary big" data-ov="close_codex">Close Archive</button>' +
+      '</div></div>';
+  } else if (kind === 'matrix') {
+    const tpp = (G && G.tpp) || 0;
+    const branches = [
+      { id: 'warfare', name: 'WARFARE OVERCLOCK', color: '#f43f5e', tag: 'OFFENSE' },
+      { id: 'grid', name: 'GRID ARCHITECTURE', color: '#38bdf8', tag: 'ENERGY' },
+      { id: 'logistics', name: 'LOGISTICS & RECON', color: '#34d399', tag: 'SURVIVAL' }
+    ];
+
+    const branchHtml = branches.map(br => {
+      const protos = Object.values(TACTICAL_MATRIX_PROTOCOLS).filter(p => p.branch === br.id);
+      protos.sort((a, b) => a.tier - b.tier);
+
+      const items = protos.map(p => {
+        const unlocked = hasMatrixProtocol(p.id);
+        const reqMet = !p.req || hasMatrixProtocol(p.req);
+        const canAfford = tpp >= p.cost;
+        let btnHtml = '';
+        if (unlocked) {
+          btnHtml = '<button class="draft-btn" disabled style="background:#15803d;color:#f0fdf4;font-weight:800;border:none">✔ PROTOCOL ENGAGED</button>';
+        } else if (!reqMet) {
+          const reqP = TACTICAL_MATRIX_PROTOCOLS[p.req];
+          btnHtml = '<button class="draft-btn" disabled style="background:#334155;color:#94a3b8;border:none">REQ: ' + (reqP ? reqP.name : 'TIER ' + (p.tier - 1)) + '</button>';
+        } else if (!canAfford) {
+          btnHtml = '<button class="draft-btn" disabled style="background:#475569;color:#cbd5e1;border:none">NEED ' + p.cost + ' TPP</button>';
+        } else {
+          btnHtml = '<button class="draft-btn primary" data-ov="unlock_matrix" data-proto="' + p.id + '" style="background:' + br.color + ';border-color:' + br.color + ';color:#0f172a;font-weight:800">ENGAGE PROTOCOL (' + p.cost + ' TPP)</button>';
+        }
+
+        return '<div class="matrix-card' + (unlocked ? ' active' : (!reqMet ? ' locked' : '')) + '" style="background:#0f172a;border:1px solid ' + (unlocked ? '#22c55e' : (reqMet ? br.color : '#334155')) + ';border-radius:4px;padding:8px;border-top:3px solid ' + br.color + '">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+          '<span class="draft-tag" style="background:#1e293b;color:' + br.color + ';border:1px solid ' + br.color + '44">TIER ' + p.tier + ' · ' + p.cost + ' TPP</span>' +
+          (unlocked ? '<span style="font-size:10px;font-weight:800;color:#34d399">ONLINE</span>' : '') +
+          '</div>' +
+          '<div class="draft-name" style="color:#f8fafc;font-size:12.5px;margin:2px 0 4px">' + p.name + '</div>' +
+          '<div class="draft-desc" style="font-size:10px;color:#94a3b8;margin-bottom:8px;line-height:1.3">' + p.desc + '</div>' +
+          btnHtml +
+          '</div>';
+      }).join('');
+
+      return '<div class="matrix-branch-col" style="display:flex;flex-direction:column;gap:8px">' +
+        '<div class="matrix-branch-hdr" style="border-left:3px solid ' + br.color + ';padding-left:8px;margin-bottom:4px">' +
+        '<b style="color:' + br.color + ';font-size:11.5px;letter-spacing:0.08em">' + br.name + '</b>' +
+        '</div>' +
+        items +
+        '</div>';
+    }).join('');
+
+    h = '<div class="draft-box" style="border-top-color:#818cf8;max-width:880px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<h2 style="margin:0;color:#818cf8;letter-spacing:.15em">⚡ TACTICAL PROTOCOL MATRIX</h2>' +
+      '<div class="chip" style="background:#1e1b4b;border:1px solid #818cf8;padding:4px 10px;display:flex;align-items:center;gap:6px">' +
+      '<span style="font-size:9.5px;color:#94a3b8;font-weight:700">TACTICAL PROTOCOL POINTS:</span>' +
+      '<b style="color:#818cf8;font-size:16px">' + tpp + ' TPP</b>' +
+      '</div>' +
+      '</div>' +
+      '<div class="sub">In-Run Synergistic Combat Protocols. Earn TPP from Flawless Wave Clears, Elite Hostiles, and Titans. Resets per run.</div>' +
+      '<div class="matrix-grid" style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;margin:12px 0 14px">' + branchHtml + '</div>' +
+      '<div style="display:flex;justify-content:center">' +
+      '<button class="primary big" data-ov="close_matrix">Resume Perimeter Defense</button>' +
       '</div></div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;

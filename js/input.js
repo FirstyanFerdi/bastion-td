@@ -292,6 +292,38 @@ function onPointerDown(e) {
     }
   }
 
+  // Interactive Spore Spires Clicking (Pilar 3)
+  if (G.sporeSpires && !G.casting) {
+    const p = canvasPos(e);
+    for (let i = G.sporeSpires.length - 1; i >= 0; i--) {
+      const sp = G.sporeSpires[i];
+      if (!sp.dead && Math.hypot(p.x - sp.x, p.y - sp.y) <= 24) {
+        sp.hp -= 80;
+        burst(sp.x, sp.y, 8, '#84cc16', 80, 0.3, 2.5, true);
+        addText(sp.x, sp.y - 20, '-80 STRIKE!', '#84cc16', 13);
+        Sfx.play('hit');
+        G.uiDirty = true;
+        return;
+      }
+    }
+  }
+
+  // Interactive Seismic Pillar Clicking (Pilar 5)
+  if (G.seismicPillars && !G.casting) {
+    const p = canvasPos(e);
+    for (let i = G.seismicPillars.length - 1; i >= 0; i--) {
+      const sp = G.seismicPillars[i];
+      if (sp.hp > 0 && Math.hypot(p.x - sp.x, p.y - sp.y) <= 24) {
+        sp.hp -= 90;
+        burst(sp.x, sp.y, 6, '#78716c', 70, 0.25, 2, false);
+        addText(sp.x, sp.y - 20, '-90 CRACK!', '#a8a29e', 12);
+        Sfx.play('hit');
+        G.uiDirty = true;
+        return;
+      }
+    }
+  }
+
   if (!G.hover) return;
   const { c, r } = G.hover;
   if (G.placing) {
@@ -339,6 +371,13 @@ function onKey(e) {
       showOverlay(isOpen ? (G && G.state === 'menu' ? 'menu' : null) : 'codex');
       break;
     }
+    case 't': case 'T': {
+      const ov = $('overlay');
+      const isOpen = ov && ov.classList.contains('show') && ov.innerHTML.includes('MATRIX');
+      showOverlay(isOpen ? (G && G.state === 'menu' ? 'menu' : null) : 'matrix');
+      break;
+    }
+    case 'h': case 'H': if (typeof triggerThermalPurge === 'function') triggerThermalPurge(); break;
     case 'v': case 'V': if (typeof triggerCoreOverload === 'function') triggerCoreOverload(); break;
     case 'Escape': G.placing = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
     case 'p': case 'P': togglePause(); break;

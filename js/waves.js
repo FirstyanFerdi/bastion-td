@@ -11,6 +11,7 @@ function startWave() {
   G.queue.sort((a, b) => a.at - b.at);
   G.state = 'active';
   G.leakedThisWave = 0;
+  G.emergencyBlackoutUsed = false;
   if (n > SAVE.bestWave) { SAVE.bestWave = n; Store.set('nb_bestWave', n); addCores(3); }
 
   // Living Hive Mutation Evaluation (wave >= 6)
@@ -102,6 +103,14 @@ function onWaveClear() {
   if (interest > 0) addText(W / 2, 118, 'interest +' + interest + (isVC ? ' (Venture Capital)' : ''), '#fbbf24', 16);
   const earnedCores = addCores(1);
   addText(W / 2, 142, '+' + earnedCores + ' Nanite Core' + (earnedCores > 1 ? 's' : ''), '#38bdf8', 14);
+
+  // 5.0 Tactical Protocol Point for Clean Clear
+  if (G.leakedThisWave === 0) {
+    G.tpp = (G.tpp || 0) + 1;
+    addText(W / 2, 164, '★ FLAWLESS DEFENSE: +1 TPP EARNED! ★', '#818cf8', 15);
+    burst(W / 2, 164, 20, '#818cf8', 120, 0.5, 3, true);
+    G.uiDirty = true;
+  }
   Sfx.play('coin');
 
   // Defense Contract evaluation & reward
@@ -404,7 +413,7 @@ function update(dt) {
 
   // Field Anomalies spawn and update (4.0)
   if (G.state === 'active') {
-    G.anomalySpawnCd = (G.anomalySpawnCd || 25) - dt;
+    G.anomalySpawnCd = (G.anomalySpawnCd !== undefined ? G.anomalySpawnCd : 25) - dt;
     if (G.anomalySpawnCd <= 0 && (!G.anomalies || G.anomalies.length < 2)) {
       G.anomalySpawnCd = rand(22, 35);
       spawnFieldAnomaly();
@@ -442,6 +451,153 @@ function update(dt) {
         if (an.life <= 0) {
           G.anomalies.splice(i, 1);
           burst(an.x, an.y, 20, '#818cf8', 110, 0.5, 3, true);
+        }
+      }
+    }
+  }
+
+  // 5.0 Thermal Steam Purge Cooldown
+  if (G.thermalPurgeCd > 0) G.thermalPurgeCd = Math.max(0, G.thermalPurgeCd - dt);
+
+  // 5.0 Emergency Grid EMP (Logistics Protocol)
+  if (typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('emergency_blackout') && !G.emergencyBlackoutUsed && G.lives <= 6 && G.lives > 0 && G.state === 'active') {
+    G.emergencyBlackoutUsed = true;
+    shake(16);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+    addRing(W / 2, H / 2, 20, Math.max(W, H), 0.85, '#818cf8', 6);
+    addText(W / 2, 85, 'EMERGENCY GRID EMP ACTIVATED! (3.5s STUN)', '#818cf8', 18);
+    for (const e of G.enemies) {
+      if (!e.dead) {
+        e.stunT = Math.max(e.stunT || 0, 3.5);
+        burst(e.x, e.y, 8, '#818cf8', 90, 0.4, 2.5, true);
+      }
+    }
+  }
+
+  // 5.0 Grid Resonance Laser Beams Active Processing (Pilar 1)
+  if (G.resonanceLines && G.resonanceLines.length > 0 && typeof distToSeg === 'function') {
+    const isWide = typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('prism_beam_width');
+    const beamRadius = isWide ? 22 : 12;
+    const dmgBoost = isWide ? 1.5 : 1.0;
+    for (const l of G.resonanceLines) {
+      if (!l.conf) continue;
+      const dps = l.conf.dps * dmgBoost * dt;
+      // Enemy intersection check
+      for (const e of G.enemies) {
+        if (e.dead) continue;
+        if (distToSeg(e.x, e.y, l.x1, l.y1, l.x2, l.y2) <= (beamRadius + e.r)) {
+          let dmgType = 'energy';
+          if (l.type === 'incinerator_beam') dmgType = 'plasma';
+          else if (l.type === 'stasis_line') dmgType = 'cryo';
+          else if (l.type === 'sensor_wire') dmgType = 'phys';
+          dealDamage(e, dps, dmgType, l.target || l.relay, { noReaction: false });
+
+          if (l.type === 'stasis_line') {
+            e.slowAmt = Math.max(e.slowAmt, 0.55); e.slowT = 0.5;
+            e.brittle = Math.max(e.brittle, 0.25); e.brittleT = 1.0;
+          } else if (l.type === 'sensor_wire') {
+            e.revealT = 1.5;
+            if (e.armor > 0) e.shred = Math.min(e.armor, (e.shred || 0) + e.armor * 0.25 * dt);
+          } else if (l.type === 'ion_plasma' && Math.random() < 0.15) {
+            for (const o of G.enemies) {
+              if (o.dead || o === e) continue;
+              if (Math.hypot(o.x - e.x, o.y - e.y) <= 80) {
+                addBolt(e.x, e.y, o.x, o.y, '#facc15');
+                dealDamage(o, 25 * dt, 'energy', l.target);
+                break;
+              }
+            }
+          }
+        }
+      }
+      // Resonance beam cleanses biomass creep along its trajectory
+      if (G.creep && Object.keys(G.creep).length > 0 && typeof cleanseBiomassCreep === 'function') {
+        for (const key in G.creep) {
+          const [cr, cc] = key.split(',').map(Number);
+          const cx = cc * TILE + TILE / 2, cy = cr * TILE + TILE / 2;
+          if (distToSeg(cx, cy, l.x1, l.y1, l.x2, l.y2) <= (beamRadius + 18)) {
+            cleanseBiomassCreep(cc, cr);
+          }
+        }
+      }
+    }
+  }
+
+  // 5.0 Biomass Creep Lifetime Decay (Pilar 3)
+  if (G.creep) {
+    for (const key in G.creep) {
+      const cr = G.creep[key];
+      cr.life -= dt;
+      if (cr.life <= 0) delete G.creep[key];
+    }
+  }
+
+  // 5.0 Spore Spires Spawning & Combat AI (Pilar 3)
+  if (G.state === 'active' && G.wave >= 7 && typeof BIOMASS_CONFIG !== 'undefined') {
+    G.sporeSpires = G.sporeSpires || [];
+    G.spireSpawnCd = (G.spireSpawnCd !== undefined ? G.spireSpawnCd : 20) - dt;
+    if (G.spireSpawnCd <= 0 && G.sporeSpires.length < 2) {
+      G.spireSpawnCd = rand(22, 35);
+      const candidates = [];
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if ((r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) && !pathTile[r][c] && !G.grid[r][c]) {
+            if (!G.sporeSpires.some(s => s.r === r && s.c === c)) candidates.push({ r, c });
+          }
+        }
+      }
+      if (candidates.length > 0) {
+        const pick = candidates[Math.floor(Math.random() * candidates.length)];
+        const sp = {
+          r: pick.r, c: pick.c, x: pick.c * TILE + TILE / 2, y: pick.r * TILE + TILE / 2,
+          hp: BIOMASS_CONFIG.spireMaxHp, maxHp: BIOMASS_CONFIG.spireMaxHp,
+          fireCd: 4.0, dead: false
+        };
+        G.sporeSpires.push(sp);
+        if (typeof addBiomassCreep === 'function') addBiomassCreep(pick.c, pick.r);
+        burst(sp.x, sp.y, 25, '#84cc16', 140, 0.6, 4, true);
+        addRing(sp.x, sp.y, 10, 60, 0.5, '#a3e635', 4);
+        shake(6);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('spore_burst');
+        addText(sp.x, sp.y - 25, 'SPORE SPIRE ERUPTED!', '#84cc16', 15);
+      }
+    }
+
+    // Update active spires
+    for (let i = G.sporeSpires.length - 1; i >= 0; i--) {
+      const sp = G.sporeSpires[i];
+      if (sp.dead || sp.hp <= 0) {
+        G.sporeSpires.splice(i, 1);
+        if (typeof cleanseBiomassCreep === 'function') cleanseBiomassCreep(sp.c, sp.r);
+        const isScavenger = typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('contraband_scavenger');
+        const rewG = isScavenger ? Math.round(BIOMASS_CONFIG.spireRewardGold * 1.5) : BIOMASS_CONFIG.spireRewardGold;
+        const rewC = isScavenger ? BIOMASS_CONFIG.spireRewardCores * 2 : BIOMASS_CONFIG.spireRewardCores;
+        G.gold += rewG;
+        addCores(rewC);
+        burst(sp.x, sp.y, 35, '#84cc16', 180, 0.7, 5, true);
+        shake(8);
+        addText(sp.x, sp.y - 20, '+' + rewG + 'G +' + rewC + ' CORES', '#84cc16', 16);
+        continue;
+      }
+      sp.fireCd -= dt;
+      if (sp.fireCd <= 0) {
+        sp.fireCd = BIOMASS_CONFIG.spireFireInterval;
+        const neighbors = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+        const nb = neighbors[Math.floor(Math.random() * neighbors.length)];
+        if (typeof addBiomassCreep === 'function') addBiomassCreep(sp.c + nb[0], sp.r + nb[1]);
+        addRing(sp.x, sp.y, 8, 120, 0.45, '#84cc16', 3);
+        for (const e of G.enemies) {
+          if (!e.dead && Math.hypot(e.x - sp.x, e.y - sp.y) <= 120) {
+            e.hp = Math.min(e.maxHp, e.hp + 120);
+            e.dispHp = e.hp;
+            burst(e.x, e.y, 4, '#84cc16', 50, 0.25, 2, false);
+          }
+        }
+        if (G.towers.length > 0) {
+          const tgtT = G.towers[Math.floor(Math.random() * G.towers.length)];
+          tgtT.empT = Math.max(tgtT.empT || 0, 3.0);
+          burst(tgtT.x, tgtT.y, 10, '#84cc16', 80, 0.4, 3, false);
+          addText(tgtT.x, tgtT.y - 20, 'SPORE SLUDGE (-3s)', '#84cc16', 12);
         }
       }
     }

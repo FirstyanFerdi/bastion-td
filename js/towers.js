@@ -55,14 +55,20 @@ function getGridPowerStatus() {
     if (t.type === 'relay') {
       if (t.shutdownT > 0) continue; // In thermal shutdown, provides 0 MW
       const st = getTierData(t);
-      capacity += st.powerSupply || 25;
+      capacity += (st.powerSupply || 25);
     } else if (t.type === 'fusion_zero') {
       capacity += 50; // Absolute Zero Core clean power supply
     } else {
       used += getTowerPower(t.type, t.tier);
     }
   }
-  const isBrownout = used > capacity;
+  if (typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('zero_point_relay')) {
+    capacity += 20 * G.towers.filter(t => t.type === 'relay').length;
+  }
+  let isBrownout = used > capacity;
+  if (typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('zero_point_relay')) {
+    isBrownout = false;
+  }
   const pct = capacity > 0 ? used / capacity : 1;
   return { used, capacity, isBrownout, pct };
 }
@@ -166,8 +172,21 @@ function swapTowers(t1, t2) {
   if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
   addText(x1, y1 - 25, 'SHIFTED!', '#38bdf8', 14);
   addText(x2, y2 - 25, 'SHIFTED!', '#38bdf8', 14);
+  if (typeof updateResonanceConduits === 'function') updateResonanceConduits();
   G.uiDirty = true;
   return true;
+}
+
+function addTowerHeat(t, baseHeat) {
+  if (!t || t.type === 'relay') return;
+  let mult = 1.0;
+  if (typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('conduit_supercharge')) {
+    if (G && G.resonanceLines && G.resonanceLines.some(l => l.target === t || l.relay === t)) {
+      mult *= 0.75;
+    }
+  }
+  const maxH = typeof THERMAL_CONFIG !== 'undefined' ? THERMAL_CONFIG.maxHeat : 100;
+  t.heat = Math.min(maxH, (t.heat || 0) + baseHeat * mult);
 }
 
 function placeTower(col, row, type) {
@@ -192,6 +211,7 @@ function placeTower(col, row, type) {
     burst(t.x, t.y, 18, t.leyline.color, 130, 0.55, 3.5, true);
     addText(t.x, t.y - 24, t.leyline.name.toUpperCase(), t.leyline.color, 12);
   }
+  if (typeof updateResonanceConduits === 'function') updateResonanceConduits();
   Sfx.play('place');
   return t;
 }
@@ -214,6 +234,7 @@ function upgradeTower(t, branch) {
   const col = t.branch ? def.branches[t.branch].color : def.color;
   burst(t.x, t.y, 26, col, 150, 0.7, 3.5, false);
   addRing(t.x, t.y, 8, 60, 0.5, col, 4);
+  if (typeof updateResonanceConduits === 'function') updateResonanceConduits();
   Sfx.play('upgrade'); G.uiDirty = true;
 }
 function sellTower(t) {
@@ -228,6 +249,7 @@ function sellTower(t) {
   if (G.sel === t) G.sel = null;
   burst(t.x, t.y, 22, '#fbbf24', 120, 0.6, 3, true);
   addText(t.x, t.y - 20, '+' + v, '#fbbf24', 16);
+  if (typeof updateResonanceConduits === 'function') updateResonanceConduits();
   Sfx.play('sell'); G.uiDirty = true;
 }
 
@@ -283,6 +305,39 @@ function updateTower(t, dt) {
   if (G.mutator && G.mutator.id === 'overcharge_anomaly') rateMult *= 1.30;
   if (t.leyline && t.leyline.id === 'accelerator') rateMult *= 1.45;
 
+  // 5.0 Thermodynamics: Natural & Cryo Heat Dissipation (Pilar 2)
+  let dissipation = (typeof THERMAL_CONFIG !== 'undefined' ? THERMAL_CONFIG.naturalDissipation : 8.0);
+  for (const o of G.towers) {
+    if (o !== t && (o.type === 'cryo' || o.type === 'fusion_zero')) {
+      if ((o.x - t.x) ** 2 + (o.y - t.y) ** 2 <= (1.8 * TILE) ** 2) {
+        dissipation += (typeof THERMAL_CONFIG !== 'undefined' ? THERMAL_CONFIG.cryoDissipationBonus : 16.0);
+        break;
+      }
+    }
+  }
+  t.heat = Math.max(0, (t.heat || 0) - dt * dissipation);
+
+  // 5.0 Thermal Overheat Throttle (-40% Fire Rate)
+  const maxH = typeof THERMAL_CONFIG !== 'undefined' ? THERMAL_CONFIG.maxHeat : 100;
+  if ((t.heat || 0) >= maxH) {
+    rateMult *= (typeof THERMAL_CONFIG !== 'undefined' ? THERMAL_CONFIG.overheatPenalty : 0.60);
+    if (Math.random() < 0.12) {
+      burst(t.x, t.y - 12, 1, 'rgba(241,245,249,0.5)', 35, 0.35, 2, false);
+    }
+  }
+
+  // 5.0 Tactical Protocol: Conduit Supercharge (+20% fire rate)
+  if (typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('conduit_supercharge')) {
+    if (G && G.resonanceLines && G.resonanceLines.some(l => l.target === t || l.relay === t)) {
+      rateMult *= 1.20;
+    }
+  }
+
+  // 5.0 Living Biomass Creep Entanglement (-25% fire rate if tower is on creep tile)
+  if (G && G.creep && G.creep[t.r + ',' + t.c]) {
+    rateMult *= 0.75;
+  }
+
   // Power Grid: Brownout penalty
   const gp = getGridPowerStatus();
   if (gp.isBrownout) rateMult *= 0.65;
@@ -309,7 +364,7 @@ function updateTower(t, dt) {
 
   let effRate = st.rate * rateMult;
   if (t.type === 'gatling' && t.branch === 'A') {
-    effRate = lerp(st.rate, st.maxRate, t.heat || 0) * rateMult;
+    effRate = lerp(st.rate, st.maxRate, t.spinup || 0) * rateMult;
   }
   t.charge = clamp(1 - t.cd * effRate, 0, 1);
   const sensorRangeBonus = (t.leyline && t.leyline.id === 'sensor') ? 2.5 * TILE : 0;
@@ -335,8 +390,8 @@ function updateTower(t, dt) {
   t.spin += t.spinV * dt;
 
   if (t.type === 'gatling' && t.branch === 'A') {
-    if (target) t.heat = Math.min(1, (t.heat || 0) + dt * 0.45);
-    else t.heat = Math.max(0, (t.heat || 0) - dt * 0.6);
+    if (target) t.spinup = Math.min(1, (t.spinup || 0) + dt * 0.45);
+    else t.spinup = Math.max(0, (t.spinup || 0) - dt * 0.6);
   }
 
   if (t.type === 'tesla') {
@@ -363,6 +418,7 @@ function updateTower(t, dt) {
   }
 }
 function fireGatling(t, st, e) {
+  addTowerHeat(t, 1.2);
   const mx = t.x + Math.cos(t.angle) * (28 + t.tier * 3), my = t.y + Math.sin(t.angle) * (28 + t.tier * 3);
   t.recoil = 1; t.flash = 1;
   const isFlak = t.branch === 'B';
@@ -384,6 +440,7 @@ function fireGatling(t, st, e) {
 }
 const PLASMA_SPD = 430;
 function firePlasma(t, st, e) {
+  addTowerHeat(t, 6.0);
   const mx = t.x + Math.cos(t.angle) * 30, my = t.y + Math.sin(t.angle) * 30;
   const dist = Math.hypot(e.x - mx, e.y - my), tt = dist / PLASMA_SPD;
   let tx = e.x, ty = e.y;
@@ -458,6 +515,7 @@ function explode(p) {
   }
 }
 function cryoPulse(t, st, rangePx, effRate) {
+  addTowerHeat(t, 2.5);
   t.cd = 1 / effRate; t.pulseN++; t.flash = 1;
   const isAbsZero = t.branch === 'A', isVortex = t.branch === 'B';
   const isCat = !!(t.leyline && t.leyline.id === 'catalyst');
@@ -489,6 +547,7 @@ function cryoPulse(t, st, rangePx, effRate) {
 }
 const BOUNCE = 1.8;
 function fireTesla(t, st, e) {
+  addTowerHeat(t, 4.0);
   const hit = [e];
   // Hive Mutation: Grounding Rubber Hulls restricts chain bounce to 1
   const bonusTargets = (G && G.sector === 'abyssal') ? 2 : 0; // Sektor 07: Water conductivity (+2 targets)
@@ -534,6 +593,7 @@ function fireTesla(t, st, e) {
   Sfx.play('tesla');
 }
 function fireRail(t, st, e) {
+  addTowerHeat(t, 14.0);
   const a = t.angle, dx = Math.cos(a), dy = Math.sin(a);
   const len = st.range * TILE + 30, mx = t.x + dx * (34 + t.tier * 4), my = t.y + dy * (34 + t.tier * 4);
   let crit = Math.random() < (st.crit + (hasPerk('targeting_matrix') ? 0.10 : 0));
@@ -610,6 +670,7 @@ function fireRail(t, st, e) {
    SUPER-WEAPON FIRING ROUTINES (4.0)
    ============================================================ */
 function fireHellfire(t, st, e) {
+  addTowerHeat(t, 5.0);
   const a = t.angle;
   const mx1 = t.x + Math.cos(a - 0.22) * 32, my1 = t.y + Math.sin(a - 0.22) * 32;
   const mx2 = t.x + Math.cos(a + 0.22) * 32, my2 = t.y + Math.sin(a + 0.22) * 32;
@@ -628,6 +689,7 @@ function fireHellfire(t, st, e) {
 }
 
 function fireDeathRay(t, st, e) {
+  addTowerHeat(t, 10.0);
   const a = t.angle, dx = Math.cos(a), dy = Math.sin(a);
   const ex = t.x + dx * (st.range * TILE), ey = t.y + dy * (st.range * TILE);
   t.flash = 1; t.recoil = 1;
@@ -670,6 +732,7 @@ function updateZeroCore(t, st, dt) {
   t.pulseT = (t.pulseT || 12.0) - dt;
   if (t.pulseT <= 0) {
     t.pulseT = 12.0;
+    addTowerHeat(t, 15.0);
     shake(12);
     if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('freeze');
     addRing(t.x, t.y, 20, Math.max(W, H), 0.8, '#38bdf8', 6);
@@ -684,6 +747,7 @@ function updateZeroCore(t, st, dt) {
 }
 
 function fireAntimatter(t, st, e) {
+  addTowerHeat(t, 8.0);
   const mx = t.x + Math.cos(t.angle) * 32, my = t.y + Math.sin(t.angle) * 32;
   t.recoil = 1; t.flash = 1;
   G.proj.push({

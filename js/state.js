@@ -83,7 +83,15 @@ function newGame(keepSpeed) {
     anomalies: [],
     anomalySpawnCd: 22,
     hivePressure: { phys: 0, energy: 0, cryo: 0, cluster: 0 },
-    smugglerOffered: {}
+    smugglerOffered: {},
+    tpp: 0,
+    matrixUnlocked: {},
+    creep: {},
+    sporeSpires: [],
+    resonanceLines: [],
+    thermalPurgeCd: 0,
+    seismicPillars: [],
+    emergencyBlackoutUsed: false
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -272,6 +280,156 @@ function fuseTowers(t1, t2) {
   addRing(t2.x, t2.y, 10, 80, 0.5, recipe.color, 4);
   addText(t1.x, t1.y - 32, 'SUPER-WEAPON FUSED: ' + recipe.name.toUpperCase() + '!', recipe.color, 16);
   if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery(recipe.id, 'fusion');
+  if (typeof updateResonanceConduits === 'function') updateResonanceConduits();
+  G.uiDirty = true;
+  return true;
+}
+
+/* ============================================================
+   GRID RESONANCE BEAM CONDUITS (5.0)
+   ============================================================ */
+function updateResonanceConduits() {
+  if (!G || !G.towers || typeof RESONANCE_CONDUITS === 'undefined') return;
+  const lines = [];
+  const relays = G.towers.filter(t => t.type === 'relay' || t.type === 'fusion_zero');
+
+  const DIRS = [
+    [0, 1], [0, -1], [1, 0], [-1, 0],
+    [1, 1], [1, -1], [-1, 1], [-1, -1]
+  ];
+
+  for (const relay of relays) {
+    if (relay.shutdownT > 0) continue;
+    for (const [dc, dr] of DIRS) {
+      for (let dist = 1; dist <= 5; dist++) {
+        const nc = relay.c + dc * dist, nr = relay.r + dr * dist;
+        if (nc < 0 || nr < 0 || nc >= COLS || nr >= ROWS) break;
+        const target = G.grid[nr][nc];
+        if (target) {
+          if (target !== relay) {
+            let cKey = 'hyper_bridge';
+            if (target.type === 'tesla') cKey = 'ion_plasma';
+            else if (target.type === 'cryo' || target.type === 'fusion_zero') cKey = 'stasis_line';
+            else if (target.type === 'gatling' || target.type === 'fusion_hellfire') cKey = 'sensor_wire';
+            else if (target.type === 'plasma' || target.type === 'fusion_antimatter') cKey = 'incinerator_beam';
+            else if (target.type === 'rail' || target.type === 'fusion_deathray') cKey = 'singularity_cord';
+
+            const conf = RESONANCE_CONDUITS[cKey] || RESONANCE_CONDUITS.hyper_bridge;
+            const lineId = [Math.min(relay.c, target.c), Math.min(relay.r, target.r), Math.max(relay.c, target.c), Math.max(relay.r, target.r)].join('_');
+            if (!lines.some(l => l.id === lineId)) {
+              lines.push({
+                id: lineId,
+                type: cKey,
+                relay,
+                target,
+                x1: relay.x, y1: relay.y,
+                x2: target.x, y2: target.y,
+                c1: relay.c, r1: relay.r,
+                c2: target.c, r2: target.r,
+                conf
+              });
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+  G.resonanceLines = lines;
+}
+
+/* ============================================================
+   THERMODYNAMICS & HEAT PURGE (5.0)
+   ============================================================ */
+function triggerThermalPurge() {
+  if (!G || G.thermalPurgeCd > 0) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  const isTurbo = hasMatrixProtocol('thermal_purge_turbo');
+  const cd = isTurbo ? THERMAL_CONFIG.purgeCooldown * 0.5 : THERMAL_CONFIG.purgeCooldown;
+  const dmg = isTurbo ? THERMAL_CONFIG.purgeDamage + 250 : THERMAL_CONFIG.purgeDamage;
+
+  G.thermalPurgeCd = cd;
+  for (const t of G.towers) {
+    if (t.heat > 0) {
+      t.heat = 0;
+      burst(t.x, t.y, 10, '#cbd5e1', 90, 0.4, 3, true);
+    }
+  }
+
+  shake(12);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('steam_purge');
+  addRing(W / 2, H / 2, 20, Math.max(W, H), 0.85, '#cbd5e1', 6);
+  burst(W / 2, H / 2, 50, '#f8fafc', 260, 0.8, 5, true);
+  addText(W / 2, 90, '⚡ THERMAL STEAM PURGE ACTIVATED!', '#cbd5e1', 20);
+
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    dealDamage(e, dmg, 'plasma', null);
+  }
+
+  G.creep = {};
+  G.uiDirty = true;
+  return true;
+}
+
+/* ============================================================
+   BIOMASS CREEP & SPORE EXPANSION (5.0)
+   ============================================================ */
+function addBiomassCreep(col, row) {
+  if (!G || col < 0 || row < 0 || col >= COLS || row >= ROWS) return;
+  G.creep = G.creep || {};
+  const key = row + ',' + col;
+  if (!G.creep[key]) {
+    G.creep[key] = { r: row, c: col, life: 25.0 };
+    burst(col * TILE + TILE / 2, row * TILE + TILE / 2, 6, '#84cc16', 70, 0.4, 2.5, true);
+  } else {
+    G.creep[key].life = 25.0;
+  }
+}
+
+function cleanseBiomassCreep(col, row) {
+  if (!G || !G.creep) return;
+  const key = row + ',' + col;
+  if (G.creep[key]) {
+    delete G.creep[key];
+    burst(col * TILE + TILE / 2, row * TILE + TILE / 2, 8, '#f8fafc', 90, 0.35, 2.5, true);
+    if (Math.random() < 0.25) {
+      G.gold += 3;
+      addText(col * TILE + TILE / 2, row * TILE + TILE / 2 - 12, '+3G BIO-SALVAGE', '#34d399', 11);
+    }
+  }
+}
+
+/* ============================================================
+   TACTICAL PROTOCOL MATRIX (5.0)
+   ============================================================ */
+function hasMatrixProtocol(id) {
+  return Boolean(G && G.matrixUnlocked && G.matrixUnlocked[id]);
+}
+
+function unlockMatrixProtocol(id) {
+  if (!G || typeof TACTICAL_MATRIX_PROTOCOLS === 'undefined') return false;
+  const proto = TACTICAL_MATRIX_PROTOCOLS[id];
+  if (!proto) return false;
+  if (G.matrixUnlocked && G.matrixUnlocked[id]) return false;
+  if (proto.req && (!G.matrixUnlocked || !G.matrixUnlocked[proto.req])) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  if ((G.tpp || 0) < proto.cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.tpp -= proto.cost;
+  G.matrixUnlocked = G.matrixUnlocked || {};
+  G.matrixUnlocked[id] = true;
+  shake(8);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('matrix_unlock');
+  burst(W / 2, 90, 30, '#818cf8', 180, 0.7, 4, true);
+  addRing(W / 2, 90, 10, 80, 0.5, '#818cf8', 4);
+  addText(W / 2, 90, 'PROTOCOL ENGAGED: ' + proto.name.toUpperCase(), '#818cf8', 18);
   G.uiDirty = true;
   return true;
 }
@@ -356,6 +514,38 @@ function dealDamage(e, amount, type, src, opts) {
     burst(e.x, e.y, 4, '#fb7185', 65, 0.25, 2.5, false);
     addText(e.x, e.y - e.r - 18, 'CHITIN DEFLECT (' + e.chitinHits + ')', '#fb7185', 11);
     return 0;
+  }
+
+  // 5.0 Titan Boss Goliath: Line-of-sight blockage by Seismic Pillars
+  if (G && G.seismicPillars && G.seismicPillars.length > 0 && src && type !== 'cryo' && typeof distToSeg === 'function') {
+    for (const p of G.seismicPillars) {
+      if (p.hp > 0 && distToSeg(p.x, p.y, src.x, src.y, e.x, e.y) <= (p.r || 24)) {
+        p.hp -= Math.min(p.hp, a);
+        burst(p.x, p.y, 6, '#78716c', 60, 0.25, 2, false);
+        addText(p.x, p.y - 20, 'SEISMIC BLOCK', '#a8a29e', 11);
+        if (p.hp <= 0) {
+          burst(p.x, p.y, 22, '#d6d3d1', 140, 0.5, 4, true);
+          shake(5);
+          addText(p.x, p.y - 25, 'PILLAR COLLAPSED', '#f59e0b', 13);
+        }
+        return 0; // intercepted by stone pillar
+      }
+    }
+  }
+
+  // 5.0 Tactical Matrix Protocol: Sabot Armor-Piercing (+20% shred & +15% phys dmg)
+  if (hasMatrixProtocol('sabot_pierce')) {
+    if (e.armor > 0) e.shred = Math.min(e.armor, (e.shred || 0) + e.armor * 0.20);
+    if (type === 'phys') a *= 1.15;
+  }
+
+  // 5.0 Tactical Matrix Protocol: Apex Executioner (<15% HP executed)
+  if (hasMatrixProtocol('execution_protocol') && e.type !== 'boss' && !e.dead) {
+    if ((e.hp / e.maxHp) <= 0.15) {
+      a = e.hp + 999;
+      burst(e.x, e.y, 14, '#ef4444', 130, 0.4, 3, true);
+      addText(e.x, e.y - e.r - 20, 'APEX EXECUTION!', '#ef4444', 14);
+    }
   }
 
   // Hive Mutation: Cryo-Thermal Insulation (Adrenaline speed surge on cold)
@@ -545,7 +735,24 @@ function dealDamage(e, amount, type, src, opts) {
   }
   if (src && src.type === 'gatling' && hasPerk('depleted_uranium')) { e.bleedT = 2.5; e.bleedDps = 15; }
   if (src && src.type === 'tesla' && hasPerk('superconductor')) { e.brittle = Math.max(e.brittle, 0.25); e.brittleT = 2.5; }
-  if (opts.crit) addText(e.x, e.y - e.r - 14, 'CRIT ' + Math.round(a), '#fde047', 17);
+  if (opts.crit) {
+    addText(e.x, e.y - e.r - 14, 'CRIT ' + Math.round(a), '#fde047', 17);
+    // 5.0 Tactical Matrix Protocol: Critical Cascade (25% chance of secondary explosion)
+    if (hasMatrixProtocol('critical_cascade') && !opts.isCascade && Math.random() < 0.25) {
+      burst(e.x, e.y, 12, '#fbbf24', 110, 0.4, 3, true);
+      addRing(e.x, e.y, 6, 60, 0.35, '#fde047', 3);
+      addText(e.x, e.y - e.r - 26, 'CRIT CASCADE!', '#fbbf24', 13);
+      let hits = 0;
+      for (const o of G.enemies) {
+        if (o.dead || o === e) continue;
+        if ((o.x - e.x) ** 2 + (o.y - e.y) ** 2 <= 75 * 75) {
+          dealDamage(o, a * 0.45, type, src, { isCascade: true, noReaction: true });
+          hits++;
+          if (hits >= 2) break;
+        }
+      }
+    }
+  }
   else e.dmgAcc += a;
   if (src) src.dmg += a;
   Sfx.play('hit');
@@ -563,6 +770,28 @@ function killEnemy(e, src) {
   const finalScore = Math.round(e.reward * 10 * scoreStreakMult);
   G.gold += finalReward; G.score += finalScore; G.kills++;
   if (src) src.kills++;
+
+  // 5.0 Biomass Creep Drop on Brute/Healer/Carrier kills
+  if ((e.type === 'brute' || e.type === 'healer' || e.type === 'carrier') && Math.random() < (typeof BIOMASS_CONFIG !== 'undefined' ? BIOMASS_CONFIG.sporeDropChance : 0.55)) {
+    addBiomassCreep(Math.floor(e.x / TILE), Math.floor(e.y / TILE));
+  }
+
+  // 5.0 Tactical Protocol Points (TPP) Earning
+  if (e.affix) {
+    G.tpp = (G.tpp || 0) + 1;
+    burst(e.x, e.y, 8, '#818cf8', 90, 0.4, 2.5, true);
+    addText(e.x, e.y - e.r - 20, '+1 TPP', '#818cf8', 13);
+    G.uiDirty = true;
+  }
+  if (e.type === 'boss') {
+    G.tpp = (G.tpp || 0) + 2;
+    addText(e.x, e.y - 70, '+2 TPP', '#818cf8', 16);
+    G.uiDirty = true;
+    if (hasMatrixProtocol('contraband_scavenger')) {
+      addCores(10);
+      addText(e.x, e.y - 90, '+10 CORES (SCAVENGER)', '#38bdf8', 14);
+    }
+  }
 
   // Cursed Protocol: Glass Singularity penalty on kill
   if (G && G.cursedProtocols && G.cursedProtocols.includes('glass_singularity')) {

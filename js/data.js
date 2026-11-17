@@ -1092,3 +1092,107 @@ function buildSpawns(n) {
   ev.sort((a, b) => a.t - b.t);
   return ev;
 }
+
+/* ============================================================
+   BASTION TD 5.0: DEEP INTERCONNECTED MATRIX DEFINITIONS
+   ============================================================ */
+
+const RESONANCE_CONDUITS = {
+  ion_plasma: {
+    id: 'ion_plasma', pair: 'tesla', name: 'Ion Plasma Arc', color: '#facc15',
+    dps: 55, chainChance: 0.20, chainDmg: 45, tip: 'Energy laser with 20% chain lightning zap'
+  },
+  stasis_line: {
+    id: 'stasis_line', pair: 'cryo', name: 'Supercooled Stasis Line', color: '#06b6d4',
+    dps: 25, slow: 0.55, brittle: 0.25, tip: '55% slow & instant brittle vulnerability'
+  },
+  sensor_wire: {
+    id: 'sensor_wire', pair: 'gatling', name: 'Kinetic Sensor Wire', color: '#22d3ee',
+    dps: 40, shred: 0.35, revealStealth: true, tip: 'Unmasks stealth & 35% armor shred'
+  },
+  incinerator_beam: {
+    id: 'incinerator_beam', pair: 'plasma', name: 'Thermite Incinerator Beam', color: '#f97316',
+    dps: 70, magmaDuration: 3.0, tip: 'Lingering magma burns + 30% splash radius boost'
+  },
+  hyper_bridge: {
+    id: 'hyper_bridge', pair: 'relay', name: 'Hyper-Capacity Grid Bridge', color: '#10b981',
+    dps: 30, powerBoost: 1.0, tip: 'Double MW power output for both linked relays'
+  },
+  singularity_cord: {
+    id: 'singularity_cord', pair: 'rail', name: 'Tachyon Singularity Cord', color: '#e11d48',
+    dps: 85, critBonus: 0.25, tip: 'Extreme piercing laser with +25% critical hit rate'
+  }
+};
+
+const THERMAL_CONFIG = {
+  maxHeat: 100,
+  overheatThreshold: 100,
+  overheatPenalty: 0.60, // -40% fire rate
+  naturalDissipation: 8.0, // heat lost per second
+  cryoDissipationBonus: 16.0, // extra heat lost if near Cryo tower
+  purgeCooldown: 25.0,
+  purgeDamage: 220,
+  purgeRadius: 175
+};
+
+const BIOMASS_CONFIG = {
+  sporeDropChance: 0.55,
+  creepSpeedMult: 1.30, // +30% speed on infested tiles
+  spireMaxHp: 650,
+  spireFireInterval: 6.0,
+  spireRewardGold: 45,
+  spireRewardCores: 5
+};
+
+const TACTICAL_MATRIX_PROTOCOLS = {
+  // Branch 1: Warfare Overclock
+  sabot_pierce: {
+    id: 'sabot_pierce', branch: 'warfare', name: 'Sabot Armor-Piercing', cost: 1, icon: 'target',
+    desc: '+20% Armor Shred and +15% physical damage across all friendly defenses.',
+    tier: 1
+  },
+  critical_cascade: {
+    id: 'critical_cascade', branch: 'warfare', name: 'Critical Cascade', cost: 2, icon: 'boom',
+    desc: 'Critical hits have a 25% chance to trigger an explosive secondary blast hitting 2 nearby foes.',
+    req: 'sabot_pierce', tier: 2
+  },
+  execution_protocol: {
+    id: 'execution_protocol', branch: 'warfare', name: 'Apex Executioner', cost: 3, icon: 'crosshair',
+    desc: 'Non-boss hostiles falling below 15% Max HP are executed instantly by any incoming hit.',
+    req: 'critical_cascade', tier: 3
+  },
+
+  // Branch 2: Grid Architecture
+  prism_beam_width: {
+    id: 'prism_beam_width', branch: 'grid', name: 'Prism Beam Amplification', cost: 1, icon: 'zap',
+    desc: 'Resonance Beams deal +50% DPS and their contact hitbox width is doubled.',
+    tier: 1
+  },
+  conduit_supercharge: {
+    id: 'conduit_supercharge', branch: 'grid', name: 'Conduit Supercharge', cost: 2, icon: 'bolt',
+    desc: 'Towers linked to an active Resonance Conduit gain +20% fire rate and -25% heat build-up.',
+    req: 'prism_beam_width', tier: 2
+  },
+  zero_point_relay: {
+    id: 'zero_point_relay', branch: 'grid', name: 'Zero-Point Hyper-Grid', cost: 3, icon: 'atom',
+    desc: 'Relays provide +20 MW capacity each and are completely immune to brownouts.',
+    req: 'conduit_supercharge', tier: 3
+  },
+
+  // Branch 3: Logistics & Recon
+  contraband_scavenger: {
+    id: 'contraband_scavenger', branch: 'logistics', name: 'Contraband Scavenger', cost: 1, icon: 'coin',
+    desc: 'Supply Drops, Spore Spires, and Smuggler Drones award +50% Gold and double Nanite Cores.',
+    tier: 1
+  },
+  thermal_purge_turbo: {
+    id: 'thermal_purge_turbo', branch: 'logistics', name: 'Thermodynamic Venting', cost: 2, icon: 'flame',
+    desc: 'Thermal Steam Purge cooldown cut in half (-50%) and deals +250 boiling steam damage.',
+    req: 'contraband_scavenger', tier: 2
+  },
+  emergency_blackout: {
+    id: 'emergency_blackout', branch: 'logistics', name: 'Emergency Grid EMP', cost: 3, icon: 'shield',
+    desc: 'Once per wave, if Bastion lives drop below 6, triggers a 3.5s global EMP stun to all enemies.',
+    req: 'thermal_purge_turbo', tier: 3
+  }
+};
