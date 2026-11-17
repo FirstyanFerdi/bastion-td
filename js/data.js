@@ -444,8 +444,13 @@ for (const k of Object.keys(TD)) {
 function getTierData(t) {
   const def = TD[t.type];
   if (!def) return { dmg: 0, rate: 0, range: 2.5 };
-  if (t.branch && def.branches && def.branches[t.branch]) return def.branches[t.branch];
-  return (def.tiers && (def.tiers[t.tier] || def.tiers[0])) || { dmg: 0, rate: 0, range: 2.5 };
+  let base;
+  if (t.branch && def.branches && def.branches[t.branch]) base = def.branches[t.branch];
+  else base = (def.tiers && (def.tiers[t.tier] || def.tiers[0])) || { dmg: 0, rate: 0, range: 2.5 };
+  if (typeof hasRelic === 'function' && hasRelic('tungsten_ricochet') && base.range) {
+    return { ...base, range: base.range * 0.8 };
+  }
+  return base;
 }
 
 const TKEYS = ['gatling', 'plasma', 'cryo', 'tesla', 'rail', 'relay', 'fusion_hellfire', 'fusion_deathray', 'fusion_zero', 'fusion_antimatter'];
@@ -1261,4 +1266,140 @@ const SYNDICATE_CONFIG = {
   rewardGold: 220,
   rewardCores: 30,
   forbiddenChip: 'quantum_singularity_chip'
+};
+
+/* ============================================================
+   BASTION TD 7.0: THE GRAND EXPEDITION & TITAN MECH WARFARE
+   ============================================================ */
+
+const TITAN_MECH_CONFIG = {
+  speed: 155,
+  maxHp: 1200,
+  maxBattery: 100,
+  batteryDrainPerSec: 2.8,
+  batteryRechargeRate: 18.0, // when docked at base
+  vulcanDmg: 32,
+  vulcanRate: 8.5, // 8.5 shots per sec
+  bladeDmg: 360,
+  bladeCd: 1.4,
+  bladeRadius: 82,
+  bladeArc: Math.PI * 0.9,
+  color: '#38bdf8',
+  bladeColor: '#f59e0b'
+};
+
+const DREADNOUGHT_CONFIG = {
+  maxCharge: 100,
+  chargePerKill: 0.8,
+  chargePerWave: 15,
+  shadowDuration: 4.0,
+  rodsCount: 3,
+  rodDmg: 720,
+  rodRadius: 140,
+  craterDuration: 12.0,
+  craterDps: 55
+};
+
+const ANOMALY_RELICS = {
+  tungsten_ricochet: {
+    id: 'tungsten_ricochet',
+    name: 'Tungsten Ricochet Core',
+    color: '#38bdf8',
+    desc: 'All tower range -20%, but projectiles ricochet to 2 additional enemies for 70% damage.',
+    tag: 'OFFENSIVE'
+  },
+  nanite_catalyst: {
+    id: 'nanite_catalyst',
+    name: 'Nanite Bio-Catalyst',
+    color: '#10b981',
+    desc: 'Enemy kills refund +4 Gold and accelerate adjacent towers fire rate by +15% for 3 seconds.',
+    tag: 'ECONOMY'
+  },
+  quantum_capacitance: {
+    id: 'quantum_capacitance',
+    name: 'Zero-Point Capacitance',
+    color: '#c084fc',
+    desc: 'Grid power capacity +35 MW. All active Commander skills cooldowns reduced by 30%.',
+    tag: 'UTILITY'
+  },
+  berserker_core: {
+    id: 'berserker_core',
+    name: 'Overcharged Berserker Matrix',
+    color: '#f43f5e',
+    desc: 'Markas Base takes 2x leak damage, but all defenses gain +50% guaranteed Critical Strikes.',
+    tag: 'HIGH-RISK'
+  }
+};
+
+const ANOMALY_VAULTS = {
+  relic_vault: {
+    id: 'relic_vault',
+    name: 'Precursor Relic Vault',
+    color: '#38bdf8',
+    icon: 'target',
+    desc: 'Access an ancient alien vault containing a game-altering Exotic Relic boon.'
+  },
+  hazard_vault: {
+    id: 'hazard_vault',
+    name: 'Nanite Infestation Chamber',
+    color: '#f59e0b',
+    icon: 'spark',
+    desc: 'Purge a volatile hazard nest to harvest +75 Nanite Cores and +350 Gold immediately.'
+  },
+  smuggler_sanctum: {
+    id: 'smuggler_sanctum',
+    name: 'Syndicate Black Market Sanctum',
+    color: '#c084fc',
+    icon: 'coin',
+    desc: 'Sacrifice 4 base lives to requisition 2 forbidden Modular Chips directly.'
+  }
+};
+
+const CYBER_LOGIC_PRESETS = {
+  none: { id: 'none', name: 'Default Targeting', desc: 'Standard target priority rules.' },
+  shield_buster: {
+    id: 'shield_buster',
+    name: 'Logic: Shield Annihilator',
+    color: '#38bdf8',
+    desc: 'IF target shield > 150 -> Overclock energy and prioritize shielded hostiles.'
+  },
+  thermal_vent: {
+    id: 'thermal_vent',
+    name: 'Logic: Auto-Heat Regulator',
+    color: '#f97316',
+    desc: 'IF tower heat > 80% -> Dampen rate to prevent meltdown and seek coldest foes.'
+  },
+  titan_lock: {
+    id: 'titan_lock',
+    name: 'Logic: Apex Predator Lock',
+    color: '#f43f5e',
+    desc: 'IF Boss or Champion hostile is alive -> Lock 100% fire exclusively on them.'
+  },
+  swarm_flak: {
+    id: 'swarm_flak',
+    name: 'Logic: Cluster Flak Seeker',
+    color: '#10b981',
+    desc: 'IF > 3 enemies clustered -> Shift focus to center of hostile swarm.'
+  }
+};
+
+const MARKET_CONFIG = {
+  threshold: 3, // >= 3 of same tower type triggers supply scarcity
+  penaltyPerExtra: 0.15, // +15% cost per tower beyond threshold
+  discountRatio: 0.15 // -15% cost for unused tower types
+};
+
+const HIVEMIND_FORMATIONS = {
+  phalanx: {
+    id: 'phalanx',
+    name: 'Phalanx Vanguard',
+    color: '#f97316',
+    desc: 'Brute leads escorted by Carrier and Healer with +30% Armor shield.'
+  },
+  drop_pod: {
+    id: 'drop_pod',
+    name: 'Drop-Pod Blindspot Raid',
+    color: '#ef4444',
+    desc: 'Orbital pods drop hostiles directly into unfortified grid sectors.'
+  }
 };

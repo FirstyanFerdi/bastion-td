@@ -97,6 +97,12 @@ const Sfx = {
       case 'neural_link': [440, 554, 659, 830, 1108].forEach((f, i) => this.tone('triangle', f, f * 1.02, 0.25, 0.16, i * 0.05)); break;
       case 'corpse_reclaim': this.noise(0.35, 0.3, 600, 1, 'lowpass'); this.tone('sawtooth', 120, 360, 0.35, 0.22); break;
       case 'syndicate_drop': this.noise(0.6, 0.4, 250, 1, 'lowpass'); this.tone('sine', 140, 45, 0.55, 0.3); break;
+      case 'mech_step': this.noise(0.12, 0.14, 180, 1, 'lowpass'); this.tone('sine', 75, 30, 0.12, 0.18); break;
+      case 'mech_blade': this.tone('sawtooth', 640, 180, 0.28, 0.22); this.noise(0.25, 0.22, 2800, 2, 'highpass'); break;
+      case 'mech_vulcan': this.tone('square', 380, 110, 0.05, 0.08); this.noise(0.06, 0.08, 1600, 1, 'bandpass'); break;
+      case 'dreadnought_horn': this.tone('sawtooth', 55, 48, 1.8, 0.45); this.tone('sawtooth', 110, 96, 1.6, 0.25); this.noise(0.8, 0.5, 300, 1, 'lowpass'); break;
+      case 'orbital_impact': this.noise(1.2, 0.85, 120, 1, 'lowpass'); this.tone('sine', 95, 20, 1.0, 0.65); this.tone('sawtooth', 140, 30, 0.8, 0.4); break;
+      case 'vault_open': [392, 523, 659, 784, 1046, 1318].forEach((f, i) => this.tone('sine', f, f * 1.02, 0.35, 0.2, i * 0.06)); this.noise(0.3, 0.2, 2400, 2, 'bandpass'); break;
     }
   }
 };

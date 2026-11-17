@@ -112,6 +112,15 @@ function onPointerDown(e) {
   onPointerMove(e);
   if (e.button === 2) { G.placing = null; G.sel = null; G.casting = null; G.swapSource = null; G.uiDirty = true; return; }
 
+  // Titan Mech Manual Vulcan Fire (7.0)
+  if (G.mech && G.mech.active && !G.casting) {
+    const p = canvasPos(e);
+    if (typeof mechFireVulcan === 'function') {
+      mechFireVulcan(p.x, p.y);
+    }
+    return;
+  }
+
   // Commander Casting Handle
   if (G.casting) {
     const p = canvasPos(e);
@@ -395,15 +404,39 @@ function onKey(e) {
   const k = e.key;
   if (!G) return;
   if (G.state === 'menu') { if (e.code === 'Space' || k === 'Enter') { e.preventDefault(); begin(); } return; }
+
+  // 7.0 Titan Mech Pilot Toggle [Tab]
+  if (k === 'Tab' || e.code === 'Tab') {
+    e.preventDefault();
+    if (typeof toggleMechPilot === 'function') toggleMechPilot();
+    return;
+  }
+
+  // 7.0 Titan Mech Thermal Blade [Space]
   if (e.code === 'Space') {
     e.preventDefault();
     if (e.repeat) return;
+    if (G.mech && G.mech.active) {
+      if (typeof mechSwingBlade === 'function') mechSwingBlade();
+      return;
+    }
     if (G.state === 'over' || G.state === 'victory' || G.drafting) return;
     if (G.paused) togglePause();
     else if (G.state === 'prep') callWave();
     else togglePause();
     return;
   }
+
+  // 7.0 Titan Mech WASD Movement Keys
+  const lk = k.toLowerCase();
+  if (['w', 'a', 's', 'd'].includes(lk)) {
+    if (G.mech && G.mech.active) {
+      if (!G.mechKeys) G.mechKeys = { w: false, a: false, s: false, d: false };
+      G.mechKeys[lk] = true;
+      return;
+    }
+  }
+
   if (G.state !== 'prep' && G.state !== 'active') return;
   if (k >= '1' && k <= '6') { selectShop(TKEYS[Number(k) - 1]); return; }
   const doc = (typeof COMMANDER_DOCTRINES !== 'undefined' && COMMANDER_DOCTRINES[G.doctrine]) || (typeof COMMANDER_DOCTRINES !== 'undefined' && COMMANDER_DOCTRINES.vanguard) || { skills: ['orbital', 'minefield', 'sabot_rounds', 'carpet_bomb'] };
@@ -450,6 +483,13 @@ function onKey(e) {
     case 'f': case 'F': setSpeed(G.speed % 3 + 1); break;
     case 'u': case 'U': if (G.sel) upgradeTower(G.sel); break;
     case 'x': case 'X': case 'Delete': if (G.sel) sellTower(G.sel); break;
+  }
+}
+function onKeyUp(e) {
+  if (e.code === 'Space') e.preventDefault();
+  const lk = e.key ? e.key.toLowerCase() : '';
+  if (G && G.mechKeys && ['w', 'a', 's', 'd'].includes(lk)) {
+    G.mechKeys[lk] = false;
   }
 }
 function fit() {

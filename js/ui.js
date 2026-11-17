@@ -276,6 +276,26 @@ function renderInspector() {
     }
   }
 
+  let cyberLogicHtml = '';
+  if ((t.tier >= 1 || isFusion) && typeof CYBER_LOGIC_PRESETS !== 'undefined') {
+    const curLogic = t.cyberLogic || 'none';
+    const curConf = CYBER_LOGIC_PRESETS[curLogic] || CYBER_LOGIC_PRESETS.none;
+    const opts = Object.keys(CYBER_LOGIC_PRESETS).map(k => {
+      const p = CYBER_LOGIC_PRESETS[k];
+      return '<option value="' + k + '"' + (curLogic === k ? ' selected' : '') + '>' + p.name + '</option>';
+    }).join('');
+
+    cyberLogicHtml = '<div style="margin:5px 0;padding:5px 7px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.3);border-radius:3px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
+      '<span style="font-size:9.5px;font-weight:800;color:#38bdf8">⚡ CYBER-LOGIC MATRIX</span>' +
+      '</div>' +
+      '<select class="cyber-logic-select" data-act="set_cyber_logic" style="width:100%;font-size:10px;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:3px;border-radius:2px;cursor:pointer">' +
+      opts +
+      '</select>' +
+      '<div style="font-size:8.5px;color:#94a3b8;line-height:1.2;margin-top:3px">' + curConf.desc + '</div>' +
+      '</div>';
+  }
+
   box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
     '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + (t.branch ? def.branches[t.branch].color : def.color) + '">' + (t.branch ? def.branches[t.branch].name : def.name) + '</h4><small>' + tierTitle + ' · ' + t.kills + ' KILLS</small></div></div>' +
     conduitHtml +
@@ -287,6 +307,7 @@ function renderInspector() {
     '<div class="stats-grid">' + rows + '</div>' +
     relayHtml +
     '<div class="prio' + (isCryo || isRelay ? ' off' : '') + '" id="prioBox">' + PRIOS.map(p => '<button tabindex="-1" data-act="prio" data-prio="' + p[0] + '" class="' + (t.prio === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') + '</div>' +
+    cyberLogicHtml +
     chipsHtml +
     fusionNote +
     (isCryo && !isFusion ? '<div class="note">Cryo pulses affect all enemies in radius.</div>' : '') +
@@ -527,6 +548,46 @@ function refreshUI() {
       btnChr.disabled = false;
       btnChr.style.color = entropy > 60 ? '#f43f5e' : (entropy > 25 ? '#c084fc' : '#06b6d4');
       btnChr.style.borderColor = entropy > 60 ? '#f43f5e' : (entropy > 25 ? '#c084fc' : 'rgba(6,182,212,0.4)');
+    }
+  }
+  const btnMech = $('btnMechPilot');
+  if (btnMech && G && G.mech) {
+    const m = G.mech;
+    if (m.active) {
+      btnMech.textContent = 'MECH ACTIVE (' + Math.round(m.battery) + '%)';
+      btnMech.style.color = '#38bdf8';
+      btnMech.style.borderColor = '#38bdf8';
+      btnMech.style.background = 'rgba(56,189,248,0.2)';
+    } else {
+      btnMech.textContent = 'MECH [TAB] (' + Math.round(m.battery) + '%)';
+      btnMech.style.color = m.battery > 15 ? '#38bdf8' : '#94a3b8';
+      btnMech.style.borderColor = 'rgba(56,189,248,0.4)';
+      btnMech.style.background = 'transparent';
+    }
+  }
+  const btnDread = $('btnDreadnought');
+  if (btnDread && G && G.dreadnought) {
+    const d = G.dreadnought;
+    const maxC = typeof DREADNOUGHT_CONFIG !== 'undefined' ? DREADNOUGHT_CONFIG.maxCharge : 100;
+    const ready = d.charge >= maxC;
+    if (d.active) {
+      btnDread.innerHTML = 'ORBITAL STRIKE...';
+      btnDread.style.color = '#f59e0b';
+      btnDread.style.borderColor = '#f59e0b';
+      btnDread.disabled = true;
+    } else if (ready) {
+      btnDread.innerHTML = '★ DREADNOUGHT READY';
+      btnDread.style.color = '#fbbf24';
+      btnDread.style.borderColor = '#f59e0b';
+      btnDread.style.background = 'rgba(245,158,11,0.25)';
+      btnDread.disabled = false;
+    } else {
+      const pct = Math.floor((d.charge / maxC) * 100);
+      btnDread.innerHTML = 'DREADNOUGHT <span id="vDreadCharge" style="background:#78350f;color:#fef3c7;padding:1px 3px;border-radius:2px;font-size:8.5px">' + pct + '%</span>';
+      btnDread.style.color = '#94a3b8';
+      btnDread.style.borderColor = 'rgba(245,158,11,0.3)';
+      btnDread.style.background = 'transparent';
+      btnDread.disabled = true;
     }
   }
   renderWaveCard();
@@ -948,6 +1009,28 @@ function showOverlay(kind) {
       '</div>' +
       '</div>' +
       '<div style="font-size:9.5px;color:#94a3b8;text-align:center">Ignoring the gunship causes syndicate raiders to extract 20% of alien bounty from this sector.</div>' +
+      '</div>';
+  } else if (kind === 'anomaly_vault') {
+    const vList = typeof ANOMALY_VAULTS !== 'undefined' ? Object.values(ANOMALY_VAULTS) : [];
+    const waveNum = (G && G.wave) || 4;
+    h = '<div class="draft-box" style="border-top-color:#a855f7;max-width:680px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<h2 style="margin:0;color:#c084fc;letter-spacing:.12em">🌌 ANOMALY VAULT EXPEDITION (WAVE ' + waveNum + ')</h2>' +
+      '</div>' +
+      '<div class="sub">A dimensional rift has breached the perimeter. Choose one expedition gate to explore before the next assault.</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;margin:12px 0">' +
+      vList.map(v => {
+        return '<div class="draft-card" style="border-top-color:' + v.color + ';display:flex;flex-direction:column;justify-content:space-between">' +
+          '<div>' +
+          '<div style="font-size:10px;font-weight:800;color:' + v.color + ';margin-bottom:4px">★ ' + (v.id || 'VAULT').toUpperCase() + '</div>' +
+          '<div class="draft-name" style="font-size:13px;color:#fff;margin-bottom:6px">' + v.name + '</div>' +
+          '<div class="draft-desc" style="font-size:10px;line-height:1.35;color:#cbd5e1">' + v.desc + '</div>' +
+          '</div>' +
+          '<button class="draft-btn" data-ov="select_vault" data-vault="' + v.id + '" style="margin-top:10px;background:' + v.color + ';color:#0f172a;font-weight:800">Enter Vault</button>' +
+          '</div>';
+      }).join('') +
+      '</div>' +
+      '<div style="font-size:9.5px;color:#94a3b8;text-align:center">Exotic relics from Anomaly Vaults alter fundamental physics rules for the remainder of this defense run.</div>' +
       '</div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;

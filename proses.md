@@ -809,5 +809,87 @@ Menolak formula Tower Defense klise (seperti angka statik "+10% damage" atau gel
 * `tests/test_paradox_reality.js`: **100% PASS** menguji seluruh fitur 6.0: 4D Time Rewind, Ghost Echoes, Chrono-Horror Void Immunity, Nanite Necromancy Colossus Path Blocking, Synapse Cross-Breeding, Syndicate Bribe/Raid, dan Tectonic Mag-Lev Shifting.
 * Seluruh 14 test suites (`audit_bugs.js`, `smoke.js`, `test_ascension.js`, `test_browser_init.js`, `test_champions.js`, `test_deep_synergy.js`, `test_effects_realization.js`, `test_map_dynamics.js`, `test_mastery.js`, `test_overdrive_fusions.js`, `test_paradox_reality.js`, `test_reactions.js`, `test_sectors.js`, `test_workshop.js`) **lulus serentak dengan 0 error & 0 regresi**.
 
+---
+
+## 19. Bastion TD 7.0: The Grand Expedition & Titan Mech Warfare
+
+### 19.1 Transformasi 4 Dimensi Gameplay
+Sesuai cetak biru grand ekspansi yang disetujui pada [`bastion_td_grand_expansion_blueprint.md`](file:///c:/Users/User/.gemini/antigravity/brain/3483d84c-61da-4d36-985d-fb72d3571a51/bastion_td_grand_expansion_blueprint.md), Bastion TD 7.0 mengimplementasikan ekspansi menyeluruh pada 4 pilar utama:
+
+```
++-------------------------------------------------------------------------------------------------------+
+|                                    BASTION TD 7.0 ARSITEKTUR 4 DIMENSI                                |
++-----------------------------------+-----------------------------------+-------------------------------+
+| 1. KOMPLEKSITAS (Deep Matrix)     | 2. ADIKTIF (Roguelite Loops)      | 3. ADAPTIF (AI & Market)      |
+| • Cyber-Logic IF-THEN Matrix      | • Anomaly Vault Expeditions       | • Wartime Supply-Demand Market|
+| • Shield Annihilator priority     | • Exotic Alien Relic Boons        | • AI Blindspot Drop-Pods      |
+| • Auto-Heat Regulator throttling  | • Tungsten Ricochet / Berserker   | • Phalanx Shield Formations   |
++-----------------------------------+-----------------------------------+-------------------------------+
+|                                    4. FAKTOR 'KEREN' (Spectacle Fantasy)                              |
+| • Titan Combat Mech Pilot Mode [Tab]: WASD thrusters, Vulcan autocannon, Thermal Blade cleave [Space] |
+| • Orbital Dreadnought "Aegis Prime": Tungsten Rods from God kinetic strike & Molten Cratering        |
++-------------------------------------------------------------------------------------------------------+
+```
+
+### 19.2 Rincian Fitur Utama Versi 7.0:
+1. **Titan Combat Mech Pilot Mode (`[Tab]` / `#btnMechPilot`):**
+   * Pemain dapat langsung menerjunkan dan mengendalikan Mech Tempur Titan bipedal raksasa di atas grid medan tempur.
+   * **Kontrol Manual:**
+     - `[W, A, S, D]`: Pendorong manuver berkecepatan 155 px/detik dengan animasi langkah kaki bipedal dan hentakan audio (`mech_step`).
+     - `[Mouse Aim & Left Click]`: Mengarahkan kubah torsi secara independen dan menembakkan Vulcan Autocannon 30mm kaliber berat ke titik kursor (`mechFireVulcan()`, suara `mech_vulcan`).
+     - `[Spacebar]`: Mengayunkan Pedang Termal raksasa (*Thermal Blade Cleave*, suara `mech_blade`) dengan busur api oranye-putih yang membelah seluruh gerombolan musuh dalam radius 82 px (360 damage area).
+     - `[Tab]`: Masuk / keluar kokpit mech ke mode siaga (*Standby Autonomous Mode*).
+   * **Baterai & Pengisian Ulang Pangkalan (Dock Recharge):** Baterai mech berkurang perlahan saat aktif. Memarkir mech di dekat Markas Utama (`BASE_PT`) memicu pengisian daya cepat (+18%/s) dan perbaikan lambung baja (+60 HP/s).
+   * **Cockpit HUD Visor:** Menampilkan panel kaca futuristik di layar bawah lengkap dengan gauge Hull Integrity, Power Cell Battery, dan cooldown Thermal Blade.
+
+2. **Orbital Dreadnought "Aegis Prime" Super-Strike (`#btnDreadnought`):**
+   * Meteran energi orbital terisi otomatis dari setiap eliminasi musuh (+0.8%) dan pembersihan wave (+15%).
+   * Saat terisi 100%, pemain dapat mengaktifkan serangan apokaliptik dari kapal induk antariksa di stratosfer:
+     - Langit menggelap tertutup siluet lambung kapal raksasa sepanjang layar.
+     - Raungan sirene udara raksasa menggema melalui Web Audio API (`dreadnought_horn`).
+     - **Kinetic Tungsten Rods ("Rods from God"):** Tiga pilar tungsten hipersonik meluncur dari orbit menuju titik konsentrasi musuh, meledak dengan guncangan layar masif (`orbital_impact`, shake 22), menghasilkan 720 AoE plasma damage + 2.5s stun.
+     - Meninggalkan kawah berapi (*Molten Kinetic Craters*) yang menyala di tanah selama 12 detik, memberikan burn DoT konstan kepada musuh yang melintas.
+
+3. **Anomaly Vault Expeditions & Exotic Relic Boons:**
+   * Setiap 4 wave (Wave 4, 8, 12, 16...), sebuah celah dimensi terbuka dan pemain dihadapkan pada 3 pilihan gerbang Vault:
+     - **Precursor Relic Vault:** Menghadiahkan artefak alien eksotik permanen:
+       - `tungsten_ricochet`: Seluruh tembakan balistik memantulkan jejak peluru ke 2 musuh di sekitarnya (70% damage).
+       - `berserker_core`: Menjamin seluruh tembakan menghasilkan critical hit dengan pengali kerusakan 1.5x.
+       - `nanite_catalyst`: Menghadiahkan ekstra +4 Gold dari setiap kill dan meningkatkan kecepatan tembak menara sekitar.
+       - `quantum_capacitance`: Menambah pasokan daya jaringan pangkalan secara gratis (+35 MW).
+     - **Nanite Infestation Chamber (Hazard Vault):** Membasmi sarang monster volatile untuk memanen instan **+350 Gold** dan **+75 Nanite Cores**.
+     - **Syndicate Black Market Sanctum:** Mengorbankan 4 nyawa markas demi mendapatkan 2 Modular Chip Terlarang.
+
+4. **Cyber-Logic Automation Matrix (Pemrograman Perilaku Menara):**
+   * Tersedia di Tactical Inspector untuk seluruh menara Tier II+ dan Super-Weapon Fusions.
+   * Preset Logika Otomasi:
+     - `Logic: Shield Annihilator` (`shield_buster`): Secara cerdas mendeteksi dan mengunci musuh yang memiliki perisai energi $> 100$, mengabaikan urutan jalur standar.
+     - `Logic: Auto-Heat Regulator` (`thermal_vent`): Otomatis membatasi laju tembakan saat suhu panas mencapai $> 75\%$ dan menyemburkan uap pendingin aktif (-25 heat/detik) guna mencegah overheat blackout.
+     - `Logic: Apex Predator Lock` (`titan_lock`): Mengunci 100% fokus tembakan hanya pada musuh Champion atau Titan Boss di dalam jangkauan.
+
+5. **Wartime Supply-Demand Market & AI Blindspot Drop-Pods:**
+   * **Ekonomi Pasar Dinamis:** Jika pemain membangun $\ge 3$ menara dengan tipe yang sama, pasar mengalami kelangkaan suku cadang (+15% kenaikan harga untuk setiap menara tambahan). Sebaliknya, tipe senjata yang tidak digunakan diberikan subsidi diskon anti-monotoni sebesar -15%.
+   * **Inkursi Drop-Pod:** Mulai Wave 7, AI Director mendeteksi titik buta pertahanan pemain dan meluncurkan drop-pod taktis bergaris merah dari langit yang mendarat di belakang garis depan untuk mengerahkan pasukan penyerbu elit.
+
+### 19.3 Hasil Uji Mutu & Verifikasi Komprehensif (15 Test Suites 100% Lulus):
+* Telah dibuat rangkaian pengujian unit baru [`tests/test_grand_expansion.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_grand_expansion.js) yang memvalidasi seluruh fungsionalitas 7.0 secara end-to-end.
+* **Hasil Eksekusi 15 Test Suites Keseluruhan:**
+  1. `tests/smoke.js` -> **PASS** (Simulasi 20 wave penuh 0 crash)
+  2. `tests/test_workshop.js` -> **PASS** (Meta-progression & Nanite Cores)
+  3. `tests/test_ascension.js` -> **PASS** (Pact of Punishment Ascension 0-5)
+  4. `tests/test_sectors.js` -> **PASS** (7 Sektor & Iklim Medan Tempur)
+  5. `tests/test_mastery.js` -> **PASS** (Power Grid, Doktrin, Titan Bosses)
+  6. `tests/test_map_dynamics.js` -> **PASS** (Leylines, Interactive Fuel Cells)
+  7. `tests/test_overdrive_fusions.js` -> **PASS** (Super-Weapons & Overdrive)
+  8. `tests/test_champions.js` -> **PASS** (Threat Director & Affixes)
+  9. `tests/test_reactions.js` -> **PASS** (4 Reaksi Elemental)
+  10. `tests/test_deep_synergy.js` -> **PASS** (5 Pilar Sinergi Mendalam)
+  11. `tests/test_effects_realization.js` -> **PASS** (Verifikasi Visual/Audio Efek Nyata)
+  12. `tests/test_browser_init.js` -> **PASS** (Inisialisasi Canvas & Siklus Render)
+  13. `tests/audit_bugs.js` -> **PASS** (Audit Statis: 0 Error, 0 Missing SFX, 0 Unhandled Action)
+  14. `tests/test_paradox_reality.js` -> **PASS** (Chrono 4D Rewind & Paradox Reality)
+  15. `tests/test_grand_expansion.js` -> **PASS** (Titan Mech Warfare, Dreadnought, Vaults, Cyber-Logic, Market)
+
+
 
 

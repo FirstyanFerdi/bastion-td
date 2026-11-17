@@ -43,7 +43,7 @@ function init() {
     }
   }, { passive: false });
   window.addEventListener('keydown', onKey);
-  window.addEventListener('keyup', e => { if (e.code === 'Space') e.preventDefault(); });
+  window.addEventListener('keyup', onKeyUp);
   document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.state === 'active') G.paused = true; });
   document.addEventListener('click', e => {
     const b = e.target.closest ? e.target.closest('button') : null;
@@ -103,6 +103,21 @@ function init() {
       G.uiDirty = true;
       Sfx.play('click');
     }
+    else if (act === 'set_cyber_logic') {
+      // Handled via inspector change listener
+    }
+  });
+  $('inspector').addEventListener('change', e => {
+    const sel = e.target.closest('select');
+    if (!sel || !G.sel) return;
+    const act = sel.dataset.act;
+    if (act === 'set_cyber_logic') {
+      G.sel.cyberLogic = sel.value;
+      G.uiDirty = true;
+      Sfx.play('click');
+      const conf = (typeof CYBER_LOGIC_PRESETS !== 'undefined') ? CYBER_LOGIC_PRESETS[sel.value] : null;
+      if (conf) addText(G.sel.x, G.sel.y - 25, conf.name, conf.color || '#38bdf8', 13);
+    }
   });
   if ($('btnWorkshop')) {
     $('btnWorkshop').addEventListener('click', () => {
@@ -138,6 +153,18 @@ function init() {
     $('btnOverload').addEventListener('click', () => {
       Sfx.init(); Sfx.resume();
       if (typeof triggerCoreOverload === 'function') triggerCoreOverload();
+    });
+  }
+  if ($('btnMechPilot')) {
+    $('btnMechPilot').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume();
+      if (typeof toggleMechPilot === 'function') toggleMechPilot();
+    });
+  }
+  if ($('btnDreadnought')) {
+    $('btnDreadnought').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume();
+      if (typeof triggerDreadnoughtStrike === 'function') triggerDreadnoughtStrike();
     });
   }
   if ($('chipSector')) {
@@ -214,6 +241,11 @@ function init() {
       showOverlay(null);
       Sfx.play('click');
     }
+    else if (a === 'select_vault') {
+      if (b.dataset.vault && typeof selectAnomalyVault === 'function') {
+        selectAnomalyVault(b.dataset.vault);
+      }
+    }
     else if (a === 'close_smuggler' || a === 'close_codex' || a === 'close') {
       showOverlay(G && G.state === 'menu' ? 'menu' : null);
       Sfx.play('click');
@@ -225,4 +257,4 @@ function init() {
 init();
 
 // Small debug/test hook (harmless in production)
-window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive, MAP_SECTORS, loadSector, setSector, getSectorMastery, recordSectorProgress, isSectorUnlocked, FUSION_RECIPES, CURSED_PROTOCOLS, FIELD_ANOMALIES, HIVE_COUNTER_TRAITS, fuseTowers, triggerCoreOverload, applyCursedProtocol, getEligibleFusion, isCodexDiscovered, recordCodexDiscovery, getCodexProgress, spawnFieldAnomaly, RESONANCE_CONDUITS, THERMAL_CONFIG, BIOMASS_CONFIG, TACTICAL_MATRIX_PROTOCOLS, updateResonanceConduits, triggerThermalPurge, addBiomassCreep, cleanseBiomassCreep, hasMatrixProtocol, unlockMatrixProtocol, recordTimeSnapshot, triggerChronoRewind, createNeuralSynapse, removeNeuralSynapse, getTowerSynapses, reclaimCorpse, bribeSyndicate, raidSyndicate, triggerTectonicShift, CHRONO_CONFIG, NEURAL_SYNAPSE_CONFIG, RECLAIMER_CONFIG, SYNDICATE_CONFIG };
+window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive, MAP_SECTORS, loadSector, setSector, getSectorMastery, recordSectorProgress, isSectorUnlocked, FUSION_RECIPES, CURSED_PROTOCOLS, FIELD_ANOMALIES, HIVE_COUNTER_TRAITS, fuseTowers, triggerCoreOverload, applyCursedProtocol, getEligibleFusion, isCodexDiscovered, recordCodexDiscovery, getCodexProgress, spawnFieldAnomaly, RESONANCE_CONDUITS, THERMAL_CONFIG, BIOMASS_CONFIG, TACTICAL_MATRIX_PROTOCOLS, updateResonanceConduits, triggerThermalPurge, addBiomassCreep, cleanseBiomassCreep, hasMatrixProtocol, unlockMatrixProtocol, recordTimeSnapshot, triggerChronoRewind, createNeuralSynapse, removeNeuralSynapse, getTowerSynapses, reclaimCorpse, bribeSyndicate, raidSyndicate, triggerTectonicShift, CHRONO_CONFIG, NEURAL_SYNAPSE_CONFIG, RECLAIMER_CONFIG, SYNDICATE_CONFIG, toggleMechPilot, mechFireVulcan, mechSwingBlade, triggerDreadnoughtStrike, triggerAnomalyVault, selectAnomalyVault, spawnDropPod, updateWartimeMarket, hasRelic, TITAN_MECH_CONFIG, DREADNOUGHT_CONFIG, ANOMALY_RELICS, ANOMALY_VAULTS, CYBER_LOGIC_PRESETS, MARKET_CONFIG };

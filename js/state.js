@@ -101,7 +101,37 @@ function newGame(keepSpeed) {
     synapses: [],
     corpses: [],
     reclaimedMinions: [],
-    syndicateGunship: null
+    syndicateGunship: null,
+    // 7.0 Grand Expedition & Titan Mech Warfare Systems
+    mech: {
+      active: false,
+      x: BASE_PT ? BASE_PT.x : 850,
+      y: BASE_PT ? BASE_PT.y : 300,
+      hp: 1200,
+      maxHp: 1200,
+      battery: 100,
+      bladeCd: 0,
+      vulcanCd: 0,
+      facing: 0,
+      swingT: 0,
+      vx: 0,
+      vy: 0,
+      isDocked: true
+    },
+    dreadnought: {
+      charge: 0,
+      maxCharge: 100,
+      active: false,
+      t: 0,
+      rods: [],
+      craters: []
+    },
+    anomalousRelics: [],
+    vaultsOffered: {},
+    activeVaultModal: null,
+    wartimeMarket: {},
+    dropPods: [],
+    mechKeys: { w: false, a: false, s: false, d: false }
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -707,6 +737,402 @@ function triggerTectonicShift(centerCol, centerRow) {
 }
 
 /* ============================================================
+   BASTION TD 7.0: TITAN MECH, DREADNOUGHT, ANOMALIES & MARKET
+   ============================================================ */
+
+function toggleMechPilot(forceState) {
+  if (!G || !G.mech) return false;
+  const nextState = forceState !== undefined ? forceState : !G.mech.active;
+  if (nextState && G.mech.battery <= 5) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    addText(G.mech.x, G.mech.y - 30, 'BATTERY DEPLETED!', '#f43f5e', 14);
+    return false;
+  }
+  G.mech.active = nextState;
+  if (G.mech.active) {
+    G.mech.isDocked = false;
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
+    shake(6);
+    burst(G.mech.x, G.mech.y, 25, '#38bdf8', 140, 0.5, 3.5, true);
+    addRing(G.mech.x, G.mech.y, 10, 60, 0.45, '#38bdf8', 3);
+    addText(G.mech.x, G.mech.y - 35, 'TITAN MECH: PILOT ENGAGED [TAB]', '#38bdf8', 16);
+  } else {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+    addText(G.mech.x, G.mech.y - 25, 'AUTONOMOUS STANDBY', '#94a3b8', 12);
+  }
+  G.uiDirty = true;
+  return G.mech.active;
+}
+
+function updateMech(dt) {
+  if (!G || !G.mech) return;
+  const m = G.mech;
+  const cfg = typeof TITAN_MECH_CONFIG !== 'undefined' ? TITAN_MECH_CONFIG : {
+    speed: 155, batteryDrainPerSec: 2.8, batteryRechargeRate: 18.0, vulcanDmg: 32, vulcanRate: 8.5, bladeDmg: 360, bladeCd: 1.4, bladeRadius: 82
+  };
+
+  // Cooldowns
+  if (m.bladeCd > 0) m.bladeCd = Math.max(0, m.bladeCd - dt);
+  if (m.vulcanCd > 0) m.vulcanCd = Math.max(0, m.vulcanCd - dt);
+  if (m.swingT > 0) m.swingT = Math.max(0, m.swingT - dt * 4.5);
+
+  const baseDist = Math.hypot(m.x - BASE_PT.x, m.y - BASE_PT.y);
+  const nearBase = baseDist <= 60;
+
+  if (m.active) {
+    // Battery Drain
+    m.battery = Math.max(0, m.battery - dt * cfg.batteryDrainPerSec);
+    if (m.battery <= 0) {
+      toggleMechPilot(false);
+      addText(m.x, m.y - 35, 'SYSTEM SHUTDOWN - ZERO BATTERY', '#ef4444', 14);
+    }
+
+    // WASD Movement
+    let dx = 0, dy = 0;
+    if (G.mechKeys) {
+      if (G.mechKeys.w) dy -= 1;
+      if (G.mechKeys.s) dy += 1;
+      if (G.mechKeys.a) dx -= 1;
+      if (G.mechKeys.d) dx += 1;
+    }
+    const len = Math.hypot(dx, dy);
+    if (len > 0) {
+      dx /= len; dy /= len;
+      m.vx = dx * cfg.speed;
+      m.vy = dy * cfg.speed;
+      m.x = clamp(m.x + m.vx * dt, 24, W - 24);
+      m.y = clamp(m.y + m.vy * dt, 24, H - 24);
+      // Footstep sound tick
+      m.stepTimer = (m.stepTimer || 0) + dt;
+      if (m.stepTimer >= 0.35) {
+        m.stepTimer = 0;
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('mech_step');
+        burst(m.x - dx * 8, m.y - dy * 8, 3, '#64748b', 40, 0.25, 2, false);
+      }
+    } else {
+      m.vx = 0; m.vy = 0;
+    }
+
+    // Face mouse cursor
+    if (G.mouse && G.mouse.in) {
+      m.facing = Math.atan2(G.mouse.y - m.y, G.mouse.x - m.x);
+    }
+  } else {
+    // Passive Docking Recharge near base
+    if (nearBase) {
+      m.isDocked = true;
+      if (m.battery < 100) {
+        m.battery = Math.min(100, m.battery + dt * cfg.batteryRechargeRate);
+      }
+      if (m.hp < m.maxHp) {
+        m.hp = Math.min(m.maxHp, m.hp + dt * 60);
+      }
+    }
+  }
+}
+
+function mechFireVulcan(tx, ty) {
+  if (!G || !G.mech || !G.mech.active || G.mech.vulcanCd > 0) return false;
+  const m = G.mech;
+  const cfg = typeof TITAN_MECH_CONFIG !== 'undefined' ? TITAN_MECH_CONFIG : { vulcanRate: 8.5, vulcanDmg: 32 };
+  m.vulcanCd = 1 / cfg.vulcanRate;
+
+  const dx = tx - m.x, dy = ty - m.y;
+  const dLen = Math.hypot(dx, dy) || 1;
+  const nx = dx / dLen, ny = dy / dLen;
+
+  // Barrel offset
+  const bx = m.x + nx * 22 - ny * 6;
+  const by = m.y + ny * 22 + nx * 6;
+
+  addFx('tracer', bx, by, bx + nx * 450, by + ny * 450, 0.08, '#38bdf8', 2.8);
+  burst(bx, by, 3, '#f59e0b', 70, 0.15, 2, false);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('mech_vulcan');
+
+  // Raycast hit enemy
+  let hitEnemy = null, hitDist = 450;
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    const ex = e.x - bx, ey = e.y - by;
+    const dot = ex * nx + ey * ny;
+    if (dot > 0 && dot < hitDist) {
+      const perp = Math.abs(ex * ny - ey * nx);
+      if (perp <= e.r + 6) {
+        hitDist = dot;
+        hitEnemy = e;
+      }
+    }
+  }
+  if (hitEnemy) {
+    dealDamage(hitEnemy, cfg.vulcanDmg, 'phys', null);
+    burst(hitEnemy.x, hitEnemy.y, 4, '#38bdf8', 90, 0.25, 2.5, true);
+  }
+  return true;
+}
+
+function mechSwingBlade() {
+  if (!G || !G.mech || !G.mech.active || G.mech.bladeCd > 0) return false;
+  const m = G.mech;
+  const cfg = typeof TITAN_MECH_CONFIG !== 'undefined' ? TITAN_MECH_CONFIG : { bladeCd: 1.4, bladeDmg: 360, bladeRadius: 82, bladeArc: Math.PI * 0.9 };
+  m.bladeCd = cfg.bladeCd;
+  m.swingT = 1.0;
+
+  shake(8);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('mech_blade');
+  addRing(m.x, m.y, 15, cfg.bladeRadius, 0.4, '#f59e0b', 4.5);
+  burst(m.x + Math.cos(m.facing) * 35, m.y + Math.sin(m.facing) * 35, 20, '#f59e0b', 160, 0.45, 3.5, true);
+
+  // Cleave all hostiles within arc
+  let cleaved = 0;
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    const dist = Math.hypot(e.x - m.x, e.y - m.y);
+    if (dist <= cfg.bladeRadius + e.r) {
+      const ang = Math.atan2(e.y - m.y, e.x - m.x);
+      let diff = Math.abs(ang - m.facing);
+      if (diff > Math.PI) diff = TAU - diff;
+      if (diff <= cfg.bladeArc / 2) {
+        cleaved++;
+        dealDamage(e, cfg.bladeDmg, 'plasma', null);
+        burst(e.x, e.y, 10, '#f59e0b', 130, 0.35, 3, true);
+        addText(e.x, e.y - e.r - 18, 'THERMAL CLEAVE!', '#f59e0b', 13);
+      }
+    }
+  }
+  return true;
+}
+
+function chargeDreadnought(amount) {
+  if (!G || !G.dreadnought) return;
+  const d = G.dreadnought;
+  const maxC = typeof DREADNOUGHT_CONFIG !== 'undefined' ? DREADNOUGHT_CONFIG.maxCharge : 100;
+  d.charge = Math.min(maxC, d.charge + amount);
+}
+
+function triggerDreadnoughtStrike() {
+  if (!G || !G.dreadnought || G.dreadnought.active) return false;
+  const d = G.dreadnought;
+  const maxC = typeof DREADNOUGHT_CONFIG !== 'undefined' ? DREADNOUGHT_CONFIG.maxCharge : 100;
+  if (d.charge < maxC) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  d.charge = 0;
+  d.active = true;
+  d.t = 0;
+  d.rods = [];
+
+  shake(18);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('dreadnought_horn');
+  G.banner = { text: 'ORBITAL DREADNOUGHT ENGAGED', sub: 'Kinetic Tungsten Rods incoming from orbit!', t: 0, max: 4.0, color: '#f59e0b' };
+
+  // Calculate 3 impact target coordinates along hostile clusters or path
+  const pts = [];
+  if (G.enemies.length >= 3) {
+    pts.push({ x: G.enemies[0].x, y: G.enemies[0].y });
+    pts.push({ x: G.enemies[Math.floor(G.enemies.length / 2)].x, y: G.enemies[Math.floor(G.enemies.length / 2)].y });
+    pts.push({ x: G.enemies[G.enemies.length - 1].x, y: G.enemies[G.enemies.length - 1].y });
+  } else {
+    pts.push({ x: W * 0.35, y: H * 0.5 });
+    pts.push({ x: W * 0.55, y: H * 0.4 });
+    pts.push({ x: W * 0.75, y: H * 0.6 });
+  }
+
+  for (let i = 0; i < pts.length; i++) {
+    d.rods.push({
+      x: pts[i].x, y: pts[i].y,
+      delay: 1.2 + i * 0.7,
+      landed: false
+    });
+  }
+  G.uiDirty = true;
+  return true;
+}
+
+function updateDreadnought(dt) {
+  if (!G || !G.dreadnought) return;
+  const d = G.dreadnought;
+  const cfg = typeof DREADNOUGHT_CONFIG !== 'undefined' ? DREADNOUGHT_CONFIG : {
+    shadowDuration: 4.0, rodDmg: 720, rodRadius: 140, craterDuration: 12.0, craterDps: 55
+  };
+
+  if (d.active) {
+    d.t += dt;
+    // Check rod impacts
+    for (const r of d.rods) {
+      if (!r.landed && d.t >= r.delay) {
+        r.landed = true;
+        shake(22);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('orbital_impact');
+        addRing(r.x, r.y, 15, cfg.rodRadius, 0.85, '#f59e0b', 7);
+        burst(r.x, r.y, 60, '#f97316', 280, 1.1, 5.5, true);
+        burst(r.x, r.y, 35, '#fff', 190, 0.7, 4, true);
+        addText(r.x, r.y - 30, 'KINETIC IMPACT: -' + cfg.rodDmg + ' AOE!', '#f59e0b', 20);
+
+        // AoE Damage
+        for (const e of G.enemies) {
+          if (e.dead) continue;
+          const dist = Math.hypot(e.x - r.x, e.y - r.y);
+          if (dist <= cfg.rodRadius + e.r) {
+            dealDamage(e, cfg.rodDmg, 'plasma', null);
+            e.stunT = Math.max(e.stunT || 0, 2.5);
+          }
+        }
+
+        // Leave Molten Crater
+        if (!d.craters) d.craters = [];
+        d.craters.push({
+          x: r.x, y: r.y, r: cfg.rodRadius * 0.75,
+          life: cfg.craterDuration, maxLife: cfg.craterDuration,
+          dps: cfg.craterDps
+        });
+      }
+    }
+
+    if (d.t >= cfg.shadowDuration + 2.0 && d.rods.every(r => r.landed)) {
+      d.active = false;
+    }
+  }
+
+  // Update craters
+  if (d.craters && d.craters.length > 0) {
+    for (let i = d.craters.length - 1; i >= 0; i--) {
+      const cr = d.craters[i];
+      cr.life -= dt;
+      for (const e of G.enemies) {
+        if (!e.dead && Math.hypot(e.x - cr.x, e.y - cr.y) <= cr.r + e.r) {
+          dealDamage(e, cr.dps * dt, 'plasma', null);
+        }
+      }
+      if (cr.life <= 0) d.craters.splice(i, 1);
+    }
+  }
+}
+
+function hasRelic(relicId) {
+  return G && G.anomalousRelics && G.anomalousRelics.includes(relicId);
+}
+
+function triggerAnomalyVault(wave) {
+  if (!G || (G.vaultsOffered && G.vaultsOffered[wave])) return false;
+  if (!G.vaultsOffered) G.vaultsOffered = {};
+  G.vaultsOffered[wave] = true;
+  G.activeVaultModal = {
+    wave: wave,
+    options: Object.values(ANOMALY_VAULTS)
+  };
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('vault_open');
+  showOverlay('anomaly_vault');
+  return true;
+}
+
+function selectAnomalyVault(vaultId, relicId) {
+  if (!G) return false;
+  if (vaultId === 'relic_vault') {
+    const rId = relicId || Object.keys(ANOMALY_RELICS)[Math.floor(Math.random() * Object.keys(ANOMALY_RELICS).length)];
+    if (!G.anomalousRelics) G.anomalousRelics = [];
+    if (!G.anomalousRelics.includes(rId)) {
+      G.anomalousRelics.push(rId);
+      const r = ANOMALY_RELICS[rId];
+      burst(W / 2, H / 2, 35, r.color, 180, 0.8, 4, true);
+      addText(W / 2, H / 2 - 40, 'EXOTIC RELIC: ' + r.name.toUpperCase(), r.color, 18);
+    }
+  } else if (vaultId === 'hazard_vault') {
+    G.gold += 350;
+    if (typeof addCores === 'function') addCores(75);
+    burst(W / 2, H / 2, 30, '#f59e0b', 160, 0.7, 4, true);
+    addText(W / 2, H / 2 - 40, 'INFESTATION PURGED: +350G +75 CORES!', '#f59e0b', 18);
+  } else if (vaultId === 'smuggler_sanctum') {
+    G.lives = Math.max(1, G.lives - 4);
+    if (typeof addChip === 'function') {
+      addChip('quantum_singularity_chip', 1);
+      addChip('hyper_overdrive_chip', 1);
+    }
+    burst(W / 2, H / 2, 30, '#c084fc', 160, 0.7, 4, true);
+    addText(W / 2, H / 2 - 40, 'SANCTUM PACT: -4 LIVES + 2 FORBIDDEN CHIPS', '#c084fc', 16);
+  }
+  G.activeVaultModal = null;
+  showOverlay(null);
+  G.uiDirty = true;
+  return true;
+}
+
+function updateWartimeMarket() {
+  if (!G || !G.towers) return;
+  const counts = {};
+  for (const t of G.towers) {
+    counts[t.type] = (counts[t.type] || 0) + 1;
+  }
+  G.wartimeMarket = {};
+  const tKeys = typeof TKEYS !== 'undefined' ? TKEYS : ['gatling', 'plasma', 'cryo', 'rail', 'tesla', 'relay'];
+  const thresh = typeof MARKET_CONFIG !== 'undefined' ? MARKET_CONFIG.threshold : 3;
+  for (const k of tKeys) {
+    const c = counts[k] || 0;
+    if (c >= thresh) {
+      G.wartimeMarket[k] = 1.0 + (c - thresh + 1) * (MARKET_CONFIG.penaltyPerExtra || 0.15);
+    } else if (c === 0 && G.towers.length >= 6) {
+      G.wartimeMarket[k] = 1.0 - (MARKET_CONFIG.discountRatio || 0.15);
+    } else {
+      G.wartimeMarket[k] = 1.0;
+    }
+  }
+}
+
+function spawnDropPod(x, y, hostiles) {
+  if (!G) return;
+  if (!G.dropPods) G.dropPods = [];
+  let px = x, py = y;
+  if (typeof px !== 'number' || typeof py !== 'number' || (y === undefined && typeof x === 'number')) {
+    const pIdx = Math.floor((typeof MAIN_PATH !== 'undefined' ? MAIN_PATH.length : 10) * 0.45);
+    const pt = (typeof MAIN_PATH !== 'undefined' && MAIN_PATH[pIdx]) ? MAIN_PATH[pIdx] : { x: W * 0.45, y: H * 0.45 };
+    px = pt.x + (typeof rand === 'function' ? rand(-25, 25) : 0);
+    py = pt.y + (typeof rand === 'function' ? rand(-25, 25) : 0);
+  }
+  const dp = {
+    id: Date.now() + Math.random(),
+    x: px, y: py,
+    t: 0,
+    landDelay: 2.2,
+    landed: false,
+    hostiles: hostiles || ['breacher', 'stealth', 'scout']
+  };
+  G.dropPods.push(dp);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('drop');
+  addRing(px, py, 10, 60, 0.6, '#ef4444', 3);
+  addText(px, py - 25, '! INCOMING DROP-POD !', '#ef4444', 13);
+  return dp;
+}
+
+function updateDropPods(dt) {
+  if (!G || !G.dropPods || G.dropPods.length === 0) return;
+  for (let i = G.dropPods.length - 1; i >= 0; i--) {
+    const dp = G.dropPods[i];
+    dp.t += dt;
+    if (!dp.landed && dp.t >= dp.landDelay) {
+      dp.landed = true;
+      shake(10);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+      burst(dp.x, dp.y, 25, '#ef4444', 160, 0.6, 4, true);
+      addRing(dp.x, dp.y, 10, 80, 0.5, '#ef4444', 4);
+      addText(dp.x, dp.y - 20, 'DROP-POD TOUCHDOWN!', '#ef4444', 14);
+
+      // Spawn hostiles at drop-pod location
+      if (typeof spawnEnemy === 'function') {
+        for (const type of dp.hostiles) {
+          spawnEnemy(type, G.wave);
+          const spawned = G.enemies[G.enemies.length - 1];
+          if (spawned) {
+            spawned.x = dp.x + rand(-15, 15);
+            spawned.y = dp.y + rand(-15, 15);
+          }
+        }
+      }
+      G.dropPods.splice(i, 1);
+    }
+  }
+}
+
+/* ============================================================
    EFFECTS
    ============================================================ */
 function burst(x, y, n, color, spd, life, size, round) {
@@ -754,6 +1180,12 @@ function dealDamage(e, amount, type, src, opts) {
   // Cursed Protocol: Glass Singularity (Guaranteed Critical Strikes)
   if (G && G.cursedProtocols && G.cursedProtocols.includes('glass_singularity')) {
     opts.crit = true;
+  }
+
+  // 7.0 Exotic Relic: Berserker Matrix (Guaranteed Crits)
+  if (hasRelic('berserker_core')) {
+    opts.crit = true;
+    a *= 1.50;
   }
 
   // Reactive Hivemind Evolutionary Pressure Tracking (4.0)
@@ -909,6 +1341,21 @@ function dealDamage(e, amount, type, src, opts) {
     }
   }
 
+  // 7.0 Exotic Relic: Tungsten Ricochet Core
+  if (hasRelic('tungsten_ricochet') && src && !opts.isRicochet && G.enemies.length > 1) {
+    let ricCount = 0;
+    for (const o of G.enemies) {
+      if (o.dead || o === e) continue;
+      if (Math.hypot(o.x - e.x, o.y - e.y) <= 130) {
+        ricCount++;
+        addFx('tracer', e.x, e.y, o.x, o.y, 0.12, '#38bdf8', 2);
+        burst(o.x, o.y, 4, '#38bdf8', 80, 0.25, 2, true);
+        dealDamage(o, a * 0.70, type, src, { isRicochet: true, noReaction: true });
+        if (ricCount >= 2) break;
+      }
+    }
+  }
+
   // Champion Affix: Anti-Projectile Dome
   const inDome = e.affix === 'dome' || G.enemies.some(o => !o.dead && o.affix === 'dome' && (o.x - e.x) ** 2 + (o.y - e.y) ** 2 <= 40 * 40);
   if (inDome && (type === 'phys' || (src && src.type === 'rail'))) {
@@ -1059,6 +1506,25 @@ function killEnemy(e, src) {
   const finalScore = Math.round(e.reward * 10 * scoreStreakMult);
   G.gold += finalReward; G.score += finalScore; G.kills++;
   if (src) src.kills++;
+
+  // 7.0 Dreadnought Gauge Charge from Kills
+  if (typeof chargeDreadnought === 'function') {
+    chargeDreadnought(typeof DREADNOUGHT_CONFIG !== 'undefined' ? DREADNOUGHT_CONFIG.chargePerKill : 0.8);
+  }
+
+  // 7.0 Exotic Relic: Nanite Bio-Catalyst
+  if (typeof hasRelic === 'function' && hasRelic('nanite_catalyst')) {
+    G.gold += 4;
+    burst(e.x, e.y, 6, '#10b981', 75, 0.3, 2, true);
+    addText(e.x, e.y - 12, '+4G CATALYST', '#10b981', 11);
+    if (G.towers) {
+      for (const t of G.towers) {
+        if (Math.hypot(t.x - e.x, t.y - e.y) <= 120) {
+          t.catalystBoostT = 3.0;
+        }
+      }
+    }
+  }
 
   // 5.0 Biomass Creep Drop on Brute/Healer/Carrier kills
   if ((e.type === 'brute' || e.type === 'healer' || e.type === 'carrier') && Math.random() < (typeof BIOMASS_CONFIG !== 'undefined' ? BIOMASS_CONFIG.sporeDropChance : 0.55)) {

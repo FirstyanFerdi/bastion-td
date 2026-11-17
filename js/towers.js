@@ -5,27 +5,56 @@
    TOWERS
    ============================================================ */
 function acquire(t, rangePx) {
-  let best = null, bv = 0;
+  let best = null, bv = -Infinity;
+  const logic = t.cyberLogic || t.logicRule;
+
+  // 7.0 Cyber-Logic Priority Pre-check
+  if (logic === 'shield_buster') {
+    for (const e of G.enemies) {
+      if (e.dead || e.x < 2) continue;
+      if (e.stealth && e.revealT <= 0 && !(t.leyline && t.leyline.id === 'sensor')) continue;
+      const dx = e.x - t.x, dy = e.y - t.y, rr2 = rangePx + (typeof e.r === 'number' ? e.r : 0);
+      if (dx * dx + dy * dy <= rr2 * rr2 && (e.shield || 0) > 100) {
+        if (!best || (e.shield || 0) > (best.shield || 0)) best = e;
+      }
+    }
+    if (best) { t.target = best; return best; }
+  } else if (logic === 'titan_lock') {
+    for (const e of G.enemies) {
+      if (e.dead || e.x < 2) continue;
+      if (e.stealth && e.revealT <= 0 && !(t.leyline && t.leyline.id === 'sensor')) continue;
+      const dx = e.x - t.x, dy = e.y - t.y, rr2 = rangePx + (typeof e.r === 'number' ? e.r : 0);
+      if (dx * dx + dy * dy <= rr2 * rr2 && (e.type === 'boss' || e.affix)) {
+        if (!best || e.hp > best.hp) best = e;
+      }
+    }
+    if (best) { t.target = best; return best; }
+  }
+
   for (const e of G.enemies) {
     if (e.dead || e.x < 2) continue;
-    if (e.stealth && e.revealT <= 0 && !(t.leyline && t.leyline.id === 'sensor')) continue; // Unrevealed stealth cannot be locked unless on Sensor Leyline
-    const dx = e.x - t.x, dy = e.y - t.y, rr2 = rangePx + e.r;
+    if (e.stealth && e.revealT <= 0 && !(t.leyline && t.leyline.id === 'sensor')) continue;
+    const dx = e.x - t.x, dy = e.y - t.y, rr2 = rangePx + (typeof e.r === 'number' ? e.r : 0);
     if (dx * dx + dy * dy > rr2 * rr2) continue;
     let v;
     switch (t.prio) {
-      case 'first': v = e.d; break;
-      case 'last': v = -e.d; break;
-      case 'strongest': v = e.hp + e.shield; break;
-      default: v = -(e.hp + e.shield);
+      case 'first': v = e.d || 0; break;
+      case 'last': v = -(e.d || 0); break;
+      case 'strongest': v = e.hp + (e.shield || 0); break;
+      default: v = -(e.hp + (e.shield || 0));
     }
     if (best === null || v > bv) { best = e; bv = v; }
   }
+  t.target = best;
   return best;
 }
 function getTowerCost(type) {
   const def = TD[type];
   if (!def) return 0;
-  const mult = (typeof G !== 'undefined' && G && G.ascension >= 1) ? 1.15 : 1.0;
+  let mult = (typeof G !== 'undefined' && G && G.ascension >= 1) ? 1.15 : 1.0;
+  if (typeof G !== 'undefined' && G && G.wartimeMarket && G.wartimeMarket[type]) {
+    mult *= G.wartimeMarket[type];
+  }
   return Math.round(def.cost * mult);
 }
 
@@ -44,6 +73,7 @@ function getGridPowerStatus() {
   let used = 0;
   let capacity = 60;
   if (G && G.sector === 'metropolis') capacity += 15; // Sektor 06: Overclocked Grid
+  if (typeof hasRelic === 'function' && hasRelic('quantum_capacitance')) capacity += 35; // 7.0 Exotic Relic
   if (typeof getWorkshopLevel === 'function') {
     capacity += getWorkshopLevel('treasury') * 5;
   }
@@ -212,6 +242,7 @@ function placeTower(col, row, type) {
     addText(t.x, t.y - 24, t.leyline.name.toUpperCase(), t.leyline.color, 12);
   }
   if (typeof updateResonanceConduits === 'function') updateResonanceConduits();
+  if (typeof updateWartimeMarket === 'function') updateWartimeMarket();
   Sfx.play('place');
   return t;
 }
@@ -253,6 +284,7 @@ function sellTower(t) {
   burst(t.x, t.y, 22, '#fbbf24', 120, 0.6, 3, true);
   addText(t.x, t.y - 20, '+' + v, '#fbbf24', 16);
   if (typeof updateResonanceConduits === 'function') updateResonanceConduits();
+  if (typeof updateWartimeMarket === 'function') updateWartimeMarket();
   Sfx.play('sell'); G.uiDirty = true;
 }
 
@@ -350,6 +382,21 @@ function updateTower(t, dt) {
     }
   }
   t.synapseRateMult = rateMult;
+
+  // 7.0 Nanite Bio-Catalyst Rate Boost
+  if (t.catalystBoostT > 0) {
+    t.catalystBoostT = Math.max(0, t.catalystBoostT - dt);
+    rateMult *= 1.15;
+  }
+
+  // 7.0 Cyber-Logic Automation Presets
+  const curLogic = t.cyberLogic || t.logicRule;
+  if (curLogic && curLogic !== 'none') {
+    if (curLogic === 'thermal_vent' && (t.heat || 0) > 75) {
+      rateMult *= 0.65;
+      t.heat = Math.max(0, (t.heat || 0) - dt * 25);
+    }
+  }
 
   // Power Grid: Brownout penalty
   const gp = getGridPowerStatus();

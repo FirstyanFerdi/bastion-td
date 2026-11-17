@@ -52,6 +52,11 @@ function startWave() {
     if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('syndicate_drop');
     addText(G.syndicateGunship.x, G.syndicateGunship.y - 30, 'MERCENARY GUNSHIP ARRIVED!', '#fbbf24', 16);
   }
+
+  // 7.0 AI Director Blindspot Drop-Pod Incursions (Wave >= 7)
+  if (n >= 7 && (n % 4 === 3 || (G.threatIndex && G.threatIndex >= 40))) {
+    if (typeof spawnDropPod === 'function') spawnDropPod(n);
+  }
   let sub = boss ? 'Heavy hostile signature detected' : '';
   if (G.mutator) sub = (sub ? sub + ' · ' : '') + 'MUTATOR: ' + G.mutator.name;
   if (G.hiveMutation && typeof HIVE_MUTATIONS !== 'undefined' && HIVE_MUTATIONS[G.hiveMutation]) {
@@ -157,6 +162,16 @@ function onWaveClear() {
     setTimeout(() => {
       if (G && !G.drafting) showOverlay('smuggler');
     }, 1200);
+  }
+
+  // 7.0 Orbital Dreadnought Charge on Wave Clear
+  if (typeof chargeDreadnought === 'function') {
+    chargeDreadnought(typeof DREADNOUGHT_CONFIG !== 'undefined' ? DREADNOUGHT_CONFIG.chargePerWave : 15);
+  }
+
+  // 7.0 Anomaly Vault Expedition (Waves 4, 8, 12, 16...)
+  if (n % 4 === 0 && n % 5 !== 0 && typeof triggerAnomalyVault === 'function') {
+    triggerAnomalyVault(n);
   }
 
   saveBest();
@@ -757,6 +772,15 @@ function update(dt) {
       G.syndicateGunship = null;
     }
   }
+
+  // 7.0 Titan Mech Pilot Mode Update
+  if (typeof updateMech === 'function') updateMech(dt);
+
+  // 7.0 Orbital Dreadnought Super-Strike Update
+  if (typeof updateDreadnought === 'function') updateDreadnought(dt);
+
+  // 7.0 Tactical Drop-Pods Update
+  if (typeof updateDropPods === 'function') updateDropPods(dt);
 }
 
 /* ============================================================

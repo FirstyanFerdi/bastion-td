@@ -463,6 +463,7 @@ function render() {
   drawFieldAnomalies(c, time);
   drawSporeSpires(c, time);
   drawSeismicPillars(c, time);
+  drawDropPods(c, time);
   drawCorpses(c, time);
   drawReclaimedMinions(c, time);
   drawNeuralSynapses(c, time);
@@ -516,6 +517,8 @@ function render() {
   for (const e of G.enemies) if (e.type === 'boss' && e.x > -40) drawEnemy(c, e, time);
   for (const e of G.enemies) if (e.x > -10) drawBars(c, e);
   drawSyndicateGunship(c, time);
+  drawTitanMech(c, time);
+  drawDreadnoughtStrike(c, time);
   // plasma shells
   for (const p of G.proj) {
     glow(c, p.x, p.y, 13, '#fb923c', 0.9);
@@ -570,6 +573,8 @@ function render() {
   }
   // 6.0 Chrono Ripple & Paradox Glitch
   drawChronoRipple(c, time);
+  // 7.0 Titan Mech Cockpit Visor HUD
+  drawMechHUD(c);
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
     c.save(); c.globalAlpha = a; c.textAlign = 'center';
@@ -1113,4 +1118,363 @@ function drawChronoRipple(c, time) {
     c.strokeRect(2, 2, W - 4, H - 4);
     c.restore();
   }
+}
+
+/* ============================================================
+   BASTION TD 7.0: TITAN MECH, DREADNOUGHT & DROP-POD RENDERING
+   ============================================================ */
+
+function drawDropPods(c, time) {
+  if (!G || !G.dropPods || G.dropPods.length === 0) return;
+  for (const dp of G.dropPods) {
+    if (!dp.landed) {
+      // Beacon laser from sky
+      const pRatio = dp.t / dp.landDelay;
+      c.save();
+      c.strokeStyle = 'rgba(239, 68, 68, ' + (0.4 + 0.4 * Math.sin(time * 14)) + ')';
+      c.lineWidth = 2.5;
+      c.beginPath();
+      c.moveTo(dp.x, -50);
+      c.lineTo(dp.x, dp.y);
+      c.stroke();
+
+      // Pulsing reticle on ground
+      const pulseR = 15 + (1 - pRatio) * 35;
+      c.strokeStyle = '#ef4444';
+      c.lineWidth = 2;
+      c.setLineDash([6, 4]);
+      c.beginPath();
+      c.arc(dp.x, dp.y, pulseR, 0, TAU);
+      c.stroke();
+      c.setLineDash([]);
+
+      // Descending pod silhouette
+      const podY = -60 + (dp.y + 60) * (pRatio * pRatio);
+      c.fillStyle = '#1e293b';
+      c.strokeStyle = '#f87171';
+      c.lineWidth = 1.5;
+      rr(c, dp.x - 10, podY - 18, 20, 26, 4);
+      c.fill(); c.stroke();
+      c.restore();
+    } else {
+      // Landed Drop Pod Bunker
+      c.save();
+      c.fillStyle = '#0f172a';
+      c.strokeStyle = '#ef4444';
+      c.lineWidth = 2;
+      rr(c, dp.x - 14, dp.y - 14, 28, 28, 5);
+      c.fill(); c.stroke();
+
+      // Hazard beacon
+      c.fillStyle = '#ef4444';
+      c.beginPath();
+      c.arc(dp.x, dp.y, 4, 0, TAU);
+      c.fill();
+
+      // Heat vent exhaust
+      if (Math.random() < 0.35) {
+        c.fillStyle = 'rgba(248, 113, 113, 0.4)';
+        c.fillRect(dp.x - 8 + Math.random() * 16, dp.y - 18, 3, 4);
+      }
+      c.restore();
+    }
+  }
+}
+
+function drawTitanMech(c, time) {
+  if (!G || !G.mech) return;
+  const m = G.mech;
+  const mx = m.x, my = m.y, facing = m.facing || 0;
+  c.save();
+  c.translate(mx, my);
+
+  // Piloted halo ring
+  if (m.active) {
+    c.strokeStyle = 'rgba(56, 189, 248, ' + (0.5 + 0.3 * Math.sin(time * 6)) + ')';
+    c.lineWidth = 1.5;
+    c.setLineDash([4, 4]);
+    c.beginPath();
+    c.arc(0, 0, 32, 0, TAU);
+    c.stroke();
+    c.setLineDash([]);
+  } else if (m.isDocked) {
+    c.strokeStyle = 'rgba(52, 211, 153, 0.4)';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.arc(0, 0, 28, 0, TAU);
+    c.stroke();
+  }
+
+  // Shadow
+  c.fillStyle = 'rgba(0, 0, 0, 0.4)';
+  c.beginPath();
+  c.ellipse(0, 8, 22, 12, 0, 0, TAU);
+  c.fill();
+
+  // Walker Legs
+  const isMoving = Math.hypot(m.vx || 0, m.vy || 0) > 10;
+  const legCycle = isMoving ? Math.sin(time * 12) * 8 : 0;
+  c.fillStyle = '#334155';
+  c.strokeStyle = '#1e293b';
+  c.lineWidth = 2;
+  // Left leg
+  c.fillRect(-14, 2 + legCycle, 8, 14);
+  c.strokeRect(-14, 2 + legCycle, 8, 14);
+  // Right leg
+  c.fillRect(6, 2 - legCycle, 8, 14);
+  c.strokeRect(6, 2 - legCycle, 8, 14);
+
+  // Torso / Chassis (rotates to facing)
+  c.rotate(facing);
+
+  // Armored Shoulder Mounts
+  c.fillStyle = '#1e293b';
+  c.strokeStyle = m.active ? '#38bdf8' : '#64748b';
+  c.lineWidth = 1.8;
+  rr(c, -18, -20, 36, 40, 6);
+  c.fill(); c.stroke();
+
+  // Vulcan Cannon (Right Arm)
+  c.fillStyle = '#0f172a';
+  c.fillRect(10, 8, 20, 6);
+  c.strokeStyle = '#94a3b8';
+  c.strokeRect(10, 8, 20, 6);
+  if (m.firingT > 0) {
+    // Muzzle Flash
+    glow(c, 32, 11, 12, '#fbbf24', 0.9);
+    c.fillStyle = '#fff';
+    c.beginPath();
+    c.arc(32, 11, 4, 0, TAU);
+    c.fill();
+  }
+
+  // Energy Blade / Shield Generator (Left Arm)
+  c.fillStyle = '#0f172a';
+  c.fillRect(10, -14, 12, 6);
+  c.strokeStyle = '#f97316';
+  c.strokeRect(10, -14, 12, 6);
+
+  // Cockpit Core
+  c.fillStyle = m.active ? '#0284c7' : '#475569';
+  c.beginPath();
+  c.arc(0, 0, 9, 0, TAU);
+  c.fill();
+  c.fillStyle = m.active ? '#38bdf8' : '#94a3b8';
+  c.beginPath();
+  c.arc(2, 0, 5, 0, TAU);
+  c.fill();
+
+  // Thermal Blade Swing Arc Visual
+  if (m.swingT > 0) {
+    c.save();
+    c.strokeStyle = 'rgba(249, 115, 22, ' + (m.swingT * 1.5) + ')';
+    c.lineWidth = 8;
+    c.beginPath();
+    c.arc(0, 0, 75, -Math.PI / 2.5, Math.PI / 2.5);
+    c.stroke();
+
+    c.strokeStyle = 'rgba(255, 255, 255, ' + m.swingT + ')';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.arc(0, 0, 75, -Math.PI / 3, Math.PI / 3);
+    c.stroke();
+    c.restore();
+  }
+
+  c.restore();
+
+  // Floating Health & Battery Bars above mech
+  const barW = 44, barH = 4;
+  const bx = mx - barW / 2, by = my - 36;
+  // Hull HP Bar
+  c.fillStyle = 'rgba(15, 23, 42, 0.8)';
+  c.fillRect(bx, by, barW, barH);
+  const hpPct = clamp(m.hp / m.maxHp, 0, 1);
+  c.fillStyle = hpPct > 0.4 ? '#22c55e' : '#ef4444';
+  c.fillRect(bx, by, barW * hpPct, barH);
+  c.strokeStyle = '#0f172a';
+  c.lineWidth = 1;
+  c.strokeRect(bx, by, barW, barH);
+
+  // Battery Bar
+  c.fillStyle = 'rgba(15, 23, 42, 0.8)';
+  c.fillRect(bx, by + barH + 2, barW, barH);
+  const batPct = clamp(m.battery / m.maxBattery, 0, 1);
+  c.fillStyle = batPct > 0.2 ? '#38bdf8' : '#f59e0b';
+  c.fillRect(bx, by + barH + 2, barW * batPct, barH);
+  c.strokeRect(bx, by + barH + 2, barW, barH);
+
+  // Pilot Prompt Tag
+  if (!m.active) {
+    c.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    c.fillRect(mx - 32, my - 50, 64, 12);
+    c.fillStyle = '#94a3b8';
+    c.font = '700 8.5px ' + FONT;
+    c.textAlign = 'center';
+    c.fillText(m.isDocked ? 'DOCK RECHARGE' : 'MECH [TAB]', mx, my - 41);
+  }
+}
+
+function drawDreadnoughtStrike(c, time) {
+  if (!G || !G.dreadnought) return;
+  const d = G.dreadnought;
+
+  // Render Molten Craters on ground
+  if (d.craters && d.craters.length > 0) {
+    for (const cr of d.craters) {
+      const alpha = clamp(cr.life / cr.maxLife, 0, 1);
+      c.save();
+      // Molten magma ground fill
+      glow(c, cr.x, cr.y, cr.r * 0.8, '#f97316', alpha * 0.7);
+      c.fillStyle = 'rgba(234, 88, 12, ' + (alpha * 0.35) + ')';
+      c.beginPath();
+      c.arc(cr.x, cr.y, cr.r, 0, TAU);
+      c.fill();
+      // Scorched ring border
+      c.strokeStyle = 'rgba(249, 115, 22, ' + (alpha * 0.8) + ')';
+      c.lineWidth = 2.5;
+      c.stroke();
+      // Fissure cracks
+      c.strokeStyle = 'rgba(254, 215, 170, ' + alpha + ')';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.moveTo(cr.x - cr.r * 0.5, cr.y - cr.r * 0.3);
+      c.lineTo(cr.x + cr.r * 0.4, cr.y + cr.r * 0.2);
+      c.lineTo(cr.x + cr.r * 0.7, cr.y - cr.r * 0.1);
+      c.stroke();
+      c.restore();
+    }
+  }
+
+  if (!d.active) return;
+
+  // Atmospheric darkening overlay
+  c.save();
+  c.fillStyle = 'rgba(15, 23, 42, 0.45)';
+  c.fillRect(0, 0, W, H);
+
+  // Giant Dreadnought Shadow overhead
+  const shipX = W * 0.5 + Math.sin(time * 0.5) * 40;
+  c.fillStyle = 'rgba(2, 6, 23, 0.65)';
+  c.beginPath();
+  c.moveTo(shipX - 280, -30);
+  c.lineTo(shipX + 280, -30);
+  c.lineTo(shipX + 160, 90);
+  c.lineTo(shipX, 130);
+  c.lineTo(shipX - 160, 90);
+  c.closePath();
+  c.fill();
+  c.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+  c.lineWidth = 2;
+  c.stroke();
+
+  // Glowing Thruster Ports
+  glow(c, shipX - 120, -10, 18, '#38bdf8', 0.8);
+  glow(c, shipX + 120, -10, 18, '#38bdf8', 0.8);
+
+  // Render Target Reticles and Falling Tungsten Rods
+  if (d.rods) {
+    for (const r of d.rods) {
+      if (!r.landed) {
+        // Orbital Target Lock Reticle
+        const tDiff = Math.max(0, r.delay - d.t);
+        const lockR = 25 + tDiff * 45;
+        c.strokeStyle = '#f59e0b';
+        c.lineWidth = 2.5;
+        c.setLineDash([8, 6]);
+        c.beginPath();
+        c.arc(r.x, r.y, lockR, 0, TAU);
+        c.stroke();
+        c.setLineDash([]);
+
+        // Crosshairs
+        c.strokeStyle = 'rgba(245, 158, 11, 0.8)';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(r.x - lockR - 8, r.y); c.lineTo(r.x + lockR + 8, r.y);
+        c.moveTo(r.x, r.y - lockR - 8); c.lineTo(r.x, r.y + lockR + 8);
+        c.stroke();
+
+        // Falling Kinetic Rod Trail when close to impact
+        if (tDiff < 0.6) {
+          const fallProgress = (0.6 - tDiff) / 0.6;
+          const rodY = -100 + (r.y + 100) * fallProgress;
+          c.strokeStyle = '#fed7aa';
+          c.lineWidth = 6;
+          c.beginPath();
+          c.moveTo(r.x, rodY - 90);
+          c.lineTo(r.x, rodY);
+          c.stroke();
+          glow(c, r.x, rodY, 20, '#f97316', 0.9);
+        }
+      }
+    }
+  }
+  c.restore();
+}
+
+function drawMechHUD(c) {
+  if (!G || !G.mech || !G.mech.active) return;
+  const m = G.mech;
+  const cfg = typeof TITAN_MECH_CONFIG !== 'undefined' ? TITAN_MECH_CONFIG : { maxHp: 1000, maxBattery: 100 };
+  const hW = 440, hH = 68;
+  const hX = (W - hW) / 2, hY = H - hH - 12;
+
+  c.save();
+  // Cockpit Glass Backdrop
+  c.fillStyle = 'rgba(4, 12, 24, 0.88)';
+  c.strokeStyle = '#0284c7';
+  c.lineWidth = 2;
+  rr(c, hX, hY, hW, hH, 8);
+  c.fill(); c.stroke();
+
+  // Scanline Effect
+  c.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+  c.lineWidth = 1;
+  c.beginPath();
+  for (let ly = hY + 6; ly < hY + hH; ly += 6) {
+    c.moveTo(hX + 6, ly); c.lineTo(hX + hW - 6, ly);
+  }
+  c.stroke();
+
+  // Header Title
+  c.font = '800 11px ' + FONT;
+  c.fillStyle = '#38bdf8';
+  c.textAlign = 'left';
+  c.fillText('⚔ TITAN COMBAT MECH PILOT HUD [TAB TO DISEMBARK]', hX + 16, hY + 18);
+
+  // Status Indicators Grid
+  // 1. Hull HP
+  const hpPct = clamp(m.hp / cfg.maxHp, 0, 1);
+  c.font = '700 9.5px ' + FONT;
+  c.fillStyle = '#94a3b8';
+  c.fillText('HULL INTEGRITY (' + Math.round(m.hp) + '/' + cfg.maxHp + ')', hX + 16, hY + 34);
+  c.fillStyle = 'rgba(15, 23, 42, 0.8)';
+  c.fillRect(hX + 16, hY + 38, 120, 6);
+  c.fillStyle = hpPct > 0.4 ? '#22c55e' : '#ef4444';
+  c.fillRect(hX + 16, hY + 38, 120 * hpPct, 6);
+
+  // 2. Battery
+  const batPct = clamp(m.battery / cfg.maxBattery, 0, 1);
+  c.fillStyle = '#94a3b8';
+  c.fillText('POWER CELL (' + Math.round(m.battery) + '%)', hX + 150, hY + 34);
+  c.fillStyle = 'rgba(15, 23, 42, 0.8)';
+  c.fillRect(hX + 150, hY + 38, 120, 6);
+  c.fillStyle = batPct > 0.2 ? '#38bdf8' : '#f59e0b';
+  c.fillRect(hX + 150, hY + 38, 120 * batPct, 6);
+
+  // 3. Thermal Blade Status
+  c.fillStyle = '#94a3b8';
+  c.fillText('THERMAL BLADE [SPACE]', hX + 285, hY + 34);
+  const bladeReady = m.bladeCd <= 0;
+  c.font = '800 11px ' + FONT;
+  c.fillStyle = bladeReady ? '#f97316' : '#64748b';
+  c.fillText(bladeReady ? '★ READY TO CLEAVE' : 'COOLDOWN ' + m.bladeCd.toFixed(1) + 's', hX + 285, hY + 48);
+
+  // Controls Reminder
+  c.font = '600 9.5px ' + FONT;
+  c.fillStyle = '#cbd5e1';
+  c.fillText('WASD: Thrusters · Left Click: Vulcan Autocannon · Near Base: Auto Dock Recharge', hX + 16, hY + 58);
+
+  c.restore();
 }
