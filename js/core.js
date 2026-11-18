@@ -63,7 +63,8 @@ const SAVE = {
     executioner_nanites: 2,
     feedback_chrono: 2
   }),
-  codex: Store.get('nb_codex', {})
+  codex: Store.get('nb_codex', {}),
+  nemesisRoster: Store.get('nb_nemesis', [])
 };
 
 function setDoctrine(id) {

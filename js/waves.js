@@ -39,6 +39,23 @@ function startWave() {
     G.mutator = null;
   }
 
+  // 9.0 Atmospheric Micro-Climate Weather Cycling (every 4 waves)
+  if (n % 4 === 0) {
+    const weathers = ['ion_squall', 'spore_fog'];
+    const selected = weathers[Math.floor(((n / 4) - 1)) % weathers.length];
+    if (typeof setWeather === 'function') setWeather(selected);
+  } else if (n % 4 === 2) {
+    if (typeof setWeather === 'function') setWeather('clear');
+  }
+
+  // 9.0 Nemesis Commander Scheduled Invasion
+  if (G.nemesisRoster && G.nemesisRoster.length > 0 && n >= 6 && n % 3 === 0) {
+    const nem = G.nemesisRoster[0];
+    if (typeof spawnNemesisCommander === 'function') {
+      setTimeout(() => spawnNemesisCommander(nem), 1500);
+    }
+  }
+
   // 6.0 Infiltrator Syndicate Dropship Encounter
   if ([6, 12, 18].includes(n)) {
     G.syndicateGunship = {
@@ -117,11 +134,12 @@ function onWaveClear() {
   const intRate = isVC ? 0.14 : 0.08, intCap = isVC ? 260 : 150;
   const interest = Math.min(intCap, Math.floor(G.gold * intRate));
   const ascScoreMult = 1 + (G.ascension || 0) * 0.20;
-  G.gold += bonus + interest; G.score += Math.round((n * 100 + bonus + interest) * ascScoreMult);
+  const adaptScoreMult = (G && G.adaptabilityScore) || 1.0;
+  G.gold += bonus + interest; G.score += Math.round((n * 100 + bonus + interest) * ascScoreMult * adaptScoreMult);
   addText(W / 2, 90, 'WAVE ' + n + ' CLEARED  +' + bonus, '#6ee7b7', 22);
   if (interest > 0) addText(W / 2, 118, 'interest +' + interest + (isVC ? ' (Venture Capital)' : ''), '#fbbf24', 16);
-  const earnedCores = addCores(1);
-  addText(W / 2, 142, '+' + earnedCores + ' Nanite Core' + (earnedCores > 1 ? 's' : ''), '#38bdf8', 14);
+  const earnedCores = addCores(Math.round(1 * (adaptScoreMult > 1.5 ? 2 : 1)));
+  addText(W / 2, 142, '+' + earnedCores + ' Nanite Core' + (earnedCores > 1 ? 's' : '') + (adaptScoreMult > 1.0 ? ' (Adaptability x' + adaptScoreMult.toFixed(1) + ')' : ''), '#38bdf8', 14);
 
   // 5.0 Tactical Protocol Point for Clean Clear
   if (G.leakedThisWave === 0) {
@@ -786,6 +804,10 @@ function update(dt) {
   if (typeof updateMegastructures === 'function') updateMegastructures(dt);
   if (typeof updateLogistics === 'function') updateLogistics(dt);
   if (typeof updatePheromones === 'function') updatePheromones(dt);
+
+  // 9.0 Living Ecosystem & Nemesis Network Updates
+  if (typeof updateEcology === 'function') updateEcology(dt);
+  if (typeof updateProfiler === 'function') updateProfiler(dt);
   if (G && G.grapplePrompt && G.grapplePrompt.timer > 0) {
     G.grapplePrompt.timer = Math.max(0, G.grapplePrompt.timer - dt);
     if (G.grapplePrompt.timer <= 0) G.grapplePrompt = null;

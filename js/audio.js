@@ -6,7 +6,7 @@
    ============================================================ */
 const Sfx = {
   ctx: null, master: null, noiseBuf: null, muted: SAVE.muted, last: {},
-  GAP: { gatling: 55, hit: 45, kill: 40, plasma: 90, boom: 70, cryo: 120, freeze: 200, tesla: 80, rail: 120, heal: 300, shield: 200, click: 20, orbital: 300, overcharge: 200, caltrops: 150, shatter: 80, perk: 300, emp: 200, reaction: 110, shockwave: 130, fusion: 250, overload: 300, streak: 120, strike: 250, drop: 200 },
+  GAP: { gatling: 55, hit: 45, kill: 40, plasma: 90, boom: 70, cryo: 120, freeze: 200, tesla: 80, rail: 120, heal: 300, shield: 200, click: 20, orbital: 300, overcharge: 200, caltrops: 150, shatter: 80, perk: 300, emp: 200, reaction: 110, shockwave: 130, fusion: 250, overload: 300, streak: 120, strike: 250, drop: 200, rockslide: 200, weather_ion: 200, gorger_feed: 150, alpha_roar: 400, harpoon_tether: 200, soil_burn: 120 },
   init() {
     if (this.ctx) return;
     try {
@@ -110,6 +110,12 @@ const Sfx = {
       case 'ion_beam': this.tone('sawtooth', 180, 120, 0.4, 0.28); this.tone('sine', 440, 220, 0.35, 0.2); this.noise(0.3, 0.2, 1800, 2, 'bandpass'); break;
       case 'pipe_burst': this.noise(0.4, 0.35, 2800, 2, 'highpass'); this.tone('square', 240, 90, 0.15, 0.18); break;
       case 'gene_splice': [523, 659, 880, 1174].forEach((f, i) => this.tone('sine', f, f * 1.06, 0.25, 0.18, i * 0.05)); this.noise(0.2, 0.15, 3400, 2, 'bandpass'); break;
+      case 'rockslide': this.noise(0.9, 0.75, 140, 1, 'lowpass'); this.tone('sawtooth', 90, 25, 0.8, 0.45); break;
+      case 'weather_ion': this.noise(0.4, 0.5, 3200, 2, 'bandpass'); this.tone('sawtooth', 1200, 80, 0.35, 0.3); break;
+      case 'gorger_feed': this.noise(0.25, 0.4, 650, 1, 'lowpass'); this.tone('square', 140, 60, 0.18, 0.22); break;
+      case 'alpha_roar': this.noise(1.1, 0.8, 220, 1, 'lowpass'); this.tone('sawtooth', 75, 32, 1.2, 0.5); this.tone('sine', 48, 20, 1.0, 0.6); break;
+      case 'harpoon_tether': this.tone('sawtooth', 880, 240, 0.2, 0.25); this.noise(0.2, 0.3, 2400, 2, 'highpass'); break;
+      case 'soil_burn': this.noise(0.3, 0.25, 1800, 1, 'highpass'); this.tone('triangle', 320, 120, 0.2, 0.12); break;
     }
   }
 };

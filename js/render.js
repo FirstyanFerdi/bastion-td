@@ -471,6 +471,10 @@ function render() {
   drawLogisticsConduits(c, time);
   drawMegastructures(c, time);
   drawTitanGrapple(c, time);
+  // 9.0 Living Ecosystem Ground Systems
+  drawEcologySoil(c, time);
+  drawDestructibleCrags(c, time);
+  drawBarricades(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -535,6 +539,7 @@ function render() {
   drawSyndicateGunship(c, time);
   drawTitanMech(c, time);
   drawDreadnoughtStrike(c, time);
+  drawNemesisBosses(c, time);
   // plasma shells
   for (const p of G.proj) {
     glow(c, p.x, p.y, 13, '#fb923c', 0.9);
@@ -591,6 +596,9 @@ function render() {
   drawChronoRipple(c, time);
   // 7.0 Titan Mech Cockpit Visor HUD
   drawMechHUD(c);
+  // 9.0 Micro-Climate Atmospheric Weather Atmosphere
+  drawWeatherAtmosphere(c, time);
+
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
     c.save(); c.globalAlpha = a; c.textAlign = 'center';
@@ -1695,6 +1703,197 @@ function drawTitanGrapple(c, time) {
     c.lineTo(b.x, b.y);
     c.stroke();
     c.setLineDash([]);
+  }
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 9.0: LIVING ECOSYSTEM & NEMESIS NETWORK RENDERS
+   ============================================================ */
+
+function drawEcologySoil(c, time) {
+  if (!G || !G.soilTiles) return;
+  c.save();
+  for (const k in G.soilTiles) {
+    const st = G.soilTiles[k];
+    const x = st.c * TILE, y = st.r * TILE;
+    const alpha = clamp(st.life / st.maxLife, 0.2, 0.85);
+
+    if (st.type === 'thermal_ash') {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 5 + st.c);
+      c.fillStyle = 'rgba(249,115,22,' + (0.22 + 0.12 * pulse * alpha) + ')';
+      c.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+      c.strokeStyle = 'rgba(251,146,60,' + (0.4 + 0.4 * alpha) + ')';
+      c.lineWidth = 1.5;
+      c.strokeRect(x + 3, y + 3, TILE - 6, TILE - 6);
+      c.strokeStyle = '#fdba74';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(x + 8, y + 12);
+      c.lineTo(x + TILE / 2, y + TILE / 2);
+      c.lineTo(x + TILE - 8, y + TILE - 14);
+      c.stroke();
+    } else if (st.type === 'frost_slick') {
+      const sheen = Math.sin(time * 3 + st.c * 2);
+      c.fillStyle = 'rgba(56,189,248,' + (0.2 + 0.15 * alpha) + ')';
+      c.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+      c.strokeStyle = 'rgba(186,230,253,' + (0.5 + 0.3 * sheen) + ')';
+      c.lineWidth = 1.8;
+      c.strokeRect(x + 3, y + 3, TILE - 6, TILE - 6);
+      c.beginPath();
+      c.moveTo(x + 6, y + TILE - 8);
+      c.lineTo(x + TILE - 8, y + 8);
+      c.stroke();
+    } else if (st.type === 'acid_sinkhole') {
+      c.fillStyle = 'rgba(132,204,22,' + (0.28 + 0.15 * alpha) + ')';
+      c.beginPath();
+      c.arc(st.x, st.y, TILE * 0.44, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = '#a3e635';
+      c.lineWidth = 2;
+      c.stroke();
+      const bRad = (time * 15 + st.c * 10) % (TILE * 0.35);
+      c.strokeStyle = 'rgba(217,249,157,0.7)';
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.arc(st.x, st.y, bRad, 0, Math.PI * 2);
+      c.stroke();
+    }
+  }
+  c.restore();
+}
+
+function drawDestructibleCrags(c, time) {
+  if (!G) return;
+  c.save();
+
+  if (G.destructibleCrags) {
+    for (const crag of G.destructibleCrags) {
+      if (crag.collapsed) continue;
+      const x = crag.c * TILE + TILE / 2, y = crag.r * TILE + TILE / 2;
+      c.fillStyle = '#334155';
+      c.beginPath();
+      c.moveTo(x - 20, y + 16);
+      c.lineTo(x - 12, y - 18);
+      c.lineTo(x + 8, y - 22);
+      c.lineTo(x + 22, y - 4);
+      c.lineTo(x + 16, y + 18);
+      c.closePath();
+      c.fill();
+      c.strokeStyle = '#64748b';
+      c.lineWidth = 2;
+      c.stroke();
+
+      c.strokeStyle = '#94a3b8';
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.moveTo(x - 6, y - 12);
+      c.lineTo(x + 2, y + 4);
+      c.lineTo(x + 10, y + 12);
+      c.stroke();
+
+      if (crag.hp < crag.maxHp) {
+        const bw = 36, bh = 4;
+        c.fillStyle = 'rgba(15,23,42,0.85)';
+        c.fillRect(x - bw / 2 - 1, y - 28, bw + 2, bh + 2);
+        c.fillStyle = '#f59e0b';
+        c.fillRect(x - bw / 2, y - 27, bw * (crag.hp / crag.maxHp), bh);
+      }
+    }
+  }
+
+  if (G.rockslides) {
+    for (const rs of G.rockslides) {
+      if (rs.cleared) continue;
+      c.fillStyle = '#475569';
+      c.beginPath();
+      c.arc(rs.x - 10, rs.y - 6, 12, 0, Math.PI * 2);
+      c.arc(rs.x + 8, rs.y - 8, 14, 0, Math.PI * 2);
+      c.arc(rs.x + 2, rs.y + 10, 11, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = '#94a3b8';
+      c.lineWidth = 2;
+      c.stroke();
+
+      const bw = 40, bh = 4;
+      c.fillStyle = 'rgba(15,23,42,0.85)';
+      c.fillRect(rs.x - bw / 2 - 1, rs.y - 24, bw + 2, bh + 2);
+      c.fillStyle = '#e2e8f0';
+      c.fillRect(rs.x - bw / 2, rs.y - 23, bw * (rs.life / rs.maxLife), bh);
+      c.font = '800 8.5px ' + FONT;
+      c.fillStyle = '#f59e0b';
+      c.textAlign = 'center';
+      c.fillText('RUBBLE (' + Math.ceil(rs.life) + 's)', rs.x, rs.y - 27);
+    }
+  }
+
+  c.restore();
+}
+
+function drawBarricades(c, time) {
+  if (!G || !G.barricades || G.barricades.length === 0) return;
+  c.save();
+  for (const bar of G.barricades) {
+    const x = bar.x, y = bar.y;
+    c.fillStyle = '#1e293b';
+    c.fillRect(x - 18, y - 8, 36, 16);
+    c.strokeStyle = '#f59e0b';
+    c.lineWidth = 2;
+    c.strokeRect(x - 18, y - 8, 36, 16);
+    c.strokeStyle = '#fbbf24';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(x - 12, y - 6); c.lineTo(x - 6, y + 6);
+    c.moveTo(x - 2, y - 6); c.lineTo(x + 4, y + 6);
+    c.moveTo(x + 8, y - 6); c.lineTo(x + 14, y + 6);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function drawWeatherAtmosphere(c, time) {
+  if (!G || !G.currentWeather) return;
+  c.save();
+  if (G.currentWeather === 'spore_fog') {
+    c.fillStyle = 'rgba(20,83,45,0.12)';
+    c.fillRect(0, 0, W, H);
+
+    c.fillStyle = 'rgba(163,230,53,0.45)';
+    for (let i = 0; i < 20; i++) {
+      const px = (Math.sin(time * 0.4 + i * 1.5) * 0.5 + 0.5) * W;
+      const py = ((time * 25 + i * 45) % H);
+      c.beginPath();
+      c.arc(px, py, 2.2, 0, Math.PI * 2);
+      c.fill();
+    }
+  } else if (G.currentWeather === 'ion_squall') {
+    const stormPulse = Math.sin(time * 4);
+    if (stormPulse > 0.8) {
+      c.fillStyle = 'rgba(129,140,248,0.06)';
+      c.fillRect(0, 0, W, H);
+    }
+  }
+  c.restore();
+}
+
+function drawNemesisBosses(c, time) {
+  if (!G || !G.enemies) return;
+  c.save();
+  for (const e of G.enemies) {
+    if (!e.dead && e.isNemesis && e.nemesisTitle) {
+      const ty = e.y - (e.r || 24) - 32;
+      c.font = '800 11px ' + FONT;
+      const tw = c.measureText(e.nemesisTitle.toUpperCase()).width + 16;
+      c.fillStyle = 'rgba(15,23,42,0.9)';
+      c.fillRect(e.x - tw / 2, ty - 12, tw, 18);
+      c.strokeStyle = '#a855f7';
+      c.lineWidth = 1.5;
+      c.strokeRect(e.x - tw / 2, ty - 12, tw, 18);
+
+      c.fillStyle = '#e9d5ff';
+      c.textAlign = 'center';
+      c.fillText('★ ' + e.nemesisTitle.toUpperCase() + ' ★', e.x, ty + 2);
+    }
   }
   c.restore();
 }

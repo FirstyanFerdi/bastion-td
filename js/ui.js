@@ -188,6 +188,31 @@ function renderInspector() {
     return;
   }
 
+  // 9.0 Destructible Crag Inspector
+  if (t && t.roadC !== undefined) {
+    const crag = t;
+    box.innerHTML = '<h3>TACTICAL TERRAIN INSPECTOR</h3>' +
+      '<div class="insp-name"><div><h4 style="color:#f59e0b">DESTRUCTIBLE CHOKEPOINT CRAG</h4><small>CRAG INTEGRITY · ' + crag.hp + ' / ' + crag.maxHp + ' HP</small></div></div>' +
+      '<div style="margin:5px 0;padding:6px;background:rgba(15,23,42,0.8);border-left:3px solid #f59e0b;border-radius:2px">' +
+      '<div style="font-size:10px;color:#f8fafc;font-weight:700">STATUS: ' + (crag.collapsed ? 'COLLAPSED (AVALANCHE TRIGGERED)' : 'UNSTABLE GEOLOGICAL CRAG') + '</div>' +
+      '<div style="font-size:9.5px;color:#cbd5e1;line-height:1.25;margin-top:2px">Detonating or shooting this cliff triggers a massive Rockslide Avalanche that blocks the main road tile (' + crag.roadC + ',' + crag.roadR + ') for 20 seconds, crushing hostiles and redirecting traffic.</div>' +
+      '</div>' +
+      (!crag.collapsed ? '<button class="primary" data-act="collapse_crag" data-crag="' + crag.id + '" style="width:100%;margin-top:6px;background:#f59e0b;color:#0f172a;font-weight:800">COLLAPSE CHOKEPOINT CRAG</button>' : '');
+    return;
+  }
+
+  // 9.0 Nemesis Commander Dossier Inspector
+  if (t && t.isNemesis) {
+    const nem = t;
+    box.innerHTML = '<h3>NEMESIS INTELLIGENCE DOSSIER</h3>' +
+      '<div class="insp-name"><div><h4 style="color:#a855f7">' + (nem.nemesisTitle || "Vor'gath, The Rail-Shatterer").toUpperCase() + '</h4><small>BOUNTY RETRIBUTION COMMANDER</small></div></div>' +
+      '<div style="margin:5px 0;padding:6px;background:rgba(15,23,42,0.8);border-left:3px solid #a855f7;border-radius:2px">' +
+      '<div style="font-size:10px;color:#f8fafc;font-weight:700">HARD-COUNTER ARMOR: -50% ' + (nem.counterType || 'phys').toUpperCase() + ' DAMAGE</div>' +
+      '<div style="font-size:9.5px;color:#cbd5e1;line-height:1.25;margin-top:2px">Persistent Nemesis Commander. Defeating this unit yields high retribution rewards: +100 Gold, +35 Nanite Cores, and an Exotic Neural Chip!</div>' +
+      '</div>';
+    return;
+  }
+
   const def = TD[t.type], tier = t.tier;
   const isFusion = Boolean(def && def.isFusion);
   const cur = statRows(t.type, tier, t.branch);
@@ -570,6 +595,13 @@ function refreshUI() {
     $('vSector').textContent = curSecObj.num + ' ' + curSecObj.shortName;
     $('vSector').style.color = curSecObj.color;
     if ($('chipSector')) $('chipSector').style.borderColor = curSecObj.color + '66';
+  }
+  // 9.0 Atmospheric Weather Chip Update
+  if ($('vWeather') && G && G.currentWeather && typeof ECOSYSTEM_CONFIG !== 'undefined' && ECOSYSTEM_CONFIG.weather) {
+    const w = ECOSYSTEM_CONFIG.weather[G.currentWeather] || { name: 'Clear', color: '#38bdf8' };
+    $('vWeather').textContent = G.currentWeather.toUpperCase().replace('_', ' ');
+    $('vWeather').style.color = w.color;
+    if ($('chipWeather')) $('chipWeather').style.borderColor = w.color + '66';
   }
   const btnOv = $('btnOverload');
   if (btnOv && G) {

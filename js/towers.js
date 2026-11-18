@@ -13,6 +13,7 @@ function acquire(t, rangePx) {
     for (const e of G.enemies) {
       if (e.dead || e.x < 2) continue;
       if (e.stealth && e.revealT <= 0 && !(t.leyline && t.leyline.id === 'sensor')) continue;
+      if (e.burrowed && !(t.leyline && t.leyline.id === 'sensor')) continue;
       const dx = e.x - t.x, dy = e.y - t.y, rr2 = rangePx + (typeof e.r === 'number' ? e.r : 0);
       if (dx * dx + dy * dy <= rr2 * rr2 && (e.shield || 0) > 100) {
         if (!best || (e.shield || 0) > (best.shield || 0)) best = e;
@@ -23,6 +24,7 @@ function acquire(t, rangePx) {
     for (const e of G.enemies) {
       if (e.dead || e.x < 2) continue;
       if (e.stealth && e.revealT <= 0 && !(t.leyline && t.leyline.id === 'sensor')) continue;
+      if (e.burrowed && !(t.leyline && t.leyline.id === 'sensor')) continue;
       const dx = e.x - t.x, dy = e.y - t.y, rr2 = rangePx + (typeof e.r === 'number' ? e.r : 0);
       if (dx * dx + dy * dy <= rr2 * rr2 && (e.type === 'boss' || e.affix)) {
         if (!best || e.hp > best.hp) best = e;
@@ -34,6 +36,7 @@ function acquire(t, rangePx) {
   for (const e of G.enemies) {
     if (e.dead || e.x < 2) continue;
     if (e.stealth && e.revealT <= 0 && !(t.leyline && t.leyline.id === 'sensor')) continue;
+    if (e.burrowed && !(t.leyline && t.leyline.id === 'sensor')) continue;
     const dx = e.x - t.x, dy = e.y - t.y, rr2 = rangePx + (typeof e.r === 'number' ? e.r : 0);
     if (dx * dx + dy * dy > rr2 * rr2) continue;
     let v;
@@ -351,6 +354,15 @@ function updateTower(t, dt) {
       }
     }
   }
+  // 9.0 Reactive Dynamic Soil Influences
+  if (G && G.soilTiles) {
+    const soilUnder = G.soilTiles[t.c + '_' + t.r];
+    if (soilUnder) {
+      if (soilUnder.type === 'thermal_ash') dissipation *= 0.50;
+      else if (soilUnder.type === 'acid_sinkhole') rateMult *= 0.75;
+    }
+  }
+
   t.heat = Math.max(0, (t.heat || 0) - dt * dissipation);
 
   // 5.0 Thermal Overheat Throttle (-40% Fire Rate)
@@ -429,6 +441,12 @@ function updateTower(t, dt) {
     }
   }
 
+  // 9.0 Ion Squall Overcharge
+  if (t.ionOverchargeT > 0) {
+    t.ionOverchargeT = Math.max(0, t.ionOverchargeT - dt);
+    rateMult *= 2.0;
+  }
+
   let effRate = st.rate * rateMult;
   if (t.type === 'gatling' && t.branch === 'A') {
     effRate = lerp(st.rate, st.maxRate, t.spinup || 0) * rateMult;
@@ -436,6 +454,10 @@ function updateTower(t, dt) {
   t.charge = clamp(1 - t.cd * effRate, 0, 1);
   const sensorRangeBonus = (t.leyline && t.leyline.id === 'sensor') ? 2.5 * TILE : 0;
   if (G && G.sector === 'dunes' && !(t.leyline && t.leyline.id === 'sensor')) rangeMult *= 0.90; // Sektor 05: Quicksand dust reduces range
+  // 9.0 Weather: Toxic Spore Fog reduces range unless Sensor Leyline
+  if (G && G.currentWeather === 'spore_fog' && !(t.leyline && t.leyline.id === 'sensor')) {
+    rangeMult *= 0.65;
+  }
   const rangePx = st.range * rangeMult * TILE + sensorRangeBonus;
 
   if (t.type === 'cryo') {
@@ -570,6 +592,10 @@ function explode(p) {
   burst(p.x, p.y, 22, '#fb923c', 190, 0.6, 4, true);
   burst(p.x, p.y, 10, '#fff7ed', 120, 0.35, 3, true);
   shake(2.2); Sfx.play('boom');
+  // 9.0 Reactive Dynamic Soil: Thermal Ash & Vitrified Soil
+  if (typeof addSoilTile === 'function') {
+    addSoilTile(Math.floor(p.x / TILE), Math.floor(p.y / TILE), 'thermal_ash', 18.0);
+  }
   // Nova Mortar leaves radiation puddle
   if (p.branch === 'A' && p.radDur) {
     const dur = p.catalyst ? p.radDur * 1.5 : p.radDur;
@@ -600,6 +626,10 @@ function explode(p) {
 }
 function cryoPulse(t, st, rangePx, effRate) {
   addTowerHeat(t, 2.5);
+  // 9.0 Reactive Dynamic Soil: Frost Slick Ice Slide
+  if (typeof addSoilTile === 'function') {
+    addSoilTile(t.c, t.r, 'frost_slick', 12.0);
+  }
   t.cd = 1 / effRate; t.pulseN++; t.flash = 1;
   const isAbsZero = t.branch === 'A', isVortex = t.branch === 'B';
   const isCat = !!(t.leyline && t.leyline.id === 'catalyst');

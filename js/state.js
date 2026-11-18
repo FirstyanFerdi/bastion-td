@@ -142,7 +142,23 @@ function newGame(keepSpeed) {
     bloodForgeKills: 0,
     activeBossTitan: null,
     grapplePrompt: null,
-    placingMegastructure: null
+    placingMegastructure: null,
+    // 9.0 Living Ecosystem & Nemesis Network Systems
+    soilTiles: {},
+    currentWeather: 'clear',
+    weatherTimer: 0,
+    ionSquallTimer: 0,
+    profilerStats: { choke: 0, sniper: 0, elemental: 0, mech: 0 },
+    adaptabilityScore: 1.0,
+    activeNemesis: null,
+    nemesisRoster: (typeof SAVE !== 'undefined' && SAVE.nemesisRoster) ? SAVE.nemesisRoster : [],
+    acidDeathTally: {},
+    destructibleCrags: [
+      { id: 'crag_1', c: 4, r: 2, roadC: 5, roadR: 2, hp: 300, maxHp: 300, collapsed: false, x: 4 * TILE + TILE / 2, y: 2 * TILE + TILE / 2 },
+      { id: 'crag_2', c: 9, r: 6, roadC: 8, roadR: 6, hp: 300, maxHp: 300, collapsed: false, x: 9 * TILE + TILE / 2, y: 6 * TILE + TILE / 2 }
+    ],
+    rockslides: [],
+    barricades: []
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -1207,6 +1223,46 @@ function dealDamage(e, amount, type, src, opts) {
     if (opts.isSplash) G.hivePressure.cluster += a;
   }
 
+  // 9.0 Tactical Profiler Tracking
+  if (G && G.profilerStats) {
+    if (src === 'mech' || (src && src.isMech)) {
+      G.profilerStats.mech = (G.profilerStats.mech || 0) + a;
+    } else if (type === 'cryo' || type === 'plasma') {
+      G.profilerStats.elemental = (G.profilerStats.elemental || 0) + a;
+    } else if (src && (src.type === 'rail' || (src.range && src.range >= 3.5))) {
+      G.profilerStats.sniper = (G.profilerStats.sniper || 0) + a;
+    } else {
+      G.profilerStats.choke = (G.profilerStats.choke || 0) + a;
+    }
+  }
+
+  // 9.0 Symbiotic Parasite Protection & Snipe
+  if (e.hasParasite) {
+    e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
+    if ((src && src.type === 'rail') || a >= 200) {
+      e.hasParasite = false;
+      burst(e.x, e.y - 12, 12, '#84cc16', 90, 0.4, 3, true);
+      addText(e.x, e.y - e.r - 24, 'PARASITE PURGED!', '#84cc16', 13);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('spore_burst');
+    }
+  }
+
+  // 9.0 Nemesis Commander Hard-Counter Armor (-50% against countered damage type)
+  if (e.isNemesis && e.counterType === type) {
+    a *= 0.50;
+    burst(e.x, e.y, 6, '#a855f7', 70, 0.3, 2, false);
+    if (Math.random() < 0.25) addText(e.x, e.y - e.r - 22, 'NEMESIS RESIST -50%', '#a855f7', 12);
+  }
+
+  // 9.0 Chaff Cloud Skimmer Projectile & Energy Mitigation
+  if ((type === 'phys' || type === 'energy') && G && G.enemies) {
+    const nearSkimmer = G.enemies.some(s => !s.dead && s.type === 'chaff_skimmer' && Math.hypot(s.x - e.x, s.y - e.y) <= 100);
+    if (nearSkimmer) {
+      a *= 0.50;
+      burst(e.x, e.y, 4, '#94a3b8', 50, 0.25, 2, false);
+    }
+  }
+
   // Reactive Hivemind Counter-Traits (4.0)
   if (e.counterTrait === 'reflective' && type === 'phys' && Math.random() < 0.25) {
     burst(e.x, e.y, 6, '#f43f5e', 80, 0.3, 2, true);
@@ -1655,13 +1711,37 @@ function killEnemy(e, src) {
     Sfx.play('kill');
   }
 
-  // 6.0 Corpse Persistence for Nanite Necromancy
+  // 6.0 Corpse Persistence for Nanite Necromancy & 9.0 Gorger Cannibalism
   if (e.type !== 'swarm' && G && G.corpses) {
-    if (G.corpses.length < 8) {
+    if (G.corpses.length < 16) {
       G.corpses.push({
         type: e.type, x: e.x, y: e.y, r: e.r || 14,
-        life: (typeof RECLAIMER_CONFIG !== 'undefined' ? RECLAIMER_CONFIG.corpseLifetime : 14.0)
+        life: 16.0
       });
+    }
+  }
+
+  // 9.0 Nemesis Commander Retribution Bounty
+  if (e.isNemesis) {
+    G.gold += 100;
+    addCores(35);
+    addText(e.x, e.y - 45, '+100G NEMESIS BOUNTY!', '#fbbf24', 18);
+    addText(e.x, e.y - 70, '+35 CORES & EXOTIC CHIP!', '#38bdf8', 15);
+    burst(e.x, e.y, 45, '#a855f7', 200, 0.8, 5, true);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('vault_open');
+    if (G.nemesisRoster) {
+      G.nemesisRoster = G.nemesisRoster.filter(n => n.id !== e.nemesisId);
+      if (typeof SAVE !== 'undefined') SAVE.nemesisRoster = G.nemesisRoster;
+    }
+  }
+
+  // 9.0 Acidic Sinkhole Accumulation (15+ Brute/Healer deaths)
+  if ((e.type === 'brute' || e.type === 'healer') && G && G.acidDeathTally) {
+    const tk = Math.floor(e.x / TILE) + '_' + Math.floor(e.y / TILE);
+    G.acidDeathTally[tk] = (G.acidDeathTally[tk] || 0) + 1;
+    if (G.acidDeathTally[tk] >= 15 && typeof addSoilTile === 'function') {
+      addSoilTile(Math.floor(e.x / TILE), Math.floor(e.y / TILE), 'acid_sinkhole', 25.0);
+      G.acidDeathTally[tk] = 0;
     }
   }
 
@@ -2051,4 +2131,312 @@ function applyDarkCurio(curioId) {
   }
   G.uiDirty = true;
   return true;
+}
+
+/* ============================================================
+   BASTION TD 9.0: LIVING ECOSYSTEM & NEMESIS NETWORK FUNCTIONS
+   ============================================================ */
+
+function addSoilTile(c, r, type, duration) {
+  if (!G) return null;
+  G.soilTiles = G.soilTiles || {};
+  const cfg = typeof ECOSYSTEM_CONFIG !== 'undefined' && ECOSYSTEM_CONFIG.soil && ECOSYSTEM_CONFIG.soil[type];
+  const maxLife = duration || (cfg ? cfg.duration : 15.0);
+  const key = c + '_' + r;
+  const tile = {
+    key,
+    type,
+    c,
+    r,
+    x: c * TILE + TILE / 2,
+    y: r * TILE + TILE / 2,
+    life: maxLife,
+    maxLife,
+    dps: (cfg && cfg.dps) || 0,
+    speedMult: (cfg && cfg.speedMult) || 1.0
+  };
+  G.soilTiles[key] = tile;
+  if (type === 'thermal_ash') {
+    burst(tile.x, tile.y, 8, '#f97316', 70, 0.4, 3, false);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('soil_burn');
+  } else if (type === 'frost_slick') {
+    burst(tile.x, tile.y, 8, '#38bdf8', 60, 0.4, 2.5, false);
+  } else if (type === 'acid_sinkhole') {
+    burst(tile.x, tile.y, 12, '#84cc16', 80, 0.5, 3.5, false);
+  }
+  G.uiDirty = true;
+  return tile;
+}
+
+function setWeather(weatherType) {
+  if (!G || !ECOSYSTEM_CONFIG.weather[weatherType]) return;
+  G.currentWeather = weatherType;
+  G.weatherTimer = 0;
+  G.ionSquallTimer = 0;
+  const w = ECOSYSTEM_CONFIG.weather[weatherType];
+  addText(W / 2, 70, 'ATMOSPHERE: ' + w.name.toUpperCase(), w.color, 16);
+  if (weatherType === 'ion_squall') {
+    shake(8);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('weather_ion');
+  }
+  G.uiDirty = true;
+}
+
+function updateEcology(dt) {
+  if (!G) return;
+  // 1. Update Soil Tiles
+  if (G.soilTiles) {
+    for (const k in G.soilTiles) {
+      const st = G.soilTiles[k];
+      st.life -= dt;
+      if (st.life <= 0) {
+        delete G.soilTiles[k];
+      }
+    }
+  }
+
+  // 2. Update Weather Atmosphere
+  G.weatherTimer = (G.weatherTimer || 0) + dt;
+  if (G.currentWeather === 'ion_squall') {
+    G.ionSquallTimer = (G.ionSquallTimer || 0) + dt;
+    if (G.ionSquallTimer >= 3.5) {
+      G.ionSquallTimer = 0;
+      // Strike lightning at random target
+      if (G.enemies && G.enemies.length > 0 && (Math.random() < 0.65 || (!G.towers || G.towers.length === 0))) {
+        const target = G.enemies[Math.floor(Math.random() * G.enemies.length)];
+        if (target && !target.dead) {
+          dealDamage(target, 150, 'energy', null, { noReaction: true });
+          target.stunT = Math.max(target.stunT || 0, 1.5);
+          addFx('tracer', target.x, -20, target.x, target.y, 0.25, '#818cf8', 4);
+          burst(target.x, target.y, 16, '#818cf8', 120, 0.4, 3, true);
+          shake(6);
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('weather_ion');
+          addText(target.x, target.y - 20, 'ION STRIKE!', '#818cf8', 13);
+        }
+      } else if (G.towers && G.towers.length > 0 && Math.random() < 0.5) {
+        // Strike tower: instant overcharge metal towers
+        const t = G.towers[Math.floor(Math.random() * G.towers.length)];
+        if (t && (t.type === 'gatling' || t.type === 'tesla' || t.type === 'rail')) {
+          t.ionOverchargeT = 4.0;
+          burst(t.x, t.y, 14, '#38bdf8', 90, 0.4, 3, true);
+          addText(t.x, t.y - 18, 'ION OVERCHARGE (+100%)', '#38bdf8', 12);
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+        }
+      } else if (G.mech && G.mech.active) {
+        G.mech.battery = 100;
+        burst(G.mech.x, G.mech.y, 16, '#38bdf8', 120, 0.45, 3.5, true);
+        addText(G.mech.x, G.mech.y - 28, 'MECH BATTERY FULL!', '#38bdf8', 14);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('weather_ion');
+      } else if (G.enemies && G.enemies.length > 0) {
+        const target = G.enemies[0];
+        if (target && !target.dead) {
+          dealDamage(target, 150, 'energy', null, { noReaction: true });
+          target.stunT = Math.max(target.stunT || 0, 1.5);
+          burst(target.x, target.y, 16, '#818cf8', 120, 0.4, 3, true);
+        }
+      }
+    }
+  }
+
+  // 3. Update Rockslides
+  if (G.rockslides) {
+    for (let i = G.rockslides.length - 1; i >= 0; i--) {
+      const rs = G.rockslides[i];
+      rs.life -= dt;
+      if (rs.life <= 0 || rs.cleared) {
+        G.rockslides.splice(i, 1);
+        burst(rs.x, rs.y, 16, '#78716c', 90, 0.4, 3, false);
+        addText(rs.x, rs.y - 15, 'ROAD CLEARED', '#a8a29e', 12);
+      }
+    }
+  }
+}
+
+function updateProfiler(dt) {
+  if (!G || !G.profilerStats) return;
+  const s = G.profilerStats;
+  const total = s.choke + s.sniper + s.elemental + s.mech;
+  if (total < 300) return;
+
+  // Calculate dominant playstyle vector
+  let dominant = 'choke_heavy';
+  let maxVal = s.choke;
+  if (s.sniper > maxVal) { dominant = 'sniper_long_range'; maxVal = s.sniper; }
+  if (s.elemental > maxVal) { dominant = 'elemental_spam'; maxVal = s.elemental; }
+  if (s.mech > maxVal) { dominant = 'mech_brawler'; maxVal = s.mech; }
+
+  G.dominantPlaystyle = dominant;
+
+  // Adaptability score scaling based on strategy complexity
+  let activeVectors = 0;
+  if (s.choke > total * 0.15) activeVectors++;
+  if (s.sniper > total * 0.15) activeVectors++;
+  if (s.elemental > total * 0.15) activeVectors++;
+  if (s.mech > total * 0.15) activeVectors++;
+
+  G.adaptabilityScore = Math.min(3.0, 1.0 + activeVectors * 0.4);
+}
+
+function damageCrag(crag, amount) {
+  if (!crag || crag.collapsed) return;
+  crag.hp = Math.max(0, crag.hp - amount);
+  burst(crag.x, crag.y, 6, '#78716c', 60, 0.3, 2, false);
+  if (crag.hp <= 0) {
+    triggerRockslide(crag);
+  }
+}
+
+function triggerRockslide(crag) {
+  if (!crag || crag.collapsed) return;
+  crag.collapsed = true;
+  crag.hp = 0;
+  shake(14);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('rockslide');
+
+  const rx = crag.roadC * TILE + TILE / 2;
+  const ry = crag.roadR * TILE + TILE / 2;
+  burst(rx, ry, 35, '#78716c', 160, 0.7, 4.5, true);
+  burst(rx, ry, 20, '#d6d3d1', 120, 0.5, 3, false);
+  addText(rx, ry - 25, 'ROCKSLIDE AVALANCHE!', '#f59e0b', 16);
+
+  // Spawn rockslide blockade on road tile
+  G.rockslides = G.rockslides || [];
+  const rs = {
+    id: 'rockslide_' + Date.now(),
+    c: crag.roadC,
+    r: crag.roadR,
+    x: rx,
+    y: ry,
+    life: DESTRUCTIBLE_TERRAIN_CONFIG.rockslideDuration,
+    maxLife: DESTRUCTIBLE_TERRAIN_CONFIG.rockslideDuration,
+    hp: 300,
+    maxHp: 300,
+    cleared: false
+  };
+  G.rockslides.push(rs);
+
+  // Crush enemies on this road tile
+  if (G.enemies) {
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      if (Math.hypot(e.x - rx, e.y - ry) <= 45) {
+        dealDamage(e, DESTRUCTIBLE_TERRAIN_CONFIG.rockslideDamage, 'phys', null, { noReaction: true });
+        e.stunT = Math.max(e.stunT || 0, 2.5);
+        addText(e.x, e.y - e.r - 18, 'CRUSHED!', '#f59e0b', 13);
+      }
+    }
+  }
+  G.uiDirty = true;
+  return rs;
+}
+
+function placeBarricade(c, r) {
+  if (!G) return false;
+  const cost = DESTRUCTIBLE_TERRAIN_CONFIG.barricadeCost;
+  if (G.gold < cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.gold -= cost;
+  G.barricades = G.barricades || [];
+  const bar = {
+    id: 'barricade_' + Date.now(),
+    c, r,
+    x: c * TILE + TILE / 2,
+    y: r * TILE + TILE / 2,
+    hp: DESTRUCTIBLE_TERRAIN_CONFIG.barricadeHp,
+    maxHp: DESTRUCTIBLE_TERRAIN_CONFIG.barricadeHp
+  };
+  G.barricades.push(bar);
+  burst(bar.x, bar.y, 14, '#94a3b8', 90, 0.4, 3, false);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('place');
+  addText(bar.x, bar.y - 18, 'BARRICADE DEPLOYED', '#38bdf8', 12);
+  G.uiDirty = true;
+  return bar;
+}
+
+function feedGorger(e, corpse) {
+  if (!e || e.dead || !corpse) return;
+  e.corpsesEaten = (e.corpsesEaten || 0) + 1;
+  burst(corpse.x, corpse.y, 12, '#f43f5e', 80, 0.4, 3, true);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('gorger_feed');
+  addText(e.x, e.y - e.r - 16, 'DEVOUR (' + e.corpsesEaten + '/3)', '#f43f5e', 12);
+
+  if (e.corpsesEaten >= ECO_MUTATION_CONFIG.gorger.eatThreshold) {
+    // Instant Metamorphosis into Alpha Gorgon Apex
+    e.type = 'alpha_gorgon';
+    e.maxHp = Math.round(e.maxHp * ECO_MUTATION_CONFIG.alpha_gorgon.hpMult);
+    e.hp = e.dispHp = e.maxHp;
+    e.armor = ECO_MUTATION_CONFIG.alpha_gorgon.armor;
+    e.r = Math.round(e.r * ECO_MUTATION_CONFIG.alpha_gorgon.rMult);
+    e.reward = Math.round(e.reward * ECO_MUTATION_CONFIG.alpha_gorgon.bountyMult);
+    shake(12);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('alpha_roar');
+    burst(e.x, e.y, 40, '#831843', 180, 0.7, 4.5, true);
+    addRing(e.x, e.y, 10, 95, 0.6, '#ec4899', 4);
+    addText(e.x, e.y - e.r - 28, 'METAMORPHOSIS: ALPHA GORGON!', '#d946ef', 16);
+  }
+}
+
+function recordNemesisEscape(e) {
+  if (!e || (!e.type && !e.isElite)) return;
+  G.nemesisRoster = G.nemesisRoster || [];
+
+  // Determine hardest hit damage type
+  let counterType = 'phys';
+  if (G.damageTrack) {
+    let maxDmg = G.damageTrack.phys || 0;
+    if ((G.damageTrack.energy || 0) > maxDmg) { counterType = 'energy'; maxDmg = G.damageTrack.energy; }
+    if ((G.damageTrack.cryo || 0) > maxDmg) { counterType = 'cryo'; maxDmg = G.damageTrack.cryo; }
+    if ((G.damageTrack.plasma || 0) > maxDmg) { counterType = 'plasma'; maxDmg = G.damageTrack.plasma; }
+  }
+
+  const titles = {
+    phys: "Vor'gath, The Rail-Shatterer",
+    energy: "Volt-Reaper, The Superconductor",
+    cryo: "Kryos-Tek, The Glacier-Borne",
+    plasma: "Ignis-Vor, The Asbestos Fiend"
+  };
+
+  const title = titles[counterType] || "Vor'gath, The Untouchable";
+  const entry = {
+    id: 'nemesis_' + Date.now(),
+    title,
+    counterType,
+    waveOrigin: (G && G.wave) || 1,
+    baseHp: Math.round((e.maxHp || 1000) * 1.3),
+    enemyType: e.type || 'boss'
+  };
+
+  // Avoid duplicates
+  if (!G.nemesisRoster.some(n => n.title === entry.title)) {
+    G.nemesisRoster.push(entry);
+    if (typeof SAVE !== 'undefined') {
+      SAVE.nemesisRoster = G.nemesisRoster;
+      Store.set('nb_nemesis', SAVE.nemesisRoster);
+    }
+  }
+  return entry;
+}
+
+function spawnNemesisCommander(nemesisData) {
+  if (!G) return null;
+  const nd = nemesisData || (G.nemesisRoster && G.nemesisRoster[0]);
+  if (!nd) return null;
+
+  spawnEnemy('boss', G.wave);
+  const boss = G.enemies[G.enemies.length - 1];
+  if (boss) {
+    boss.isNemesis = true;
+    boss.nemesisId = nd.id;
+    boss.nemesisTitle = nd.title;
+    boss.counterType = nd.counterType;
+    boss.hp = boss.maxHp = boss.dispHp = Math.max(boss.maxHp, nd.baseHp || 2400);
+    boss.reward += 100;
+    shake(16);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boss');
+    addRing(boss.x, boss.y, 14, 140, 0.8, '#a855f7', 6);
+    addText(boss.x, boss.y - 35, 'NEMESIS INVADER: ' + nd.title.toUpperCase(), '#a855f7', 16);
+  }
+  return boss;
 }

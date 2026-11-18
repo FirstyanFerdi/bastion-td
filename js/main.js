@@ -137,6 +137,14 @@ function init() {
         G.uiDirty = true;
       }
     }
+    else if (act === 'collapse_crag') {
+      const cragId = b.dataset.crag;
+      const crag = G.destructibleCrags && G.destructibleCrags.find(c => c.id === cragId);
+      if (crag && typeof triggerRockslide === 'function') {
+        triggerRockslide(crag);
+        G.uiDirty = true;
+      }
+    }
     else if (act === 'set_cyber_logic') {
       // Handled via inspector change listener
     }
@@ -315,5 +323,7 @@ init();
 // Small debug/test hook (harmless in production)
 window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive, MAP_SECTORS, loadSector, setSector, getSectorMastery, recordSectorProgress, isSectorUnlocked, FUSION_RECIPES, CURSED_PROTOCOLS, FIELD_ANOMALIES, HIVE_COUNTER_TRAITS, fuseTowers, triggerCoreOverload, applyCursedProtocol, getEligibleFusion, isCodexDiscovered, recordCodexDiscovery, getCodexProgress, spawnFieldAnomaly, RESONANCE_CONDUITS, THERMAL_CONFIG, BIOMASS_CONFIG, TACTICAL_MATRIX_PROTOCOLS, updateResonanceConduits, triggerThermalPurge, addBiomassCreep, cleanseBiomassCreep, hasMatrixProtocol, unlockMatrixProtocol, recordTimeSnapshot, triggerChronoRewind, createNeuralSynapse, removeNeuralSynapse, getTowerSynapses, reclaimCorpse, bribeSyndicate, raidSyndicate, triggerTectonicShift, CHRONO_CONFIG, NEURAL_SYNAPSE_CONFIG, RECLAIMER_CONFIG, SYNDICATE_CONFIG, toggleMechPilot, mechFireVulcan, mechSwingBlade, triggerDreadnoughtStrike, triggerAnomalyVault, selectAnomalyVault, spawnDropPod, updateWartimeMarket, hasRelic, TITAN_MECH_CONFIG, DREADNOUGHT_CONFIG, ANOMALY_RELICS, ANOMALY_VAULTS, CYBER_LOGIC_PRESETS, MARKET_CONFIG,
   // 8.0 Masterclass AAA/Indie Exports
-  canPlaceMegastructure, placeMegastructure, updateMegastructures, setupBossMultiParts, damageBossPart, mechGrappleStrike, routeLogistics, updateLogistics, recordPheromoneDeath, updatePheromones, applyGeneSplice, applyDarkCurio, MEGASTRUCTURE_CONFIG, MULTI_PART_TITAN_CONFIG, LOGISTICS_CONFIG, GENE_SPLICING_CONFIG, DARK_TECH_CURIOS
+  canPlaceMegastructure, placeMegastructure, updateMegastructures, setupBossMultiParts, damageBossPart, mechGrappleStrike, routeLogistics, updateLogistics, recordPheromoneDeath, updatePheromones, applyGeneSplice, applyDarkCurio, MEGASTRUCTURE_CONFIG, MULTI_PART_TITAN_CONFIG, LOGISTICS_CONFIG, GENE_SPLICING_CONFIG, DARK_TECH_CURIOS,
+  // 9.0 Living Ecosystem & Nemesis Network Exports
+  addSoilTile, setWeather, updateEcology, updateProfiler, damageCrag, triggerRockslide, placeBarricade, feedGorger, recordNemesisEscape, spawnNemesisCommander, ECOSYSTEM_CONFIG, NEURAL_NEMESIS_CONFIG, DESTRUCTIBLE_TERRAIN_CONFIG, ECO_MUTATION_CONFIG
 };

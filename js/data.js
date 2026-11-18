@@ -914,7 +914,12 @@ const ED = {
   stealth: { name: 'Stealth Infiltrator', hp: 44, speed: 115, r: 9, armor: 0, reward: 8, leak: 1, stealth: true },
   carrier: { name: 'Shield Carrier', hp: 380, speed: 40, r: 20, armor: 0.35, reward: 28, leak: 2, carrier: true },
   breacher: { name: 'EMP Breacher', hp: 80, speed: 92, r: 12, armor: 0, reward: 9, leak: 1, breacher: true },
-  boss: { name: 'Boss', hp: 1900, speed: 34, r: 28, armor: 0.25, reward: 140, leak: 8 }
+  boss: { name: 'Boss', hp: 1900, speed: 34, r: 28, armor: 0.25, reward: 140, leak: 8 },
+  gorger: { name: 'Hive Gorger', hp: 320, speed: 65, r: 16, armor: 0.2, reward: 16, leak: 2, gorger: true },
+  alpha_gorgon: { name: 'Alpha Gorgon Apex', hp: 800, speed: 50, r: 26, armor: 0.45, reward: 45, leak: 4 },
+  sapper: { name: 'Subterranean Sapper', hp: 180, speed: 75, r: 13, armor: 0.15, reward: 14, leak: 2, sapper: true },
+  chaff_skimmer: { name: 'Chaff Cloud Skimmer', hp: 220, speed: 70, r: 15, armor: 0.25, reward: 18, leak: 2, skimmer: true },
+  harpoon_leecher: { name: 'Harpoon Leecher', hp: 260, speed: 60, r: 16, armor: 0.3, reward: 22, leak: 2, leecher: true }
 };
 const hpScale = n => 1 + 0.2 * (n - 1) + 0.014 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
@@ -1549,6 +1554,129 @@ const DARK_TECH_CURIOS = {
     name: 'Singularity Core of Agony',
     color: '#a855f7',
     desc: 'Hostile kills create mini-black holes sucking in nearby foes. SACRIFICE: All turrets suffer -40% Range penalty.'
+  }
+};
+
+/* ============================================================
+   BASTION TD 9.0: LIVING ECOSYSTEM & NEMESIS NETWORK DATA
+   ============================================================ */
+const ECOSYSTEM_CONFIG = {
+  soil: {
+    thermal_ash: {
+      id: 'thermal_ash',
+      name: 'Thermal Ash & Vitrified Soil',
+      color: '#f97316',
+      duration: 18.0,
+      dps: 45,
+      noRegen: true,
+      heatSlow: 0.50,
+      desc: 'Superheated ground: Deals 45 DPS Burn and suppresses natural regeneration. Turrets dissipate heat 50% slower.'
+    },
+    frost_slick: {
+      id: 'frost_slick',
+      name: 'Frost Slick Ice Slide',
+      color: '#38bdf8',
+      duration: 12.0,
+      speedMult: 1.60,
+      skidDamage: 120,
+      skidStun: 2.0,
+      desc: 'Frictionless glacial ice: +60% hostile move speed, but corner turns trigger skid collision (120 dmg + 2s Stun).'
+    },
+    acid_sinkhole: {
+      id: 'acid_sinkhole',
+      name: 'Acidic Sinkhole Erosion',
+      color: '#84cc16',
+      duration: 25.0,
+      swallowLight: true,
+      slowHeavy: 0.50,
+      jitter: 0.25,
+      desc: 'Caustic sinkhole: Instantly swallows light units (Scout/Swarm); slows heavy units by 50% and jitters adjacent turrets.'
+    }
+  },
+  weather: {
+    clear: {
+      id: 'clear',
+      name: 'Clear Atmosphere',
+      color: '#38bdf8',
+      desc: 'Optimal visibility and standard defensive engagement conditions.'
+    },
+    ion_squall: {
+      id: 'ion_squall',
+      name: 'Ion Squall Thunderstorm',
+      color: '#818cf8',
+      interval: 3.5,
+      strikeDamage: 150,
+      strikeStun: 1.5,
+      towerOverchargeDur: 4.0,
+      desc: 'Violent atmospheric ionization: Periodic lightning stuns aliens, overcharges metal turrets (+100% Rate), and recharges Titan Mech.'
+    },
+    spore_fog: {
+      id: 'spore_fog',
+      name: 'Toxic Spore Fog',
+      color: '#a3e635',
+      rangePenalty: 0.35,
+      desc: 'Dense bio-particulate mist: -35% turret targeting range unless illuminated by Sensor Leylines or energetic beams.'
+    }
+  }
+};
+
+const NEURAL_NEMESIS_CONFIG = {
+  profiles: {
+    choke_heavy: {
+      id: 'choke_heavy',
+      name: 'Choke-Point Gauntlet',
+      counter: 'sapper',
+      desc: '>50% firepower concentrated in tight chokepoint. AI counters with Subterranean Sappers tunneling under defenses.'
+    },
+    sniper_long_range: {
+      id: 'sniper_long_range',
+      name: 'Railgun Sniper Dominance',
+      counter: 'chaff_skimmer',
+      desc: 'Dominant long-distance physical sniper fire. AI counters with Chaff Skimmers projecting aerosol deflection shields.'
+    },
+    elemental_spam: {
+      id: 'elemental_spam',
+      name: 'Cryo / Thermal Looping',
+      counter: 'thermophile',
+      desc: 'Continuous crowd-control and burn loops. AI counters with Thermophiles absorbing ice and fire to surge with shields.'
+    },
+    mech_brawler: {
+      id: 'mech_brawler',
+      name: 'Titan Mech Brawler',
+      counter: 'harpoon_leecher',
+      desc: 'Heavy frontline Mech combat. AI counters with Harpoon Leechers locking movement and draining reactor power.'
+    }
+  },
+  bounty: {
+    gold: 100,
+    cores: 35,
+    exoticChip: 'nemesis_neural_core'
+  }
+};
+
+const DESTRUCTIBLE_TERRAIN_CONFIG = {
+  cragHp: 300,
+  rockslideDuration: 20.0,
+  rockslideDamage: 250,
+  clearingRate: 20, // DPS dealt by heavy hostiles pounding on rubble
+  barricadeCost: 40,
+  barricadeHp: 400
+};
+
+const ECO_MUTATION_CONFIG = {
+  gorger: {
+    devourRadius: 140,
+    eatThreshold: 3
+  },
+  alpha_gorgon: {
+    hpMult: 2.5,
+    armor: 0.45,
+    rMult: 1.8,
+    bountyMult: 3.0
+  },
+  symbiotic_parasite: {
+    hp: 120,
+    absorbCc: true
   }
 };
 

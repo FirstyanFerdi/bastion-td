@@ -955,6 +955,98 @@ Berdasarkan blueprint yang telah disetujui (`bastion_td_veteran_lead_designer_bl
   16. `tests/test_masterclass_overhaul.js` -> **PASS**
   **RINGKASAN: 16/16 TEST SUITES LULUS 100% TANPA REGRESI.**
 
+---
+
+## 21. Bastion TD 9.0: Living Ecosystem & Nemesis Network
+
+Pembaruan revolusioner versi 9.0 mentransformasi Bastion TD dari tower defense mekanis konvensional menjadi simulasi ekologi hidup dan adaptif dengan jaringan dendam persisten (*persistent retribution system*):
+
+### 21.1 Pilar 1: The Reactive Dynamic Ecology (Medan Reaktif & Mikroklimat Cuaca)
+1. **Saturasi Tanah Reaktif (Dynamic Soil Saturation):**
+   * **Thermal Ash & Vitrified Soil (`thermal_ash`):** Terbentuk dari ledakan proyektil Plasma atau muntahan termal. Membakar kaki musuh dengan 45 Burn DPS, melenyapkan regenerasi HP alami alien, dan memperlambat pendinginan menara di atasnya hingga $50\%$.
+   * **Frost Slick Ice Slide (`frost_slick`):** Terbentuk dari semburan Cryo Emitter di jalur. Menghilangkan gesekan lintasan: alien meluncur $+60\%$ lebih cepat, namun **kehilangan traksi di tikungan** — alien yang berbelok terlempar menabrak pembatas jalan (*skid crash*), menerima **120 Collision Damage** dan menderita **2.0 detik Stun**!
+   * **Acidic Sinkhole Erosion (`acid_sinkhole`):** Terbentuk dari akumulasi kematian 15+ Brute atau Healer di petak yang sama. Darah asam melarutkan aspal menjadi jurang kawah: musuh berbobot ringan (Scout, Swarm) langsung **tertelan dan tewas seketika**, sedangkan musuh berbobot berat (Brute, Carrier, Boss) diperlambat sebesar $50\%$.
+2. **Mikroklimat Cuaca Dinamis (Micro-Climate Weather Fronts):**
+   * Berganti secara atmosferik setiap 4 wave:
+     - **Ion Squall (`ion_squall`):** Badai petir ionik; sambaran kilat acak melumpuhkan musuh (150 damage energi + 1.5 detik Stun), memberikan buff *Instant Overcharge* (+100% Attack Rate) selama 4 detik gratis pada menara logam, atau mengisi penuh baterai Titan Mech.
+     - **Toxic Spore Fog (`spore_fog`):** Kabut spora tebal menutupi lintasan; seluruh menara menerima penalti jangkauan $-35\%$ kecuali diterangi oleh Leyline Sensor Relay atau tembakan berenergi tinggi.
+     - **Clear Atmosphere (`clear`):** Kondisi visibilitas standar pangkalan.
+
+---
+
+### 21.2 Pilar 2: The Neural Nemesis AI 3.0 & Tactical Profiler
+1. **Tactical Profiler Real-Time:**
+   * Menganalisis kebiasaan taktik pemain dalam 4 vektor:
+     - `choke_heavy`: >50% tembakan terfokus di area sempit.
+     - `sniper_long_range`: Penggunaan Railgun jarak jauh mendominasi.
+     - `elemental_spam`: Looping crowd-control es dan api.
+     - `mech_brawler`: Dominasi pertarungan garis depan dengan Titan Mech.
+2. **Unit Tandingan Cerdas (AI Counter-Units):**
+   * **Subterranean Sapper (`sapper`):** Saat mendekati gugus menara padat, menggali ke dalam tanah (*burrowed*) selama 3.5 detik, kebal dari bidikan menara permukaan kecuali terdeteksi Sensor Leyline.
+   * **Chaff Cloud Skimmer (`chaff_skimmer`):** Memancarkan aerosol logam yang menyerap dan memantulkan proyektil serta laser, mengurangi kerusakan ke sekutu sekitarnya sebesar $50\%$.
+   * **Harpoon Leecher (`harpoon_leecher`):** Saat berdekatan dengan Titan Mech, menembakkan tali tentakel biokinetik yang mengunci pergerakan Mech (*root*) dan menguras daya baterai reaktor.
+3. **Nemesis Bosses & Retribution Loop:**
+   * Setiap Boss atau Elite yang berhasil meloloskan diri (*leak*) dicatat ke dalam `G.nemesisRoster` dan `SAVE.nemesisRoster` sebagai **Nemesis Commander** dengan gelar kehormatan khusus (misalnya: *“Vor'gath, The Rail-Shatterer”* atau *“Ignis-Vor, The Asbestos Fiend”*).
+   * Membawa lapisan baja penangkal spesifik (-50% kerusakan terhadap jenis senjata yang paling banyak melukainya di ronde sebelumnya).
+   * **Bounty Retribution:** Mengalahkan Nemesis Commander menganugerahkan hadiah fantastis: **+100 Gold**, **+35 Nanite Cores**, dan **Exotic Neural Chip**!
+
+---
+
+### 21.3 Pilar 3: Deformable Terrain & Physics Obstacles (Rintangan Dinamis)
+1. **Destructible Chokepoint Crags (Tebing Reruntuhan):**
+   * Tebing batu retak di tepi tikungan strategis (300 HP). Pemain atau serangan artileri dapat menembaknya hingga roboh.
+   * Robohnya tebing memicu **Rockslide Avalanche**: bongkahan batu besar jatuh ke jalur, menghancurkan musuh di petak tersebut (**250 Crushing Damage + Stun 2.5s**) dan memblokir jalan utama selama 20 detik!
+   * Musuh berbobot berat (Brute, Carrier) harus memukul dan membersihkan puing (20 DPS) sebelum jalur dapat dilalui kembali.
+2. **Portable Heavy Barricade (`placeBarricade`):**
+   * Pemain dapat menaruh barikade baja kawat berduri (400 HP) di petak tepi jalur seharga 40 Gold untuk memperlambat dan menahan laju kawanan musuh.
+
+---
+
+### 21.4 Pilar 4: The Living Predator-Prey Hive Ecosystem (Kanibalisme Lapangan)
+1. **Gorging Cannibalism & Metamorfosis Alpha:**
+   * Unit pemakan bangkai (**Hive Gorger**) mengendus bangkai organik (`G.corpses`) dalam radius 140px dan menyimpang dari jalurnya untuk memakannya.
+   * Setiap 3 bangkai yang dimakan memicu **Metamorfosis Instan** menjadi **Alpha Gorgon Apex**: ukuran membesar $1.8\times$, HP melonjak $+150\%$, dibekali $45\%$ Armor Plating, dan membawa nilai hadiah $3\times$ lipat.
+2. **Symbiotic Parasites (Parasit Penunggang):**
+   * Parasit biologi kecil menunggangi punggung alien besar (Brute, Carrier).
+   * Selama parasit hidup, inangnya kebal dari efek Slow dan Stun.
+   * Tembakan presisi Railgun atau kerusakan masif (>200) membasmi parasit dari punggung inang.
+
+---
+
+### 21.5 Pilar 5: Roguelite Destiny Loop & Tactical Inspector Universal
+1. **Pengganda Skor Tactical Mastery Adaptability:**
+   * Semakin banyak vektor strategi yang divariasikan pemain (memaksa AI merespons beragam counter), `G.adaptabilityScore` meningkat hingga $3.0\times$, melipatgandakan perolehan Skor dan Nanite Cores di akhir wave.
+2. **Tactical Inspector Terpadu:**
+   * Mengklik Tebing Runtuh (*Destructible Crag*) membuka panel dossier dengan tombol pemicu *Collapse Chokepoint Crag*.
+   * Mengklik Nemesis Boss membuka dossier intelijen musuh bebuyutan dengan rincian tipe armor penangkal dan hadiah buronan.
+3. **Chip Indikator Atmosfer Cuaca:**
+   * Panel chip `#chipWeather` di bar atas HUD menampilkan status atmosfer real-time (`CLEAR`, `ION SQUALL`, `SPORE FOG`) dengan border warna tematik.
+
+---
+
+### 21.6 Verifikasi Menyeluruh (17 Test Suites 100% Lulus):
+* Dibuat test suite baru `tests/test_living_ecosystem.js` yang memverifikasi seluruh 5 pilar Bastion TD 9.0 secara mendalam.
+* **Hasil Uji 17 Test Suites:**
+  1. `tests/audit_bugs.js` -> **PASS (0 static bugs found)**
+  2. `tests/smoke.js` -> **PASS**
+  3. `tests/test_ascension.js` -> **PASS**
+  4. `tests/test_browser_init.js` -> **PASS**
+  5. `tests/test_champions.js` -> **PASS**
+  6. `tests/test_deep_synergy.js` -> **PASS**
+  7. `tests/test_effects_realization.js` -> **PASS**
+  8. `tests/test_grand_expansion.js` -> **PASS**
+  9. `tests/test_living_ecosystem.js` -> **PASS (New 9.0 Test Suite)**
+  10. `tests/test_map_dynamics.js` -> **PASS**
+  11. `tests/test_masterclass_overhaul.js` -> **PASS**
+  12. `tests/test_mastery.js` -> **PASS**
+  13. `tests/test_overdrive_fusions.js` -> **PASS**
+  14. `tests/test_paradox_reality.js` -> **PASS**
+  15. `tests/test_reactions.js` -> **PASS**
+  16. `tests/test_sectors.js` -> **PASS**
+  17. `tests/test_workshop.js` -> **PASS**
+  **RINGKASAN: 17/17 TEST SUITES LULUS 100% TANPA REGRESI.**
+
+
 
 
 

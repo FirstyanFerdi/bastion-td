@@ -378,6 +378,32 @@ function onPointerDown(e) {
     }
   }
 
+  // 9.0 Destructible Crag Clicking
+  if (G.destructibleCrags && !G.casting && !G.placing) {
+    const p = canvasPos(e);
+    for (const crag of G.destructibleCrags) {
+      if (Math.hypot(p.x - crag.x, p.y - crag.y) <= 24) {
+        G.sel = crag;
+        Sfx.play('click');
+        G.uiDirty = true;
+        return;
+      }
+    }
+  }
+
+  // 9.0 Nemesis Boss Clicking
+  if (G.enemies && !G.casting && !G.placing) {
+    const p = canvasPos(e);
+    for (const en of G.enemies) {
+      if (!en.dead && en.isNemesis && Math.hypot(p.x - en.x, p.y - en.y) <= (en.r || 24) + 6) {
+        G.sel = en;
+        Sfx.play('click');
+        G.uiDirty = true;
+        return;
+      }
+    }
+  }
+
   // Neural Synapse Connecting (6.0)
   if (G.synapseSource && G.hover) {
     const { c, r } = G.hover;

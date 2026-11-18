@@ -61,6 +61,11 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     if (G.hiveMutation === 'rubber') e.grounded = true;
   }
 
+  // 9.0 Symbiotic Parasite Attachment (Absorbs Slow & Stun until sniped)
+  if ((type === 'brute' || type === 'carrier') && n >= 5 && Math.random() < 0.30) {
+    e.hasParasite = true;
+  }
+
   // 8.0 Colossal Multi-Part Titan Boss Anatomies
   if (type === 'boss' && typeof setupBossMultiParts === 'function') {
     setupBossMultiParts(e);
@@ -415,6 +420,111 @@ function updateEnemy(e, dt) {
     sp *= (typeof BIOMASS_CONFIG !== 'undefined' ? BIOMASS_CONFIG.creepSpeedMult : 1.30);
   }
 
+  // 9.0 Reactive Dynamic Soil Influences
+  if (G && G.soilTiles) {
+    const soil = G.soilTiles[tileC + '_' + tileR];
+    if (soil) {
+      if (soil.type === 'thermal_ash') {
+        dealDamage(e, (soil.dps || 45) * dt, 'energy', null, { noReaction: true });
+        e.noRegen = true;
+        if (Math.random() < 0.2) burst(e.x, e.y, 1, '#f97316', 30, 0.2, 1.5, false);
+      } else if (soil.type === 'frost_slick') {
+        sp *= (soil.speedMult || 1.60);
+        if (e.isTurningCorner && (!e.skidCd || e.skidCd <= 0)) {
+          e.skidCd = 3.0;
+          e.stunT = Math.max(e.stunT || 0, 2.0);
+          dealDamage(e, 120, 'phys', null, { noReaction: true });
+          burst(e.x, e.y, 14, '#38bdf8', 110, 0.45, 3, true);
+          addText(e.x, e.y - e.r - 20, 'ICE SKID CRASH!', '#38bdf8', 13);
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shatter');
+        }
+      } else if (soil.type === 'acid_sinkhole') {
+        if (e.type === 'scout' || e.type === 'swarm') {
+          e.dead = true; e.hp = 0;
+          burst(e.x, e.y, 16, '#84cc16', 90, 0.5, 3, true);
+          addText(e.x, e.y - 15, 'SINKHOLE SWALLOWED!', '#84cc16', 13);
+          return;
+        } else {
+          sp *= 0.50;
+        }
+      }
+    }
+  }
+  if (e.skidCd > 0) e.skidCd -= dt;
+
+  // 9.0 Rockslide Path Blockage & Rubble Clearing
+  if (G && G.rockslides && G.rockslides.length > 0) {
+    for (const rs of G.rockslides) {
+      if (!rs.cleared && Math.hypot(rs.x - e.x, rs.y - e.y) <= 35) {
+        if (e.type === 'brute' || e.type === 'carrier' || e.type === 'boss') {
+          rs.hp -= (typeof DESTRUCTIBLE_TERRAIN_CONFIG !== 'undefined' ? DESTRUCTIBLE_TERRAIN_CONFIG.clearingRate : 20) * dt;
+          sp = 0;
+          if (Math.random() < 0.2) burst(rs.x, rs.y, 2, '#78716c', 40, 0.2, 2, false);
+          if (rs.hp <= 0) rs.cleared = true;
+        } else {
+          sp = 0;
+        }
+      }
+    }
+  }
+
+  // 9.0 Gorger Corpse Cannibalism
+  if (e.type === 'gorger' && !e.dead && G && G.corpses && G.corpses.length > 0) {
+    let nearestCorpse = null, minDist = 140;
+    for (const cp of G.corpses) {
+      const d = Math.hypot(cp.x - e.x, cp.y - e.y);
+      if (d < minDist) { minDist = d; nearestCorpse = cp; }
+    }
+    if (nearestCorpse) {
+      if (minDist > 16) {
+        e.x += ((nearestCorpse.x - e.x) / minDist) * 45 * dt;
+        e.y += ((nearestCorpse.y - e.y) / minDist) * 45 * dt;
+        sp = 0;
+      } else {
+        const idx = G.corpses.indexOf(nearestCorpse);
+        if (idx !== -1) G.corpses.splice(idx, 1);
+        if (typeof feedGorger === 'function') feedGorger(e, nearestCorpse);
+      }
+    }
+  }
+
+  // 9.0 Subterranean Sapper Burrowing
+  if (e.type === 'sapper' && !e.dead) {
+    if (!e.burrowed && (!e.burrowCd || e.burrowCd <= 0)) {
+      const nearTowers = G.towers ? G.towers.filter(t => Math.hypot(t.x - e.x, t.y - e.y) <= 120).length : 0;
+      if (nearTowers >= 2) {
+        e.burrowed = true;
+        e.burrowT = 3.5;
+        e.burrowCd = 10.0;
+        burst(e.x, e.y, 10, '#78350f', 60, 0.35, 2.5, false);
+        addText(e.x, e.y - 15, 'BURROWED!', '#b45309', 12);
+      }
+    }
+    if (e.burrowT > 0) {
+      e.burrowT -= dt;
+      if (Math.random() < 0.25) burst(e.x, e.y, 2, '#78350f', 30, 0.2, 1.5, false);
+      if (e.burrowT <= 0) {
+        e.burrowed = false;
+        burst(e.x, e.y, 12, '#78350f', 70, 0.4, 3, false);
+        addText(e.x, e.y - 15, 'SURFACED', '#b45309', 12);
+      }
+    }
+    if (e.burrowCd > 0) e.burrowCd -= dt;
+  }
+
+  // 9.0 Harpoon Leecher Mech Tethering
+  if (e.type === 'harpoon_leecher' && !e.dead && G && G.mech && G.mech.active && !G.mech.isDocked) {
+    const dMech = Math.hypot(G.mech.x - e.x, G.mech.y - e.y);
+    if (dMech <= 200) {
+      e.isTetheringMech = true;
+      G.mech.rootedT = 0.5;
+      G.mech.battery = Math.max(0, G.mech.battery - 15 * dt);
+      if (Math.random() < 0.08 && typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('harpoon_tether');
+    } else {
+      e.isTetheringMech = false;
+    }
+  }
+
   if (e.stunT > 0) sp = 0; else if (e.slowT > 0) sp *= 1 - e.slowAmt;
 
   // Cyber-Hijacked minion AI
@@ -545,13 +655,19 @@ function updateEnemy(e, dt) {
     }
     G.lives -= e.leak; G.baseFlash = 1; G.dmgFlash = 1; shake(e.type === 'boss' ? 16 : 7 + e.leak);
     Sfx.play('leak');
+    // 9.0 Persistent Nemesis Retribution on Boss/Elite Leak
+    if (e.type === 'boss' || e.isElite || e.isNemesis) {
+      if (typeof recordNemesisEscape === 'function') recordNemesisEscape(e);
+    }
     addText(BASE_PT.x - 20, BASE_PT.y - 30, '-' + e.leak + (e.leak > 1 ? ' LIVES' : ' LIFE'), '#fb7185', 20);
     burst(BASE_PT.x, BASE_PT.y, 16, '#fb7185', 160, 0.6, 3.5, false);
     if (G.lives <= 0) { G.lives = 0; endGame(false); }
     return;
   }
   if (e.d < 0) e.d = 0;
-  const p = posAt(e.d, e.seg, e.pathId); e.seg = p.seg;
+  const p = posAt(e.d, e.seg, e.pathId);
+  e.isTurningCorner = (p.seg !== e.seg);
+  e.seg = p.seg;
   e.ang += angDiff(e.ang, p.ang) * Math.min(1, dt * 10);
   e.x = p.x - Math.sin(p.ang) * e.off; e.y = p.y + Math.cos(p.ang) * e.off;
 }

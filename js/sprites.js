@@ -451,8 +451,83 @@ function drawEnemy(c, e, time) {
       glow(c, 0, 0, r * 0.7, '#fbbf24', 0.5 + 0.5 * Math.sin(time * 18));
       break;
     }
+    case 'gorger': {
+      c.fillStyle = '#831843'; c.beginPath(); c.ellipse(0, 0, r * 1.1, r * 0.75, 0, 0, TAU); c.fill();
+      c.strokeStyle = '#ec4899'; c.lineWidth = 1.6; c.stroke();
+      c.strokeStyle = '#f472b6'; c.lineWidth = 2;
+      const mOpen = 0.2 + 0.15 * Math.sin(e.anim * 15);
+      c.beginPath(); c.moveTo(r * 0.8, -r * 0.2); c.lineTo(r * 1.35, -r * (0.2 + mOpen)); c.stroke();
+      c.beginPath(); c.moveTo(r * 0.8, r * 0.2); c.lineTo(r * 1.35, r * (0.2 + mOpen)); c.stroke();
+      if (e.corpsesEaten > 0) {
+        c.fillStyle = '#f43f5e';
+        for (let k = 0; k < e.corpsesEaten; k++) {
+          c.beginPath(); c.arc(-r * 0.4 + k * 8, 0, 3, 0, TAU); c.fill();
+        }
+      }
+      break;
+    }
+    case 'alpha_gorgon': {
+      c.fillStyle = '#4c0519'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.strokeStyle = '#e11d48'; c.lineWidth = 2.5; c.stroke();
+      c.fillStyle = '#f43f5e';
+      for (let i = 0; i < 6; i++) {
+        const sq = i * TAU / 6;
+        c.beginPath(); c.moveTo(Math.cos(sq) * r, Math.sin(sq) * r);
+        c.lineTo(Math.cos(sq) * (r + 7), Math.sin(sq) * (r + 7));
+        c.lineTo(Math.cos(sq + 0.3) * r, Math.sin(sq + 0.3) * r);
+        c.fill();
+      }
+      glow(c, 0, 0, r * 0.6, '#e11d48', 0.6 + 0.4 * Math.sin(time * 6));
+      break;
+    }
+    case 'sapper': {
+      const isB = !!e.burrowed;
+      c.globalAlpha = isB ? 0.35 : 1.0;
+      c.fillStyle = '#78350f'; rr(c, -r, -r * 0.6, r * 2, r * 1.2, 4); c.fill();
+      c.strokeStyle = '#b45309'; c.lineWidth = 1.8; rr(c, -r, -r * 0.6, r * 2, r * 1.2, 4); c.stroke();
+      c.fillStyle = '#d97706';
+      c.beginPath(); c.moveTo(r * 0.8, -r * 0.5); c.lineTo(r * 1.4, -r * 0.1); c.lineTo(r * 0.8, 0); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(r * 0.8, 0); c.lineTo(r * 1.4, r * 0.1); c.lineTo(r * 0.8, r * 0.5); c.closePath(); c.fill();
+      break;
+    }
+    case 'chaff_skimmer': {
+      c.fillStyle = '#334155'; c.beginPath(); c.moveTo(r * 1.2, 0); c.lineTo(-r * 0.7, -r * 0.9); c.lineTo(-r * 0.3, 0); c.lineTo(-r * 0.7, r * 0.9); c.closePath(); c.fill();
+      c.strokeStyle = '#94a3b8'; c.lineWidth = 1.6; c.stroke();
+      c.fillStyle = 'rgba(203,213,225,0.7)';
+      c.beginPath(); c.arc(-r * 0.8, -r * 0.5, 3, 0, TAU); c.arc(-r * 0.8, r * 0.5, 3, 0, TAU); c.fill();
+      break;
+    }
+    case 'harpoon_leecher': {
+      c.fillStyle = '#064e3b'; c.beginPath(); c.arc(0, 0, r * 0.85, 0, TAU); c.fill();
+      c.strokeStyle = '#10b981'; c.lineWidth = 1.8; c.stroke();
+      c.strokeStyle = '#34d399'; c.lineWidth = 1.5;
+      for (let i = 0; i < 4; i++) {
+        const tq = -0.6 + i * 0.4;
+        c.beginPath(); c.moveTo(r * 0.5, tq * r); c.lineTo(r * 1.25, tq * r * 1.4 + Math.sin(e.anim * 10 + i) * 3); c.stroke();
+      }
+      break;
+    }
   }
   c.restore();
+  // 9.0 Symbiotic Parasite perched on back
+  if (e.hasParasite) {
+    c.fillStyle = '#84cc16'; c.beginPath(); c.arc(-r * 0.4, 0, 4.5, 0, TAU); c.fill();
+    c.fillStyle = '#ecfccb'; c.fillRect(-r * 0.4 + 1, -2, 1.5, 1.5); c.fillRect(-r * 0.4 + 1, 1, 1.5, 1.5);
+  }
+  // 9.0 Nemesis Invader Retribution Crest
+  if (e.isNemesis) {
+    c.save();
+    c.strokeStyle = '#a855f7'; c.lineWidth = 2.2; c.setLineDash([4, 3]);
+    c.beginPath(); c.arc(0, 0, r + 9, time * 3, time * 3 + TAU); c.stroke();
+    c.restore();
+  }
+  // 9.0 Harpoon Tether Line to Mech
+  if (e.isTetheringMech && G && G.mech && G.mech.active) {
+    c.save();
+    c.strokeStyle = '#10b981'; c.lineWidth = 2; c.setLineDash([6, 3]);
+    c.beginPath(); c.moveTo(0, 0); c.lineTo(G.mech.x - e.x, G.mech.y - e.y); c.stroke();
+    c.restore();
+  }
   if (e.armor > 0 && e.shred > 0 && e.type === 'boss') { c.strokeStyle = 'rgba(251,146,60,0.5)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r + 2, 0, TAU); c.stroke(); }
   if (e.flash > 0) { c.fillStyle = 'rgba(255,255,255,' + (e.flash * 0.55) + ')'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill(); }
   if (e.slowT > 0) { c.strokeStyle = 'rgba(96,165,250,0.75)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r + 3, 0, TAU); c.stroke(); }
