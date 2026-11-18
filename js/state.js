@@ -1964,15 +1964,34 @@ function placeMegastructure(col, row, type) {
 function updateMegastructures(dt) {
   if (!G || !G.megastructures || G.megastructures.length === 0) return;
   for (const ms of G.megastructures) {
-    ms.timer += dt;
+    if (ms.overclockT > 0) {
+      ms.overclockT = Math.max(0, ms.overclockT - dt);
+    }
+    const speedMult = ms.overclockT > 0 ? 1.5 : 1.0;
+    const effDt = dt * speedMult;
+    ms.timer += effDt;
     const conf = MEGASTRUCTURE_CONFIG[ms.type];
     if (!conf) continue;
 
     if (ms.type === 'ion_uplink') {
-      let target = null, maxHp = -1;
-      for (const e of G.enemies) {
-        if (e.dead) continue;
-        if (e.hp > maxHp) { maxHp = e.hp; target = e; }
+      let target = null;
+      const prio = ms.prio || 'strongest';
+      const live = G.enemies.filter(e => !e.dead);
+      if (live.length > 0) {
+        if (prio === 'strongest') {
+          let maxHp = -1;
+          for (const e of live) { if (e.hp > maxHp) { maxHp = e.hp; target = e; } }
+        } else if (prio === 'weakest') {
+          let minHp = Infinity;
+          for (const e of live) { if (e.hp < minHp) { minHp = e.hp; target = e; } }
+        } else if (prio === 'last') {
+          let minProg = Infinity;
+          for (const e of live) { if (e.d < minProg) { minProg = e.d; target = e; } }
+        } else {
+          // 'first'
+          let maxProg = -1;
+          for (const e of live) { if (e.d > maxProg) { maxProg = e.d; target = e; } }
+        }
       }
       if (target) {
         ms.targetX = target.x;
@@ -1981,11 +2000,11 @@ function updateMegastructures(dt) {
         for (const e of G.enemies) {
           if (e.dead) continue;
           if (Math.hypot(e.x - ms.targetX, e.y - ms.targetY) <= beamR + (e.r || 12)) {
-            dealDamage(e, conf.dps * dt, 'energy', ms);
-            ms.dmg += conf.dps * dt;
+            dealDamage(e, conf.dps * effDt, 'energy', ms);
+            ms.dmg += conf.dps * effDt;
           }
         }
-        if (Math.floor(ms.timer * 4) !== Math.floor((ms.timer - dt) * 4)) {
+        if (Math.floor(ms.timer * 4) !== Math.floor((ms.timer - effDt) * 4)) {
           if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('ion_beam');
         }
       } else {
@@ -1995,10 +2014,10 @@ function updateMegastructures(dt) {
     } else if (ms.type === 'drone_carrier') {
       if (ms.drones) {
         for (const d of ms.drones) {
-          d.angle += dt * 1.8;
+          d.angle += effDt * 1.8;
           d.x = ms.x + Math.cos(d.angle) * d.dist;
           d.y = ms.y + Math.sin(d.angle) * d.dist;
-          d.cd = Math.max(0, d.cd - dt);
+          d.cd = Math.max(0, d.cd - effDt);
 
           if (d.type === 'interceptor' && d.cd <= 0) {
             let nearest = null, nearDist = 180;
@@ -2016,7 +2035,7 @@ function updateMegastructures(dt) {
           } else if (d.type === 'repair') {
             for (const t of G.towers) {
               if (Math.hypot(t.x - ms.x, t.y - ms.y) <= 120) {
-                t.heat = Math.max(0, (t.heat || 0) - 30 * dt);
+                t.heat = Math.max(0, (t.heat || 0) - 30 * effDt);
               }
             }
           }

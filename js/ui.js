@@ -55,7 +55,7 @@ function statRows(type, i, branch) {
 function drawMegastructureDockIcon(ic, mk, md) {
   if (!ic) return;
   ic.clearRect(0, 0, 48, 48);
-  const col = md.color || '#f59e0b';
+  const col = (md && md.color) ? md.color : '#f59e0b';
   ic.fillStyle = '#090e17';
   ic.fillRect(4, 4, 40, 40);
   ic.strokeStyle = col;
@@ -66,15 +66,65 @@ function drawMegastructureDockIcon(ic, mk, md) {
   ic.fillRect(38, 5, 5, 5);
   ic.fillRect(5, 38, 5, 5);
   ic.fillRect(38, 38, 5, 5);
-  ic.strokeStyle = '#fff';
-  ic.lineWidth = 1.6;
-  ic.beginPath();
-  ic.arc(24, 24, 10, 0, Math.PI * 2);
-  ic.stroke();
-  ic.fillStyle = col;
-  ic.beginPath();
-  ic.arc(24, 24, 5, 0, Math.PI * 2);
-  ic.fill();
+
+  if (mk === 'ion_uplink') {
+    ic.strokeStyle = '#38bdf8';
+    ic.lineWidth = 1.8;
+    ic.beginPath();
+    ic.arc(24, 24, 11, 0, Math.PI * 2);
+    ic.stroke();
+    ic.fillStyle = '#bae6fd';
+    ic.beginPath();
+    ic.arc(24, 24, 4.5, 0, Math.PI * 2);
+    ic.fill();
+    ic.strokeStyle = 'rgba(56,189,248,0.7)';
+    ic.lineWidth = 1.2;
+    ic.beginPath();
+    ic.moveTo(24, 8); ic.lineTo(24, 40);
+    ic.moveTo(8, 24); ic.lineTo(40, 24);
+    ic.stroke();
+  } else if (mk === 'drone_carrier') {
+    ic.fillStyle = '#064e3b';
+    ic.fillRect(12, 14, 24, 20);
+    ic.strokeStyle = '#10b981';
+    ic.lineWidth = 1.5;
+    ic.strokeRect(12, 14, 24, 20);
+    ic.strokeStyle = '#34d399';
+    ic.lineWidth = 1.5;
+    ic.beginPath();
+    ic.moveTo(24, 16); ic.lineTo(24, 22);
+    ic.moveTo(24, 26); ic.lineTo(24, 32);
+    ic.stroke();
+    ic.fillStyle = '#a7f3d0';
+    ic.beginPath();
+    ic.arc(17, 24, 2.5, 0, Math.PI * 2);
+    ic.arc(31, 24, 2.5, 0, Math.PI * 2);
+    ic.fill();
+  } else if (mk === 'tectonic_siphon') {
+    ic.strokeStyle = '#f59e0b';
+    ic.lineWidth = 1.6;
+    ic.beginPath();
+    ic.arc(24, 24, 13, 0, Math.PI * 2);
+    ic.stroke();
+    ic.beginPath();
+    ic.arc(24, 24, 7, 0, Math.PI * 2);
+    ic.stroke();
+    ic.fillStyle = '#fbbf24';
+    ic.beginPath();
+    ic.moveTo(24, 15); ic.lineTo(29, 31); ic.lineTo(19, 31);
+    ic.closePath();
+    ic.fill();
+  } else {
+    ic.strokeStyle = '#fff';
+    ic.lineWidth = 1.6;
+    ic.beginPath();
+    ic.arc(24, 24, 10, 0, Math.PI * 2);
+    ic.stroke();
+    ic.fillStyle = col;
+    ic.beginPath();
+    ic.arc(24, 24, 5, 0, Math.PI * 2);
+    ic.fill();
+  }
 }
 
 function drawBarricadeDockIcon(ic) {
@@ -165,19 +215,58 @@ function renderInspector() {
   const box = $('inspector');
   const t = G.sel;
   if (!t) {
+    if (G.placingBarricade) {
+      const bCost = typeof DESTRUCTIBLE_TERRAIN_CONFIG !== 'undefined' ? DESTRUCTIBLE_TERRAIN_CONFIG.barricadeCost : 40;
+      box.innerHTML = '<h3>DEPLOYING DEFENSE</h3>' +
+        '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:#38bdf8">Road Barricade</h4><small>FORTIFICATION · <i class="coin"></i>' + bCost + '</small></div></div>' +
+        '<div class="stats-grid">' +
+        '<div class="srow"><span>HP</span><span class="sv">400 HP</span></div>' +
+        '<div class="srow"><span>ARMOR</span><span class="sv">Heavy Alloy</span></div>' +
+        '<div class="srow"><span>BLOCK</span><span class="sv">Full Path</span></div>' +
+        '<div class="srow"><span>POWER</span><span class="sv">0 MW</span></div>' +
+        '</div>' +
+        '<div class="note">Click any road tile to deploy heavy barricade. Blocks enemy movement and absorbs attacks. Esc / Right-Click to cancel.</div>';
+      const ic = $('inspIcon');
+      if (ic) drawBarricadeDockIcon(ic.getContext('2d'));
+      return;
+    }
     if (G.placingMegastructure && typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[G.placingMegastructure]) {
-      const d = MEGASTRUCTURE_CONFIG[G.placingMegastructure];
-      box.innerHTML = '<h3>DEPLOYING MEGASTRUCTURE (2x2)</h3><div class="insp-name"><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>' + d.role.toUpperCase() + ' · <i class="coin"></i>' + d.cost + ' · ' + d.power + ' MW</small></div></div>' +
+      const mk = G.placingMegastructure;
+      const d = MEGASTRUCTURE_CONFIG[mk];
+      let stat1 = ['DMG', '420 DPS'], stat2 = ['RATE', 'Continuous'], stat3 = ['BEAM', '65 px'], stat4 = ['POWER', '-' + d.power + ' MW'];
+      if (mk === 'drone_carrier') {
+        stat1 = ['INTERCEPT', '4 Drones']; stat2 = ['REPAIR', '2 Drones'];
+        stat3 = ['DMG', '28 x 2.2/s']; stat4 = ['POWER', '-' + d.power + ' MW'];
+      } else if (mk === 'tectonic_siphon') {
+        stat1 = ['DMG', '250 Quake']; stat2 = ['PULSE', 'Every 3.0s'];
+        stat3 = ['RADIUS', '180 px']; stat4 = ['POWER', '-' + d.power + ' MW'];
+      }
+      box.innerHTML = '<h3>DEPLOYING DEFENSE</h3>' +
+        '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>MEGASTRUCTURE (2x2) · <i class="coin"></i>' + d.cost + ' · -' + d.power + ' MW</small></div></div>' +
+        '<div class="stats-grid">' +
+        '<div class="srow"><span>' + stat1[0] + '</span><span class="sv">' + stat1[1] + '</span></div>' +
+        '<div class="srow"><span>' + stat2[0] + '</span><span class="sv">' + stat2[1] + '</span></div>' +
+        '<div class="srow"><span>' + stat3[0] + '</span><span class="sv">' + stat3[1] + '</span></div>' +
+        '<div class="srow"><span>' + stat4[0] + '</span><span class="sv">' + stat4[1] + '</span></div>' +
+        '</div>' +
         '<div class="note" style="border-left:3px solid ' + d.color + ';background:' + d.color + '15;color:#f8fafc;margin:6px 0">' + d.desc + '</div>' +
         '<div class="note">Requires a free 2x2 grid sector. Click valid ground to construct. Esc / Right-Click to cancel.</div>';
+      const ic = $('inspIcon');
+      if (ic) drawMegastructureDockIcon(ic.getContext('2d'), mk, d);
       return;
     }
     if (G.placing) {
       const d = TD[G.placing];
       const cost = typeof getTowerCost === 'function' ? getTowerCost(G.placing) : d.cost;
-      box.innerHTML = '<h3>DEPLOYING DEFENSE</h3><div class="insp-name"><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>' + d.role.toUpperCase() + ' · <i class="coin"></i>' + cost + '</small></div></div>' +
+      box.innerHTML = '<h3>DEPLOYING DEFENSE</h3><div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>' + d.role.toUpperCase() + ' · <i class="coin"></i>' + cost + '</small></div></div>' +
         '<div class="stats-grid">' + statRows(G.placing, 0).map(r => '<div class="srow"><span>' + r[0] + '</span><span class="sv">' + r[1] + '</span></div>').join('') + '</div>' +
         '<div class="note">Click a free grid tile to construct (hold Shift for repeat placement). Esc / Right-Click to cancel.</div>';
+      const ic = $('inspIcon');
+      if (ic) {
+        const c2 = ic.getContext('2d');
+        c2.clearRect(0, 0, 48, 48);
+        drawTowerSprite(c2, G.placing, 0, { x: 24, y: 24, angle: -Math.PI / 4, spin: 0.6, charge: 1 }, 0.9);
+      }
       return;
     }
     const rxList = Object.values(ELEMENTAL_REACTIONS).map(rx =>
@@ -209,18 +298,112 @@ function renderInspector() {
     return;
   }
 
+  // 9.0 Deployable Road Barricade Inspector
+  if (t && t.maxHp && t.c !== undefined && t.roadC === undefined && (!t.type || (t.id && t.id.startsWith('barricade')))) {
+    const bar = t;
+    const pct = Math.round((bar.hp / bar.maxHp) * 100);
+    const barColor = pct > 60 ? '#38bdf8' : (pct > 25 ? '#f59e0b' : '#ef4444');
+    const canRepair = bar.hp < bar.maxHp;
+    const repBtn = canRepair ?
+      '<button class="primary" data-act="repair_barricade" style="width:100%">' + svg('up') + 'Repair +150 <i class="coin"></i>15</button>' :
+      '<button class="primary" disabled style="width:100%;opacity:0.6">MAX INTEGRITY</button>';
+    const salvageBtn = '<button class="sell" tabindex="-1" data-act="dismantle_barricade">' + svg('tag') + 'Salvage <i class="coin"></i>25</button>';
+
+    box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
+      '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:#38bdf8">Road Barricade</h4><small>FORTIFICATION · ' + bar.hp + ' / ' + bar.maxHp + ' HP</small></div></div>' +
+      '<div style="margin:5px 0;padding:5px 8px;background:rgba(15,23,42,0.6);border:1px solid rgba(56,189,248,0.25);border-radius:3px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-bottom:3px">' +
+      '<span style="color:#94a3b8">STRUCTURAL INTEGRITY</span>' +
+      '<span style="color:' + barColor + '">' + bar.hp + ' / ' + bar.maxHp + ' HP (' + pct + '%)</span>' +
+      '</div>' +
+      '<div style="width:100%;height:4px;background:#1e293b;border-radius:2px;overflow:hidden">' +
+      '<div style="width:' + pct + '%;height:100%;background:' + barColor + '"></div>' +
+      '</div>' +
+      '</div>' +
+      '<div class="tower-actions">' + repBtn + salvageBtn + '</div>' +
+      '<div class="stats-grid">' +
+      '<div class="srow"><span>HP</span><span class="sv">' + bar.hp + ' / ' + bar.maxHp + '</span></div>' +
+      '<div class="srow"><span>ARMOR</span><span class="sv">Heavy Alloy</span></div>' +
+      '<div class="srow"><span>BLOCK</span><span class="sv">Full Path</span></div>' +
+      '<div class="srow"><span>TILE</span><span class="sv">(' + bar.c + ',' + bar.r + ')</span></div>' +
+      '</div>' +
+      '<div class="prio off" id="prioBox"><button class="on">Block</button><button>Halt</button><button>Absorb</button><button>Fortify</button></div>' +
+      '<div class="note" style="border-left:3px solid #38bdf8;background:rgba(56,189,248,0.08);color:#f8fafc;margin-top:6px">' +
+      'Heavy alloy fortification. Blocks hostile pathing and absorbs enemy attacks to protect defensive lines.' +
+      '</div>';
+
+    const ic = $('inspIcon');
+    if (ic) drawBarricadeDockIcon(ic.getContext('2d'));
+    return;
+  }
+
   // 8.0 Megastructure Inspector
   if (t && typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[t.type]) {
-    const d = MEGASTRUCTURE_CONFIG[t.type];
-    const killCount = t.kills || 0;
-    const dmgCount = Math.round(t.dmg || 0);
-    box.innerHTML = '<h3>SELECTED MEGASTRUCTURE (2x2)</h3>' +
-      '<div class="insp-name"><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>' + d.role.toUpperCase() + ' · ' + killCount + ' KILLS (' + dmgCount + ' DMG)</small></div></div>' +
-      '<div style="margin:5px 0;padding:6px;background:rgba(15,23,42,0.8);border-left:3px solid ' + d.color + ';border-radius:2px">' +
-      '<div style="font-size:10px;color:#f8fafc;font-weight:700">FACILITY STATUS: ONLINE</div>' +
-      '<div style="font-size:9.5px;color:#cbd5e1;line-height:1.25;margin-top:2px">' + d.desc + '</div>' +
+    const ms = t;
+    const d = MEGASTRUCTURE_CONFIG[ms.type];
+    const killCount = ms.kills || 0;
+    const refund = Math.floor(d.cost * 0.7);
+    const isOverclocked = (ms.overclockT || 0) > 0;
+
+    let meterLabel = 'FACILITY POWER LOAD';
+    let meterVal = '-' + d.power + ' MW (ONLINE)';
+    let meterPct = 100;
+    let meterColor = d.color;
+    let stat1 = ['DMG', '420 DPS'], stat2 = ['RATE', 'Continuous'], stat3 = ['BEAM', '65 px'], stat4 = ['POWER', '-' + d.power + ' MW'];
+
+    if (ms.type === 'drone_carrier') {
+      meterLabel = 'CARRIER SQUADRON';
+      meterVal = '6 DRONES ACTIVE';
+      stat1 = ['INTERCEPT', '4 Drones']; stat2 = ['REPAIR', '2 Drones'];
+      stat3 = ['DMG', '28 x 2.2/s']; stat4 = ['POWER', '-' + d.power + ' MW'];
+    } else if (ms.type === 'tectonic_siphon') {
+      meterLabel = 'MANTLE RESONANCE';
+      meterVal = '-' + d.power + ' MW (ONLINE)';
+      stat1 = ['DMG', '250 Quake']; stat2 = ['PULSE', 'Every 3.0s'];
+      stat3 = ['RADIUS', '180 px']; stat4 = ['POWER', '-' + d.power + ' MW'];
+    }
+
+    if (isOverclocked) {
+      meterLabel = '★ OVERCLOCK BOOST';
+      meterVal = Math.ceil(ms.overclockT) + 's (+50% SPD)';
+      meterPct = Math.min(100, (ms.overclockT / 15) * 100);
+      meterColor = '#f59e0b';
+    }
+
+    const ocBtn = isOverclocked ?
+      '<button class="primary" disabled style="width:100%;background:#059669;color:#fff;font-weight:800">★ OVERCLOCKED</button>' :
+      '<button class="primary" data-act="overclock_mega" style="width:100%">' + svg('up') + 'Overclock <i class="coin"></i>40</button>';
+    const dismantleBtn = '<button class="sell" tabindex="-1" data-act="dismantle_mega">' + svg('tag') + 'Dismantle Facility <i class="coin"></i>' + refund + '</button>';
+
+    const prioHtml = '<div class="prio" id="prioBox">' +
+      PRIOS.map(p => '<button tabindex="-1" data-act="prio" data-prio="' + p[0] + '" class="' + ((ms.prio || 'first') === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') +
+      '</div>';
+
+    box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
+      '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>SELECTED MEGASTRUCTURE (2x2) · ' + killCount + ' KILLS</small></div></div>' +
+      '<div style="margin:5px 0;padding:5px 8px;background:rgba(15,23,42,0.6);border:1px solid ' + d.color + '40;border-radius:3px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-bottom:3px">' +
+      '<span style="color:#94a3b8">' + meterLabel + '</span>' +
+      '<span style="color:' + meterColor + '">' + meterVal + '</span>' +
       '</div>' +
-      '<button class="sell" tabindex="-1" data-act="dismantle_mega" style="width:100%;margin-top:6px">' + svg('tag') + 'Dismantle Facility <i class="coin"></i>' + Math.floor(d.cost * 0.7) + '</button>';
+      '<div style="width:100%;height:4px;background:#1e293b;border-radius:2px;overflow:hidden">' +
+      '<div style="width:' + meterPct + '%;height:100%;background:' + meterColor + '"></div>' +
+      '</div>' +
+      '</div>' +
+      '<div class="tower-actions">' + ocBtn + dismantleBtn + '</div>' +
+      '<div class="stats-grid">' +
+      '<div class="srow"><span>' + stat1[0] + '</span><span class="sv">' + stat1[1] + '</span></div>' +
+      '<div class="srow"><span>' + stat2[0] + '</span><span class="sv">' + stat2[1] + '</span></div>' +
+      '<div class="srow"><span>' + stat3[0] + '</span><span class="sv">' + stat3[1] + '</span></div>' +
+      '<div class="srow"><span>' + stat4[0] + '</span><span class="sv">' + stat4[1] + '</span></div>' +
+      '</div>' +
+      prioHtml +
+      '<div class="note" style="border-left:3px solid ' + d.color + ';background:' + d.color + '15;color:#f8fafc;margin-top:6px">' +
+      d.desc +
+      '</div>';
+
+    const ic = $('inspIcon');
+    if (ic) drawMegastructureDockIcon(ic.getContext('2d'), ms.type, d);
     return;
   }
 
@@ -649,7 +832,7 @@ function refreshUI() {
   if (G.uiDirty) { G.uiDirty = false; renderInspector(); }
   else if (G.sel) {
     const u = $('btnUpg');
-    if (u && G.sel.tier === 0 && !TD[G.sel.type].isFusion && TD[G.sel.type].tiers[1]) {
+    if (u && G.sel.tier === 0 && TD[G.sel.type] && !TD[G.sel.type].isFusion && TD[G.sel.type].tiers[1]) {
       u.disabled = G.gold < getUpgradeCost(TD[G.sel.type].tiers[1].upg);
     }
     if (G.sel.tier === 1) {

@@ -378,6 +378,19 @@ function onPointerDown(e) {
     }
   }
 
+  // 9.0 Deployable Road Barricade Clicking
+  if (G.barricades && G.barricades.length > 0 && !G.casting && !G.placing && !G.placingMegastructure && !G.placingBarricade) {
+    const p = canvasPos(e);
+    for (const bar of G.barricades) {
+      if (Math.hypot(p.x - bar.x, p.y - bar.y) <= 24 || (G.hover && G.hover.c === bar.c && G.hover.r === bar.r)) {
+        G.sel = bar;
+        Sfx.play('click');
+        G.uiDirty = true;
+        return;
+      }
+    }
+  }
+
   // 9.0 Destructible Crag Clicking
   if (G.destructibleCrags && !G.casting && !G.placing) {
     const p = canvasPos(e);
@@ -438,6 +451,7 @@ function onPointerDown(e) {
       const bar = placeBarricade(c, r);
       if (bar) {
         if (!e.shiftKey) G.placingBarricade = null;
+        G.sel = bar;
         G.uiDirty = true;
       }
     } else {
@@ -550,8 +564,32 @@ function onKey(e) {
     case 'p': case 'P': togglePause(); break;
     case 'm': case 'M': toggleMute(); break;
     case 'f': case 'F': setSpeed(G.speed % 3 + 1); break;
-    case 'u': case 'U': if (G.sel) upgradeTower(G.sel); break;
-    case 'x': case 'X': case 'Delete': if (G.sel) sellTower(G.sel); break;
+    case 'u': case 'U':
+      if (G.sel) {
+        if (G.sel.hp !== undefined && G.sel.c !== undefined && G.sel.roadC === undefined) {
+          const repBtn = document.querySelector('button[data-act="repair_barricade"]');
+          if (repBtn) repBtn.click();
+        } else if (typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[G.sel.type]) {
+          const ocBtn = document.querySelector('button[data-act="overclock_mega"]');
+          if (ocBtn) ocBtn.click();
+        } else {
+          upgradeTower(G.sel);
+        }
+      }
+      break;
+    case 'x': case 'X': case 'Delete':
+      if (G.sel) {
+        if (G.sel.hp !== undefined && G.sel.c !== undefined && G.sel.roadC === undefined) {
+          const salBtn = document.querySelector('button[data-act="dismantle_barricade"]');
+          if (salBtn) salBtn.click();
+        } else if (typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[G.sel.type]) {
+          const disBtn = document.querySelector('button[data-act="dismantle_mega"]');
+          if (disBtn) disBtn.click();
+        } else {
+          sellTower(G.sel);
+        }
+      }
+      break;
   }
 }
 function onKeyUp(e) {

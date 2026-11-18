@@ -1220,6 +1220,101 @@ Seluruh 19 test suite dijalankan secara berurutan dan terkonfirmasi lulus $100\%
 
 **KESIMPULAN: Seluruh tata letak antarmuka pengguna (UI/HUD) kini terbebas dari tumpang tindih (*zero overlaps*), tertata rapi dalam dok bergaya cyberpunk, adaptif terhadap berbagai resolusi layar, dan memiliki keseragaman visual tingkat tinggi.**
 
+---
+
+## 24. UNIFIKASI TACTICAL INSPECTOR UNTUK PERTAHANAN BARU (MEGASTRUCTURE & BARRICADE)
+
+### 24.1 Masalah & Analisis Akar Masalah (Root Cause)
+Berdasarkan permintaan pengguna terkait pertahanan baru (*Megastructures* dan *Deployable Barricade*) yang informasinya belum muncul seperti kartu inspektor pertahanan lama (*Tesla Coil* pada tangkapan layar):
+
+1. **Barikade Jalan Tidak Bisa Diklik / Diseleksi:**
+   * Di dalam `js/input.js`, klik mouse pada peta hanya memeriksa `G.grid[r][c]`. Karena barikade ditempatkan di atas jalur musuh (`pathTile`), barikade disimpan di array `G.barricades` dan bukan di matriks `G.grid`. Ketika pemain mengklik barikade di jalan, `G.grid[r][c]` bernilai `null` sehingga `G.sel = null` dan seleksi terbatalkan.
+2. **Ketiadaan Tampilan Inspektor Barikade:**
+   * Fungsi `renderInspector()` di `js/ui.js` tidak memiliki penanganan untuk barikade, baik saat fase penempatan (`G.placingBarricade`) maupun saat dipilih di peta. Akibatnya inspektor selalu jatuh ke legenda default kosong.
+3. **Kartu Inspektor Megastruktur Belum Sesuai Hierarki Tangkapan Layar:**
+   * Sebelumnya inspektor megastruktur hanya merender teks biasa tanpa kanvas ikon bujur sangkar berbingkai (`#inspIcon`), tanpa status meter/gauge visual, tanpa grid aksi berdampingan (`.tower-actions`), tanpa grid statistik 2x2 monospace (`.stats-grid`), dan tanpa tombol pengatur prioritas sasaran (`.prio`).
+4. **Crash Tersembunyi Pada Loop Render Kanvas:**
+   * Di `js/render.js`, saat menggambar lingkaran jangkauan `G.sel`, kode langsung mengakses `TD[t.type].color`. Untuk megastruktur dan barikade yang tidak ada di objek `TD`, hal ini memicu `TypeError: Cannot read properties of undefined (reading 'color')` yang merusak loop render canvas ketika pertahanan baru diseleksi.
+
+---
+
+### 24.2 Solusi & Arsitektur Implementasi
+
+Hierarki kartu inspektor kini diseragamkan $100\%$ dengan layout pertahanan lama pada tangkapan layar pengguna:
+* **Header Kartu:** `▪ SELECTED DEFENSE`
+* **Header Identitas:** Ikon kanvas bujur sangkar 48x48 berbingkai (`#inspIcon`) + Nama Pertahanan (warna tematik) + Subjudul (Tier / Peran / Kills / Integritas).
+* **Status Gauge / Meter Bar:** Kontainer status dengan label di kiri (`FACILITY POWER LOAD` / `STRUCTURAL INTEGRITY`), nilai metrik di kanan, dan progress bar visual bercahaya di bawahnya.
+* **Grid Tombol Aksi (`.tower-actions`):**
+  * Tombol Utama (Emas/Amber di kiri): `[ ★ Overclock Core 40G ]` untuk Megastruktur, atau `[ ⚡ Repair +150 HP 15G ]` untuk Barikade.
+  * Tombol Sekunder (Crimson di kanan): `[ 🏷 Dismantle Facility ]` atau `[ 🏷 Salvage 25G ]`.
+* **Grid Statistik 2x2 Monospace (`.stats-grid`):**
+  * Menampilkan 4 metrik spesifik pertahanan secara terstruktur (misal DPS, Rate, Beam Radius, Power Load untuk Ion Uplink; HP, Armor, Block, Tile untuk Barikade).
+* **Target Priority Selector (`.prio`):**
+  * Tombol seleksi prioritas `[ First ] [ Last ] [ Strongest ] [ Weakest ]` yang aktif dan terintegrasi langsung dengan algoritma penargetan senjata megastruktur.
+* **Kotak Catatan Taktis:** Deskripsi taktis dan panduan operasional di bagian bawah.
+
+---
+
+### 24.3 Rincian Perubahan Berkas
+
+1. **`js/input.js`:**
+   * Menambahkan deteksi raycast dan radius hit-testing untuk menyeleksi barikade di jalan saat diklik.
+   * Mengatur `G.sel = bar` secara instan setelah barikade diletakkan di jalan.
+   * Memperbarui pintasan keyboard `U` (memperbaiki barikade / overclock megastruktur) dan `X` (membongkar/menjual).
+2. **`js/render.js`:**
+   * Memperbaiki penanganan `G.sel` agar aman terhadap pertahanan non-menara standar (`TD[t.type]`).
+   * Menggambar highlight kotak 2x2 dan lingkaran radius tematik untuk megastruktur yang sedang dipilih.
+   * Menggambar highlight perisai cyan untuk barikade yang sedang dipilih.
+   * Menambahkan indikator visual garis putus-putus emas saat megastruktur sedang dalam mode Overclock.
+   * Menambahkan mini health-bar di atas barikade jalan yang sedang mengalami kerusakan.
+3. **`js/ui.js`:**
+   * Mengembangkan `drawMegastructureDockIcon` dengan ikon vektor unik untuk ketiga megastruktur:
+     * `ion_uplink`: Piringan parabola ionik dengan retikel target presisi.
+     * `drone_carrier`: Dek hanggar tempur hijau zamrud dengan garis landasan pacu dan drone.
+     * `tectonic_siphon`: Resonator gempa konsentris dengan mata bor mantel bumi.
+   * Menambahkan tampilan `DEPLOYING DEFENSE` lengkap (dengan ikon kanvas, grid statistik 2x2, dan catatan) untuk `G.placingBarricade`, `G.placingMegastructure`, dan `G.placing`.
+   * Menambahkan tampilan `SELECTED DEFENSE` lengkap yang identik dengan tangkapan layar untuk Megastruktur dan Barikade.
+   * Memasang penjaga keamanan di `updateUI` agar tidak mengakses properti `TD[G.sel.type]` bila nilainya `undefined`.
+4. **`js/main.js`:**
+   * Menambahkan listener event click inspektor untuk:
+     * `overclock_mega`: Mengurangi 40 Gold, mengaktifkan `overclockT = 15` detik (+50% kecepatan/DPS), memicu partikel cincin energi dan SFX `overcharge`.
+     * `repair_barricade`: Mengurangi 15 Gold, memulihkan +150 HP barikade, memicu partikel reparasi dan SFX `upgrade`.
+     * `dismantle_barricade`: Menambah 25 Gold ke kas pemain, menghapus barikade dari peta, memicu efek partikel dan SFX `sell`.
+5. **`js/state.js`:**
+   * Memperbarui `updateMegastructures(dt)` untuk menghitung mundur durasi overclock dan mempercepat operasi senjata sebesar 1.5x.
+   * Menghubungkan pilihan prioritas (`prio`: First, Last, Strongest, Weakest) ke dalam algoritma penargetan sinar Orbital Ion Beam.
+6. **`tests/test_new_defense_inspector.js` (Baru):**
+   * Pengujian unit dan integrasi otomatis yang memvalidasi perenderan inspektor saat penempatan (*deploying*), saat diseleksi di peta (*selected*), eksekusi tombol aksi (*overclock*, *repair*, *salvage*, *dismantle*), dan pembaruan state.
+
+---
+
+### 24.4 Hasil Uji Validasi 19 Test Suites & Audit Statis (100% Lulus)
+Seluruh pengujian lolos tanpa kesalahan:
+* `node tests/audit_bugs.js`: **PASS (Zero static inconsistency bugs, 18 data-act terverifikasi)**
+* `node tests/test_new_defense_inspector.js`: **PASS (Semua kartu inspektor baru terverifikasi 100%)**
+* Seluruh 19 test suite dijalankan dan lulus $100\%$:
+  1. `audit_bugs.js` -> **PASS**
+  2. `smoke.js` -> **PASS**
+  3. `test_ascension.js` -> **PASS**
+  4. `test_champions.js` -> **PASS**
+  5. `test_deep_synergy.js` -> **PASS**
+  6. `test_effects_realization.js` -> **PASS**
+  7. `test_effects_realization_deep.js` -> **PASS**
+  8. `test_grand_expansion.js` -> **PASS**
+  9. `test_living_ecosystem.js` -> **PASS**
+  10. `test_map_dynamics.js` -> **PASS**
+  11. `test_masterclass_overhaul.js` -> **PASS**
+  12. `test_mastery.js` -> **PASS**
+  13. `test_new_defense_inspector.js` -> **PASS**
+  14. `test_overdrive_fusions.js` -> **PASS**
+  15. `test_paradox_reality.js` -> **PASS**
+  16. `test_reactions.js` -> **PASS**
+  17. `test_sectors.js` -> **PASS**
+  18. `test_ui_layout_overhaul.js` -> **PASS**
+  19. `test_workshop.js` -> **PASS**
+
+**KESIMPULAN: Seluruh pertahanan baru (Megastruktur Ion Uplink, Drone Carrier, Tectonic Siphon, dan Road Barricade) kini memiliki kartu informasi taktis yang lengkap, simetris, dan identik persis dengan hierarki visual pertahanan lama pada tangkapan layar pengguna.**
+
 
 
 

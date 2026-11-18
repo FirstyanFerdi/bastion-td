@@ -133,6 +133,47 @@ function init() {
       G.sel = null; G.uiDirty = true;
       if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('sell');
     }
+    else if (act === 'overclock_mega' && G.sel && MEGASTRUCTURE_CONFIG && MEGASTRUCTURE_CONFIG[G.sel.type]) {
+      const ms = G.sel;
+      const ocCost = 40;
+      if (G.gold >= ocCost && !ms.overclockT) {
+        G.gold -= ocCost;
+        ms.overclockT = 15;
+        burst(ms.x, ms.y, 25, ms.color, 140, 0.6, 4, true);
+        addRing(ms.x, ms.y, 10, 60, 0.5, ms.color, 4);
+        addText(ms.x, ms.y - 25, 'CORE OVERCLOCKED!', '#f59e0b', 14);
+        G.uiDirty = true;
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+      } else {
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+      }
+    }
+    else if (act === 'repair_barricade' && G.sel && G.sel.hp !== undefined) {
+      const bar = G.sel;
+      const repCost = 15;
+      if (G.gold >= repCost && bar.hp < bar.maxHp) {
+        G.gold -= repCost;
+        bar.hp = Math.min(bar.maxHp, bar.hp + 150);
+        burst(bar.x, bar.y, 15, '#38bdf8', 80, 0.4, 3, false);
+        addText(bar.x, bar.y - 18, '+150 HP REPAIRED', '#38bdf8', 12);
+        G.uiDirty = true;
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
+      } else {
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+      }
+    }
+    else if (act === 'dismantle_barricade' && G.sel && G.sel.hp !== undefined) {
+      const bar = G.sel;
+      const refund = 25;
+      G.gold += refund;
+      const idx = G.barricades ? G.barricades.indexOf(bar) : -1;
+      if (idx !== -1) G.barricades.splice(idx, 1);
+      burst(bar.x, bar.y, 15, '#38bdf8', 80, 0.4, 3, false);
+      addText(bar.x, bar.y - 18, '+' + refund + 'G SALVAGED', '#fbbf24', 12);
+      G.sel = null;
+      G.uiDirty = true;
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('sell');
+    }
     else if (act === 'target_part') {
       if (G.sel && G.sel.parts) {
         G.sel.activeTargetPart = b.dataset.part;

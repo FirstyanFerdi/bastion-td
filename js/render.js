@@ -553,10 +553,21 @@ function render() {
     }
   }
   if (G.sel && (!G.activeContract || G.activeContract !== 'blind_fire')) {
-    const t = G.sel, def = TD[t.type], rg = getTierData(t).range * (hasPerk('targeting_matrix') ? 1.15 : 1) * TILE;
-    c.fillStyle = 'rgba(255,255,255,0.045)'; c.strokeStyle = t.branch ? def.branches[t.branch].color : def.color; c.lineWidth = 1.5; c.setLineDash([8, 6]);
-    c.beginPath(); c.arc(t.x, t.y, rg, 0, TAU); c.fill(); c.stroke(); c.setLineDash([]);
-    c.strokeStyle = '#fff'; c.lineWidth = 2; rr(c, t.x - 28, t.y - 28, 56, 56, 10); c.stroke();
+    const t = G.sel;
+    if (t.type && TD[t.type]) {
+      const def = TD[t.type], rg = getTierData(t).range * (hasPerk('targeting_matrix') ? 1.15 : 1) * TILE;
+      c.fillStyle = 'rgba(255,255,255,0.045)'; c.strokeStyle = t.branch ? def.branches[t.branch].color : def.color; c.lineWidth = 1.5; c.setLineDash([8, 6]);
+      c.beginPath(); c.arc(t.x, t.y, rg, 0, TAU); c.fill(); c.stroke(); c.setLineDash([]);
+      c.strokeStyle = '#fff'; c.lineWidth = 2; rr(c, t.x - 28, t.y - 28, 56, 56, 10); c.stroke();
+    } else if (typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[t.type]) {
+      const conf = MEGASTRUCTURE_CONFIG[t.type];
+      const rad = conf.beamRadius || conf.quakeRadius || 180;
+      c.fillStyle = conf.color + '15'; c.strokeStyle = conf.color; c.lineWidth = 1.5; c.setLineDash([8, 6]);
+      c.beginPath(); c.arc(t.x, t.y, rad, 0, TAU); c.fill(); c.stroke(); c.setLineDash([]);
+      c.strokeStyle = '#fff'; c.lineWidth = 2; rr(c, t.x - 48, t.y - 48, 96, 96, 12); c.stroke();
+    } else if (t.hp !== undefined && t.c !== undefined && t.roadC === undefined) {
+      c.strokeStyle = '#38bdf8'; c.lineWidth = 2; rr(c, t.x - 24, t.y - 24, 48, 48, 8); c.stroke();
+    }
   }
   for (const t of G.towers) drawTowerSprite(c, t.type, t.tier, t, time);
   drawTowerHeatGauges(c, time);
@@ -1567,6 +1578,14 @@ function drawMegastructures(c, time) {
     c.fillRect(rx, ry + rh - 6, 6, 6);
     c.fillRect(rx + rw - 6, ry + rh - 6, 6, 6);
 
+    if (ms.overclockT > 0) {
+      c.strokeStyle = '#f59e0b';
+      c.lineWidth = 2;
+      c.setLineDash([4, 4]);
+      c.strokeRect(rx - 2, ry - 2, rw + 4, rh + 4);
+      c.setLineDash([]);
+    }
+
     if (ms.type === 'ion_uplink') {
       c.translate(ms.x, ms.y);
       c.rotate(time * 0.8);
@@ -1885,6 +1904,14 @@ function drawBarricades(c, time) {
     c.moveTo(x - 2, y - 6); c.lineTo(x + 4, y + 6);
     c.moveTo(x + 8, y - 6); c.lineTo(x + 14, y + 6);
     c.stroke();
+
+    if (bar.hp < bar.maxHp) {
+      const pct = Math.max(0, bar.hp / bar.maxHp);
+      c.fillStyle = 'rgba(15,23,42,0.85)';
+      c.fillRect(x - 16, y - 14, 32, 4);
+      c.fillStyle = pct > 0.5 ? '#10b981' : (pct > 0.25 ? '#f59e0b' : '#ef4444');
+      c.fillRect(x - 16, y - 14, 32 * pct, 4);
+    }
   }
   c.restore();
 }
