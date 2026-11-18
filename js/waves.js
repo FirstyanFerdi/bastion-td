@@ -259,9 +259,10 @@ function update(dt) {
   // Commander skills cooldown
   const scramblerSlow = (G.hiveMutation === 'scrambler') ? 0.70 : 1.0;
   const commandProtoBoost = (typeof getWorkshopLevel === 'function' && getWorkshopLevel('command_protocol') > 0) ? 1.25 : 1.0;
+  const relicCdBoost = (typeof hasRelic === 'function' && hasRelic('quantum_capacitance')) ? 1.30 : 1.0;
   for (const k in G.skills) {
     if (G.skills[k] && G.skills[k].cd > 0) {
-      const cdRate = (hasPerk('orbital_salvo') && k === 'orbital' ? 1.5 : 1) * scramblerSlow * commandProtoBoost;
+      const cdRate = (hasPerk('orbital_salvo') && k === 'orbital' ? 1.5 : 1) * scramblerSlow * commandProtoBoost * relicCdBoost;
       G.skills[k].cd = Math.max(0, G.skills[k].cd - dt * cdRate);
     }
   }

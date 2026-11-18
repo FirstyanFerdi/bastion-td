@@ -54,6 +54,15 @@ function init() {
   $('btnMute').addEventListener('click', toggleMute);
   $('btnCall').addEventListener('click', () => { Sfx.init(); Sfx.resume(); if (G.state === 'menu') return; Sfx.play('click'); callWave(); });
   $('dock').addEventListener('click', e => {
+    const dep = e.target.closest('.deployable-shop');
+    if (dep) {
+      Sfx.init(); Sfx.resume();
+      if (!G || (G.state !== 'prep' && G.state !== 'active')) return;
+      G.placingBarricade = !G.placingBarricade;
+      G.placing = null; G.placingMegastructure = null; G.sel = null; G.casting = null;
+      G.uiDirty = true; Sfx.play('click');
+      return;
+    }
     const ms = e.target.closest('.megastructure-shop');
     if (ms) { Sfx.init(); Sfx.resume(); selectMegaShop(ms.dataset.megaType); return; }
     const s = e.target.closest('.shop');
@@ -325,5 +334,6 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   // 8.0 Masterclass AAA/Indie Exports
   canPlaceMegastructure, placeMegastructure, updateMegastructures, setupBossMultiParts, damageBossPart, mechGrappleStrike, routeLogistics, updateLogistics, recordPheromoneDeath, updatePheromones, applyGeneSplice, applyDarkCurio, MEGASTRUCTURE_CONFIG, MULTI_PART_TITAN_CONFIG, LOGISTICS_CONFIG, GENE_SPLICING_CONFIG, DARK_TECH_CURIOS,
   // 9.0 Living Ecosystem & Nemesis Network Exports
-  addSoilTile, setWeather, updateEcology, updateProfiler, damageCrag, triggerRockslide, placeBarricade, feedGorger, recordNemesisEscape, spawnNemesisCommander, ECOSYSTEM_CONFIG, NEURAL_NEMESIS_CONFIG, DESTRUCTIBLE_TERRAIN_CONFIG, ECO_MUTATION_CONFIG
+  addSoilTile, setWeather, updateEcology, updateProfiler, damageCrag, triggerRockslide, placeBarricade, feedGorger, recordNemesisEscape, spawnNemesisCommander, ECOSYSTEM_CONFIG, NEURAL_NEMESIS_CONFIG, DESTRUCTIBLE_TERRAIN_CONFIG, ECO_MUTATION_CONFIG,
+  explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
 };

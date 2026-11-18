@@ -724,6 +724,14 @@ const MODULAR_CHIPS = {
     icon: 'atom',
     color: '#c084fc',
     desc: 'Tembakan menara memiliki 20% peluang menciptakan lubang hitam mikro yang menyedot dan melenyapkan musuh.'
+  },
+  nemesis_neural_core: {
+    id: 'nemesis_neural_core',
+    name: 'Nemesis Neural Core',
+    target: 'any',
+    icon: 'spark',
+    color: '#a855f7',
+    desc: 'Inti neural adaptif musuh yang dibajak: Menara mendapatkan +25% Fire Rate dan tembakan menembus 30% armor musuh secara permanen.'
   }
 };
 
@@ -998,8 +1006,12 @@ function buildSpawns(n) {
     for (let k = 0; k < cl; k++) for (let i = 0; i < per; i++) add(2.5 + k * 5 + i * 0.06, 'swarm');
   }
   if (n >= 4) { const b = 1 + Math.floor((n - 4) / 2); for (let i = 0; i < b; i++) add(1.5 + i * 1.8, 'brute'); }
+  if (n >= 5) { const sap = 1 + Math.floor((n - 5) / 4); for (let i = 0; i < sap; i++) add(3.5 + i * 4.0, 'sapper'); }
   if (n >= 6) { const h = 1 + Math.floor((n - 6) / 4); for (let i = 0; i < h; i++) add(3 + i * 2.6, 'healer'); }
+  if (n >= 6) { const g = 1 + Math.floor((n - 6) / 4); for (let i = 0; i < g; i++) add(4.5 + i * 4.2, 'gorger'); }
   if (n >= 7) { const st = 1 + Math.floor((n - 7) / 3); for (let i = 0; i < st; i++) add(4 + i * 2.2, 'stealth'); }
+  if (n >= 7) { const cs = 1 + Math.floor((n - 7) / 4); for (let i = 0; i < cs; i++) add(2.8 + i * 3.8, 'chaff_skimmer'); }
+  if (n >= 8) { const hl = 1 + Math.floor((n - 8) / 4); for (let i = 0; i < hl; i++) add(5.0 + i * 4.5, 'harpoon_leecher'); }
   if (n >= 9) { const cr = 1 + Math.floor((n - 9) / 5); for (let i = 0; i < cr; i++) add(5 + i * 4.5, 'carrier'); }
   if (n >= 11) { const br = 1 + Math.floor((n - 11) / 4); for (let i = 0; i < br; i++) add(2 + i * 3.2, 'breacher'); }
   if (n % 5 === 0) {

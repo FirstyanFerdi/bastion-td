@@ -528,6 +528,13 @@ function drawEnemy(c, e, time) {
     c.beginPath(); c.moveTo(0, 0); c.lineTo(G.mech.x - e.x, G.mech.y - e.y); c.stroke();
     c.restore();
   }
+  // 9.0 Harpoon Tether Line to Tower
+  if (e.tetheredTower && G && G.towers && G.towers.includes(e.tetheredTower)) {
+    c.save();
+    c.strokeStyle = '#10b981'; c.lineWidth = 2.4; c.setLineDash([5, 3]);
+    c.beginPath(); c.moveTo(0, 0); c.lineTo(e.tetheredTower.x - e.x, e.tetheredTower.y - e.y); c.stroke();
+    c.restore();
+  }
   if (e.armor > 0 && e.shred > 0 && e.type === 'boss') { c.strokeStyle = 'rgba(251,146,60,0.5)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r + 2, 0, TAU); c.stroke(); }
   if (e.flash > 0) { c.fillStyle = 'rgba(255,255,255,' + (e.flash * 0.55) + ')'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill(); }
   if (e.slowT > 0) { c.strokeStyle = 'rgba(96,165,250,0.75)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r + 3, 0, TAU); c.stroke(); }

@@ -52,6 +52,55 @@ function statRows(type, i, branch) {
     default: return [['DMG', String(s.dmg)], ['RATE', f1(s.rate) + '/s'], ['RANGE', f1(s.range) + ' t'], ['POWER', '-' + (s.power || 8) + ' MW']];
   }
 }
+function drawMegastructureDockIcon(ic, mk, md) {
+  if (!ic) return;
+  ic.clearRect(0, 0, 48, 48);
+  const col = md.color || '#f59e0b';
+  ic.fillStyle = '#090e17';
+  ic.fillRect(4, 4, 40, 40);
+  ic.strokeStyle = col;
+  ic.lineWidth = 2;
+  ic.strokeRect(4, 4, 40, 40);
+  ic.fillStyle = col;
+  ic.fillRect(5, 5, 5, 5);
+  ic.fillRect(38, 5, 5, 5);
+  ic.fillRect(5, 38, 5, 5);
+  ic.fillRect(38, 38, 5, 5);
+  ic.strokeStyle = '#fff';
+  ic.lineWidth = 1.6;
+  ic.beginPath();
+  ic.arc(24, 24, 10, 0, Math.PI * 2);
+  ic.stroke();
+  ic.fillStyle = col;
+  ic.beginPath();
+  ic.arc(24, 24, 5, 0, Math.PI * 2);
+  ic.fill();
+}
+
+function drawBarricadeDockIcon(ic) {
+  if (!ic) return;
+  ic.clearRect(0, 0, 48, 48);
+  ic.fillStyle = '#090e17';
+  ic.fillRect(4, 4, 40, 40);
+  ic.strokeStyle = '#38bdf8';
+  ic.lineWidth = 2;
+  ic.strokeRect(4, 4, 40, 40);
+  ic.fillStyle = '#1e293b';
+  ic.fillRect(10, 16, 28, 16);
+  ic.strokeStyle = '#f59e0b';
+  ic.lineWidth = 1.5;
+  ic.strokeRect(10, 16, 28, 16);
+  ic.strokeStyle = '#fbbf24';
+  ic.lineWidth = 1.8;
+  ic.beginPath();
+  ic.moveTo(14, 18); ic.lineTo(19, 30);
+  ic.moveTo(21, 18); ic.lineTo(26, 30);
+  ic.moveTo(28, 18); ic.lineTo(33, 30);
+  ic.stroke();
+  ic.fillStyle = '#38bdf8';
+  ic.fillRect(20, 8, 8, 5);
+}
+
 function buildDock() {
   const dock = $('dock'); dock.innerHTML = '';
   TKEYS.forEach((k, idx) => {
@@ -77,11 +126,25 @@ function buildDock() {
       el.dataset.megaType = mk;
       el.style.setProperty('--tc', md.color);
       el.style.borderTop = '2px solid ' + md.color;
-      el.innerHTML = '<span class="key" style="background:' + md.color + ';color:#0f172a">2x2</span><div class="meta" style="padding-left:4px"><div class="nm" style="color:' + md.color + '">' + md.name.split(' ')[0] + ' ' + (md.name.split(' ')[1] || '') + '</div><div class="cost"><i class="coin"></i>' + md.cost + '</div><div class="role">' + md.role + '</div></div>' +
+      el.innerHTML = '<span class="key" style="background:' + md.color + ';color:#0f172a">2x2</span><canvas width="48" height="48"></canvas><div class="meta"><div class="nm" style="color:' + md.color + '">' + md.name.split(' ')[0] + ' ' + (md.name.split(' ')[1] || '') + '</div><div class="cost"><i class="coin"></i>' + md.cost + '</div><div class="role">' + md.role + '</div></div>' +
         '<div class="tip"><b style="color:' + md.color + '">★ MEGASTRUCTURE (2x2): ' + md.name + '</b>' + md.desc + '<div class="st"><span><em>POWER</em> -' + md.power + ' MW</span></div></div>';
       dock.appendChild(el);
+      const ic = el.querySelector('canvas').getContext('2d');
+      drawMegastructureDockIcon(ic, mk, md);
     });
   }
+
+  // 9.0 Deployable Road Barricade Facility
+  const barEl = document.createElement('div');
+  barEl.className = 'shop deployable-shop';
+  barEl.dataset.deployType = 'barricade';
+  barEl.style.setProperty('--tc', '#38bdf8');
+  barEl.style.borderTop = '2px solid #38bdf8';
+  barEl.innerHTML = '<span class="key" style="background:#38bdf8;color:#0f172a">B</span><canvas width="48" height="48"></canvas><div class="meta"><div class="nm" style="color:#38bdf8">Barricade</div><div class="cost"><i class="coin"></i>40</div><div class="role">Road Block</div></div>' +
+    '<div class="tip"><b style="color:#38bdf8">★ DEPLOYABLE BARRICADE (400 HP)</b>Deploy a heavy barricade on any road tile for 40 Gold. Stops hostiles and absorbs enemy attacks!</div>';
+  dock.appendChild(barEl);
+  const barIc = barEl.querySelector('canvas').getContext('2d');
+  drawBarricadeDockIcon(barIc);
 }
 function selectShop(type) {
   if (!G || (G.state !== 'prep' && G.state !== 'active')) return;
@@ -563,7 +626,22 @@ function refreshUI() {
   setHTML('btnMute', Sfx.muted ? svg('muted') : svg('speaker')); $('btnMute').classList.toggle('on', Sfx.muted);
   document.querySelectorAll('#speedSeg button').forEach(b => b.classList.toggle('on', Number(b.dataset.speed) === G.speed));
   document.querySelectorAll('.shop').forEach(el => {
+    if (el.dataset.deployType === 'barricade') {
+      const bCost = typeof DESTRUCTIBLE_TERRAIN_CONFIG !== 'undefined' ? DESTRUCTIBLE_TERRAIN_CONFIG.barricadeCost : 40;
+      el.classList.toggle('poor', G.gold < bCost);
+      el.classList.toggle('sel', !!G.placingBarricade);
+      return;
+    }
+    if (el.dataset.megaType) {
+      const md = typeof MEGASTRUCTURE_CONFIG !== 'undefined' ? MEGASTRUCTURE_CONFIG[el.dataset.megaType] : null;
+      if (md) {
+        el.classList.toggle('poor', G.gold < md.cost);
+        el.classList.toggle('sel', G.placingMegastructure === el.dataset.megaType);
+      }
+      return;
+    }
     const k = el.dataset.type;
+    if (!k) return;
     const cost = typeof getTowerCost === 'function' ? getTowerCost(k) : TD[k].cost;
     el.classList.toggle('poor', G.gold < cost);
     el.classList.toggle('sel', G.placing === k);
@@ -684,7 +762,7 @@ function refreshUI() {
       btnDread.disabled = false;
     } else {
       const pct = Math.floor((d.charge / maxC) * 100);
-      btnDread.innerHTML = 'DREADNOUGHT <span id="vDreadCharge" style="background:#78350f;color:#fef3c7;padding:1px 3px;border-radius:2px;font-size:8.5px">' + pct + '%</span>';
+      btnDread.innerHTML = 'DREADNOUGHT <span id="vDreadCharge" class="cbtn-badge dread">' + pct + '%</span>';
       btnDread.style.color = '#94a3b8';
       btnDread.style.borderColor = 'rgba(245,158,11,0.3)';
       btnDread.style.background = 'transparent';

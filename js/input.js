@@ -110,7 +110,7 @@ function onPointerDown(e) {
   if (!G || (G.state !== 'prep' && G.state !== 'active') || G.drafting) return;
   Sfx.init(); Sfx.resume();
   onPointerMove(e);
-  if (e.button === 2) { G.placing = null; G.sel = null; G.casting = null; G.swapSource = null; G.uiDirty = true; return; }
+  if (e.button === 2) { G.placing = null; G.placingMegastructure = null; G.placingBarricade = null; G.sel = null; G.casting = null; G.swapSource = null; G.uiDirty = true; return; }
 
   // Titan Mech Manual Vulcan Fire (7.0)
   if (G.mech && G.mech.active && !G.casting) {
@@ -433,6 +433,18 @@ function onPointerDown(e) {
     }
     return;
   }
+  if (G.placingBarricade) {
+    if (typeof placeBarricade === 'function' && typeof pathTile !== 'undefined' && pathTile[r] && pathTile[r][c]) {
+      const bar = placeBarricade(c, r);
+      if (bar) {
+        if (!e.shiftKey) G.placingBarricade = null;
+        G.uiDirty = true;
+      }
+    } else {
+      Sfx.play('error');
+    }
+    return;
+  }
   if (G.placing) {
     if (pathTile[r][c] || G.grid[r][c]) { Sfx.play('error'); return; }
     const t = placeTower(c, r, G.placing);
@@ -534,7 +546,7 @@ function onKey(e) {
       }
       break;
     }
-    case 'Escape': G.placing = null; G.placingMegastructure = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
+    case 'Escape': G.placing = null; G.placingMegastructure = null; G.placingBarricade = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
     case 'p': case 'P': togglePause(); break;
     case 'm': case 'M': toggleMute(); break;
     case 'f': case 'F': setSpeed(G.speed % 3 + 1); break;

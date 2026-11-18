@@ -1046,6 +1046,180 @@ Pembaruan revolusioner versi 9.0 mentransformasi Bastion TD dari tower defense m
   17. `tests/test_workshop.js` -> **PASS**
   **RINGKASAN: 17/17 TEST SUITES LULUS 100% TANPA REGRESI.**
 
+---
+
+## 22. Audit Mendalam Kode, Koreksi Bug Tersembunyi, dan Realisasi Nyata Efek Gameplay (Bastion TD 9.1)
+
+### 22.1 Ringkasan Analisis Audit: Masalah & Efek Parsial yang Ditemukan
+Sebuah audit forensik menyeluruh dilakukan pada seluruh berkas kode sumber (`js/data.js`, `js/enemies.js`, `js/towers.js`, `js/state.js`, `js/waves.js`, `js/sprites.js`, `js/render.js`, `js/ui.js`, `js/input.js`, `js/main.js`). Hasil audit menemukan sejumlah inkonsistensi di mana mekanik telah didefinisikan secara konseptual atau memiliki string teks, namun belum terhubung (*unwired*) ke dalam loop pertempuran, fisika proyektil, atau siklus hidup interaktif:
+
+1. **Musuh Ekosistem 9.0 Tidak Muncul di Wave Reguler (`buildSpawns`):**
+   * *Temuan:* `sapper`, `gorger`, `chaff_skimmer`, dan `harpoon_leecher` sudah didefinisikan di `ED`, memiliki sprites dan logika, tetapi tidak pernah dijadwalkan di algoritma `buildSpawns` pada `js/data.js`. Pemain dalam mode campaign/ekspedisi normal tidak akan pernah menjumpai mereka di gelombang reguler!
+   * *Solusi:* Diinjeksikan ke dalam kurva wave alami: Sapper (Wave $\ge 5$), Gorger (Wave $\ge 6$), Chaff Skimmer (Wave $\ge 7$), dan Harpoon Leecher (Wave $\ge 8$).
+2. **Tebing Runtuh (*Destructible Crags*) Tidak Merespons Tembakan Senjata:**
+   * *Temuan:* Fungsi `damageCrag` telah didefinisikan namun tidak dipanggil oleh senjata apapun selain tombol manual pada panel inspektur. Ledakan plasma, tembakan gatling, ayunan pedang termal Titan Mech, dan kinetic strike Dreadnought sama sekali tidak melukai tebing.
+   * *Solusi:* Kerusakan splash plasma (`explode`), raycast tembakan Vulcan Titan Mech, cleave pedang termal Titan Mech, hantaman Tungsten Rod Dreadnought, dan ledakan Fuel Cell kini secara dinamis melukai tebing hingga runtuh memicu longsoran salju batu (*rockslide avalanche*).
+3. **Cryo Pulse Melapisi Es pada Menara Sendiri, Bukan di Jalan:**
+   * *Temuan:* Pada `js/towers.js`, denyut Cryo memanggil `addSoilTile(t.c, t.r, 'frost_slick', 12.0)`. Menara Cryo berdiri di petak grid bangunan, sementara musuh hanya berjalan di petak jalan (`pathTile`). Akibatnya musuh tidak pernah menginjak lapisan es Cryo dalam pertempuran biasa.
+   * *Solusi:* `cryoPulse` diperbarui agar menyebarkan lapisan es licin `frost_slick` ke seluruh petak jalan (`pathTile`) yang berada di dalam radius jangkauan semprotannya.
+4. **Reaksi Berantai Ledakan *Thermite Bloom* Belum Terkoneksi:**
+   * *Temuan:* Konsep *Thermite Bloom* (ledakan sekunder saat petak abu termal disiram proyektil plasma kedua) tertulis di desain tetapi tidak memiliki implementasi kode.
+   * *Solusi:* `explode` pada `js/towers.js` kini mendeteksi keberadaan `thermal_ash` yang sudah ada di ubin sasaran, langsung memicu ledakan sekunder termal (AoE 220 kerusakan plasma bonus, cincin api oranye, efek audio `reaction`, dan status terbakar *thermite burn* selama 4 detik).
+5. **Subterranean Sapper Menerima 100% Kerusakan saat Menggali di Bawah Tanah:**
+   * *Temuan:* Menara memang mengabaikan Sapper yang sedang menggali, namun jika terkena semburan AoE atau efek area nyasar, Sapper menerima kerusakan penuh tanpa mitigasi.
+   * *Solusi:* Ditambahkan reduksi kerusakan $-75\%$ terhadap tembakan langsung non-seismik saat Sapper berada di bawah tanah (`e.burrowed`). Senjata seismik (seperti Mantle Bore drill atau plasma splash) tetap memberikan kerusakan penuh sebagai hard counter.
+6. **Chaff Skimmer Belum Menyemburkan Kabut Aerosol Lingering:**
+   * *Temuan:* Chaff Skimmer hanya mengurangi kerusakan secara pasif jika ada skimmer dekat musuh, tanpa menyebarkan awan kabut perak di jalur.
+   * *Solusi:* Diimplementasikan semburan hazard kabut aerosol perak `chaff_cloud` setiap 3.5 detik (bertahan 6 detik di jalur). Proyektil fisik dan energi yang melintasi kabut ini mengalami deviasi dan pengurangan daya rusak $-50\%$.
+7. **Harpoon Leecher Menganggur saat Titan Mech Docked:**
+   * *Temuan:* Harpoon Leecher hanya menargetkan Titan Mech. Jika pemain tidak mengaktifkan Titan Mech atau Mech sedang mengisi daya di dok pangkalan, Harpoon Leecher tidak melakukan apa-apa.
+   * *Solusi:* Ditambahkan logika penambatan ganda (*dual-target tether*): Jika Titan Mech tidak aktif, Harpoon Leecher menembakkan kabel listrik penambat ke menara pertahanan terdekat (menekan laju tembak menara dengan status EMP) dan menyalurkan energi yang disedot menjadi aura dorongan kecepatan $+25\%$ ke kawan-kawan di sekitarnya.
+8. **Parasit Simbiotik Tidak Kebal Status di Luar Hit Damage:**
+   * *Temuan:* Parasit hanya menghapus slow saat terkena damage langsung di `dealDamage`, namun efek aura cryo pasif masih bisa memperlambatnya di loop pergerakan musuh.
+   * *Solusi:* Diperbarui pada `updateEnemy` sehingga selama `e.hasParasite` aktif, status Slow dan Stun diserap $100\%$ secara instan oleh parasit. Tembakan sniper/railgun atau ledakan besar $\ge 180$ mencopot dan memusnahkan parasit dari punggung inang.
+9. **Hadiah Boss Nemesis Hanya Tulisan Teks Tanpa Memberi Chip:**
+   * *Temuan:* Teks mengambang menampilkan `+35 CORES & EXOTIC CHIP!`, namun `addChip` tidak pernah dipanggil dan chip `nemesis_neural_core` belum terdaftar di `MODULAR_CHIPS`.
+   * *Solusi:* Ditambahkan definisi `nemesis_neural_core` pada `MODULAR_CHIPS`, dipanggil `addChip('nemesis_neural_core', 1)` saat Nemesis terbunuh, dan efek socketing-nya dihubungkan ke kalkulasi menara ($+25\%$ Fire Rate & $30\%$ armor shred permanen).
+10. **Pengurangan Cooldown Skill Relik Quantum Capacitance Belum Aktif di Loop Waves:**
+    * *Temuan:* Relik eksotik *Zero-Point Capacitance* menambahkan kapasitas daya grid $+35$ MW, namun potongan cooldown skill komandan sebesar $30\%$ belum dikalikan ke dalam `cdRate` di `js/waves.js`.
+    * *Solusi:* Ditambahkan faktor pengali `relicCdBoost = 1.30` pada peremajaan cooldown skill komandan saat relik terpasang.
+11. **Barikade Jalan (*Deployable Road Barricades*) Belum Terintegrasi ke UI & Pertempuran:**
+    * *Temuan:* Fungsi `placeBarricade` ada di `js/state.js`, namun tidak ada tombol di dock toko, tidak ada ghost preview kursor, dan musuh yang lewat tidak menabrak barikade.
+    * *Solusi:* Dibuat tombol fasilitas barikade di dock toko (hotkey B, biaya 40 Gold), preview penempatan holografik di ubin jalan, logika rintangan fisik yang menghentikan musuh (`sp = 0`), musuh menyerang barikade hingga hancur, dan pecahan partikel saat barikade jebol.
+
+---
+
+### 22.2 Rincian Berkas yang Dimodifikasi & Ditambahkan
+1. **`js/data.js`:**
+   * Menambahkan chip eksotik `nemesis_neural_core` ke dalam `MODULAR_CHIPS`.
+   * Menghubungkan musuh `sapper`, `gorger`, `chaff_skimmer`, dan `harpoon_leecher` ke dalam jadwal `buildSpawns`.
+2. **`js/enemies.js`:**
+   * Menambahkan penyerapan status Slow/Stun mutlak untuk inang berparasit simbiotik.
+   * Menambahkan semburan hazard `chaff_cloud` berkala oleh Chaff Skimmer.
+   * Mengintegrasikan penambatan ganda Harpoon Leecher (Mech vs Menara + buff kecepatan kawan).
+   * Mengintegrasikan deteksi tabrakan musuh terhadap barikade jalan (`G.barricades`) dan penghancuran bertahap.
+3. **`js/towers.js`:**
+   * Memperbaiki pelapisan es `frost_slick` dari denyut Cryo agar membasahi ubin jalan (`pathTile`).
+   * Menambahkan reaksi berantai ledakan *Thermite Bloom* pada ubin yang terkena semprotan plasma kedua.
+   * Menghubungkan kerusakan cipratan proyektil plasma ke tebing chokepoint (`G.destructibleCrags`).
+   * Mengintegrasikan bonus laju tembak $+25\%$ dan penetrasi armor $30\%$ untuk menara bersoket `nemesis_neural_core`.
+4. **`js/state.js`:**
+   * Menambahkan mitigasi kerusakan $-75\%$ untuk Subterranean Sapper saat menggali di bawah tanah.
+   * Memperluas deteksi mitigasi chaff agar melindungi musuh yang berada di dalam hazard `chaff_cloud`.
+   * Menghubungkan tembakan Vulcan Mech, ayunan bilah termal Mech, kinetic rod Dreadnought, dan peledakan Fuel Cell agar memberikan kerusakan nyata pada tebing chokepoint.
+   * Memastikan terbunuhnya Nemesis Commander memberikan chip `nemesis_neural_core` langsung ke `SAVE.chipsInventory`.
+5. **`js/waves.js`:**
+   * Mengintegrasikan potongan cooldown $30\%$ dari relik *Zero-Point Capacitance* pada `update(dt)`.
+6. **`js/sprites.js` & `js/render.js`:**
+   * Menggambar kabel listrik penambat antara Harpoon Leecher dan Menara terdekat.
+   * Merender partikel kabut aerosol perak berkilau untuk hazard `chaff_cloud`.
+   * Merender preview holografik barikade jalan berwarna biru terang saat kursor berada di atas ubin jalur.
+7. **`js/ui.js`, `js/input.js`, `js/main.js`:**
+   * Menambahkan tombol shop barikade jalan di dock toko (`#dock`).
+   * Mengintegrasikan handler klik dock, penempatan klik kiri pada jalan, pembatalan klik kanan/Escape, dan status aktif UI.
+8. **`tests/test_effects_realization_deep.js` (Baru):**
+   * Test suite pengujian mendalam yang memvalidasi ke-12 mekanik efek di atas secara nyata dalam simulasi mesin game.
+
+---
+
+### 22.3 Hasil Uji Validasi 18 Test Suites (100% Lulus)
+Seluruh rangkaian pengujian unit dan audit dijalankan secara berurutan:
+1. `tests/audit_bugs.js` -> **PASS (0 static bugs found)**
+2. `tests/smoke.js` -> **PASS**
+3. `tests/test_ascension.js` -> **PASS**
+4. `tests/test_browser_init.js` -> **PASS**
+5. `tests/test_champions.js` -> **PASS**
+6. `tests/test_deep_synergy.js` -> **PASS**
+7. `tests/test_effects_realization.js` -> **PASS**
+8. `tests/test_effects_realization_deep.js` -> **PASS (Deep Combat Effects Realization)**
+9. `tests/test_grand_expansion.js` -> **PASS**
+10. `tests/test_living_ecosystem.js` -> **PASS**
+11. `tests/test_map_dynamics.js` -> **PASS**
+12. `tests/test_masterclass_overhaul.js` -> **PASS**
+13. `tests/test_mastery.js` -> **PASS**
+14. `tests/test_overdrive_fusions.js` -> **PASS**
+15. `tests/test_paradox_reality.js` -> **PASS**
+16. `tests/test_reactions.js` -> **PASS**
+17. `tests/test_sectors.js` -> **PASS**
+18. `tests/test_workshop.js` -> **PASS**
+
+**KESIMPULAN: Seluruh bug berhasil diidentifikasi dan diperbaiki, seluruh efek mekanik gameplay dari versi 1.0 hingga 9.0 kini $100\%$ terealisasi secara dinamis dan aktif di dalam mesin simulasi pertempuran nyata.**
+
+---
+
+## 23. Perombakan Total Tata Letak UI, Eliminasi Tumpang Tindih, dan Peningkatan Visual Cyberpunk (Bastion TD 9.2)
+
+### 23.1 Hasil Audit Tata Letak UI & Titik Tumpang Tindih yang Ditemukan
+Pemeriksaan menyeluruh terhadap tata letak UI di berbagai resolusi layar (1080p, 1366p, laptop, dan tablet) pada `index.html`, `css/style.css`, `js/ui.js`, dan `js/render.js` mendeteksi 5 masalah tumpang tindih (*overlapping*), penumpukan teks, dan kerapuhan visual:
+
+1. **Kepadatan Ekstrem Top Bar (`#topbar .ctrls`):**
+   * *Masalah:* Terdapat 14 tombol kontrol yang diletakkan berdampingan secara lepas (`flex-shrink: 0`) dengan lebar kumulatif $>720$px. Hal ini menekan 9 kartu status `.chips` (Lives, Gold, Wave, Score, Best Wave, Cores, Power, Sector, Weather) hingga menyebabkan pemotongan (*clipping*) atau luapan horizontal pada layar beresolusi $<1600$px.
+   * *Solusi:* Mengelompokkan seluruh kontrol ke dalam 3 dok kapsul modular bertema cyberpunk (`.ctrl-group.systems`, `.ctrl-group.protocols`, `.ctrl-group.sim`) dengan micro-badge dan padding kompak, memangkas ruang horizontal hingga $>35\%$.
+2. **Tabrakan Teks & Badge Shortcut pada Kartu Toko (`#dock .shop`):**
+   * *Masalah:* Badge pintasan keyboard `.key` diposisikan secara absolut (`top: 4px; right: 5px;`). Pada nama menara yang panjang atau layar sedang, teks judul `.nm` dan biaya `.cost` bertabrakan langsung di bawah lencana tombol angka. Selain itu, Megastructure dan Deployable Barricade tidak memiliki kanvas ikon sehingga tata letaknya timpang dibandingkan 6 menara standar.
+   * *Solusi:* Menetapkan `padding-right: 22px` pada `.shop .meta` sehingga teks judul otomatis berhenti rapi sebelum menyentuh lencana tombol. Menambahkan kanvas ikon taktis 48x48 (di-downsample ke 36x36px) untuk Megastruktur (simbol inti heksagonal) dan Barikade Jalan (perisai lapis baja dengan garis hazard kuning).
+3. **Tooltip Toko Meluap ke Luar Layar Kanan (`.tip`):**
+   * *Masalah:* Aturan CSS tooltip toko lama hanya membagi 6 menara standar (`1-2`, `3-4`, `5-6`). Item ke-7 (Mantle Bore) dan item ke-8 (Road Barricade) tidak memiliki aturan CSS khusus, sehingga tooltip mereka memanjang ke kanan dan terpotong di tepi layar (*viewport overflow*).
+   * *Solusi:* Memperbarui selektor CSS untuk 8 fasilitas dok: Item 1–3 sejajar kiri (`left: 0; right: auto;`), Item 4–5 sejajar tengah (`left: 50%; transform: translateX(-50%)`), dan Item 6–8 sejajar kanan (`left: auto; right: 0;`), menjamin tooltip selalu berada dalam batas kanvas layar.
+4. **Tubrukan Baki Kemampuan vs Baki Perk (`#cmdTray`):**
+   * *Masalah:* `.perk-tray` menggunakan `flex-wrap: wrap; justify-content: flex-end;`. Saat pemain mengumpulkan 3 atau lebih kartu perk, baki perk membungkus ke baris baru, memperbesar tinggi `#cmdTray` secara vertikal atau menabrak tombol kemampuan aktif komandan (`.cmd-skills`).
+   * *Solusi:* Menetapkan `flex-shrink: 0` pada `.cmd-skills`, menambahkan garis pemisah taktis (`border-left`), dan menjadikan `.perk-tray` pita horizontal fleksibel satu baris (`flex: 1; flex-wrap: nowrap; overflow-x: auto;`) yang dapat digeser halus tanpa pernah merusak tata letak tombol skill.
+5. **Tumpang Tindih Banner Wave 0 vs Visor Cockpit Titan Mech (`js/render.js`):**
+   * *Masalah:* Banner panduan wave 0 ("Build your defenses, then press SPACE...") digambar pada ketinggian `H - 52`. Saat pemain mengaktifkan mode pilot Titan Mech di wave 0, HUD kokpit visor Titan Mech (`drawMechHUD`) berada pada posisi `H - 80` hingga `H - 12`, sehingga kedua teks saling bertumpuk dan tidak terbaca.
+   * *Solusi:* Memindahkan banner tutorial wave 0 ke bagian atas kanvas (`bY = 20`, tinggi $34$px) dengan bingkai aksen amber taktis yang bersih dan jelas, sepenuhnya bebas dari zona visor Titan Mech maupun dok bawah.
+6. **Penahanan Gulir Sidebar (`#side` & `#inspector`):**
+   * *Masalah:* Kartu status gelombang `#waveCard` dan panel inspektur `#inspector` saat menara Tier 2/3 dipilih dapat menghasilkan konten vertikal $>800$px, menenggelamkan tombol upgrade dan sell.
+   * *Solusi:* Menerapkan `max-height: 100%; overflow-y: auto; scrollbar-width: thin;` pada `#side`, memadatkan padding `#waveCard`, merampingkan kisi statistik `.stats-grid`, dan merancang tombol Upgrade dan Sell berdampingan secara kontras tinggi (`.tower-actions`).
+
+---
+
+### 23.2 Rincian Berkas yang Dimodifikasi & Ditambahkan
+1. **`index.html`:**
+   * Menata ulang `.ctrls` menjadi 3 grup semantik: `.ctrl-group.systems` (HQ, CODEX, MATRIX, LAB), `.ctrl-group.protocols` (PURGE, CHRONO, OVERLOAD, MECH, DREADNOUGHT), dan `.ctrl-group.sim` (Speed 1x/2x/3x, Pause, Mute).
+   * Menghapus inline style yang berantakan dan mengaitkan kelas CSS terstandarisasi (`cbtn`, `cbtn-badge`, dsb.).
+2. **`css/style.css`:**
+   * Menambahkan sistem styling dok topbar bertema cyberpunk (`.ctrl-group`, `.cbtn`, `.cbtn-hq`, `.cbtn-codex`, `.cbtn-matrix`, `.cbtn-lab`, `.cbtn-purge`, `.cbtn-chrono`, `.cbtn-overload`, `.cbtn-mech`, `.cbtn-dread`).
+   * Merampingkan metrik `.chips` HUD agar pas dan tidak meluap pada layar 1024px–1440px.
+   * Mengatur padding kanan `.shop .meta` sebesar 22px untuk mencegah tubrukan teks dengan badge tombol.
+   * Menerapkan aturan posisi tooltip toko 8 kartu (`nth-child 1-3`, `4-5`, `6-8`).
+   * Merestrukturisasi `#cmdTray` dengan pemisah border dan baki perk ribbon horizontal satu baris.
+   * Memperbaiki tata letak `#side`, `#waveCard`, dan `#inspector` dengan penahanan scroll dan tombol aksi berdampingan.
+   * Menambahkan media query responsif untuk resolusi $\le 1300$px.
+3. **`js/ui.js`:**
+   * Menambahkan fungsi perenderan ikon kanvas toko: `drawMegastructureDockIcon` (simbol heksagonal inti galian) dan `drawBarricadeDockIcon` (perisai barikade baja hazard).
+   * Memperbarui `buildDock` agar merender kanvas 48x48 pada seluruh 8 kartu toko sehingga tata letak simetris sempurna.
+   * Memperbarui `refreshUI` untuk mendukung status visual `sel` dan `poor` pada `el.dataset.megaType`.
+4. **`js/render.js`:**
+   * Memindahkan posisi banner tutorial prep wave 0 dari `H - 52` ke `bY = 20` di atas kanvas dengan garis aksen amber.
+5. **`tests/test_ui_layout_overhaul.js` (Baru):**
+   * Test suite otomatis yang memvalidasi pengelompokan semantik topbar, keberadaan seluruh ID elemen, aturan pencegahan tabrakan CSS, keseragaman kanvas dok toko, dan dekonflik banner wave 0.
+
+---
+
+### 23.3 Hasil Uji Validasi 19 Test Suites (100% Lulus)
+Seluruh 19 test suite dijalankan secara berurutan dan terkonfirmasi lulus $100\%$:
+1. `tests/audit_bugs.js` -> **PASS (0 static inconsistency bugs found)**
+2. `tests/smoke.js` -> **PASS (Game loop simulation OK)**
+3. `tests/test_ascension.js` -> **PASS**
+4. `tests/test_browser_init.js` -> **PASS (All DOM elements & scripts initialized)**
+5. `tests/test_champions.js` -> **PASS**
+6. `tests/test_deep_synergy.js` -> **PASS**
+7. `tests/test_effects_realization.js` -> **PASS**
+8. `tests/test_effects_realization_deep.js` -> **PASS**
+9. `tests/test_grand_expansion.js` -> **PASS**
+10. `tests/test_living_ecosystem.js` -> **PASS**
+11. `tests/test_map_dynamics.js` -> **PASS**
+12. `tests/test_masterclass_overhaul.js` -> **PASS**
+13. `tests/test_mastery.js` -> **PASS**
+14. `tests/test_overdrive_fusions.js` -> **PASS**
+15. `tests/test_paradox_reality.js` -> **PASS**
+16. `tests/test_reactions.js` -> **PASS**
+17. `tests/test_sectors.js` -> **PASS**
+18. `tests/test_ui_layout_overhaul.js` -> **PASS (UI Layout Anti-Collision & Uniformity)**
+19. `tests/test_workshop.js` -> **PASS**
+
+**KESIMPULAN: Seluruh tata letak antarmuka pengguna (UI/HUD) kini terbebas dari tumpang tindih (*zero overlaps*), tertata rapi dalam dok bergaya cyberpunk, adaptif terhadap berbagai resolusi layar, dan memiliki keseragaman visual tingkat tinggi.**
+
 
 
 

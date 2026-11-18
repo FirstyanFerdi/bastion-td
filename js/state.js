@@ -266,6 +266,15 @@ function detonateFuelCell(fc) {
       }
     }
   }
+
+  // 9.0 Fuel Cell Blast Damage to Destructible Crags
+  if (G && G.destructibleCrags && typeof damageCrag === 'function') {
+    for (const crag of G.destructibleCrags) {
+      if (!crag.collapsed && Math.hypot(crag.x - fc.x, crag.y - fc.y) <= 120) {
+        damageCrag(crag, 300);
+      }
+    }
+  }
 }
 
 /* ============================================================
@@ -894,6 +903,21 @@ function mechFireVulcan(tx, ty) {
     dealDamage(hitEnemy, cfg.vulcanDmg, 'phys', null);
     burst(hitEnemy.x, hitEnemy.y, 4, '#38bdf8', 90, 0.25, 2.5, true);
   }
+  // 9.0 Vulcan Direct Fire Damage to Destructible Crags
+  if (G && G.destructibleCrags && typeof damageCrag === 'function') {
+    for (const crag of G.destructibleCrags) {
+      if (!crag.collapsed) {
+        const cx = crag.x - bx, cy = crag.y - by;
+        const dot = cx * nx + cy * ny;
+        if (dot > 0 && dot < hitDist) {
+          const perp = Math.abs(cx * ny - cy * nx);
+          if (perp <= 26) {
+            damageCrag(crag, cfg.vulcanDmg);
+          }
+        }
+      }
+    }
+  }
   return true;
 }
 
@@ -923,6 +947,14 @@ function mechSwingBlade() {
         dealDamage(e, cfg.bladeDmg, 'plasma', null);
         burst(e.x, e.y, 10, '#f59e0b', 130, 0.35, 3, true);
         addText(e.x, e.y - e.r - 18, 'THERMAL CLEAVE!', '#f59e0b', 13);
+      }
+    }
+  }
+  // 9.0 Titan Thermal Blade Cleave Damage to Destructible Crags
+  if (G && G.destructibleCrags && typeof damageCrag === 'function') {
+    for (const crag of G.destructibleCrags) {
+      if (!crag.collapsed && Math.hypot(crag.x - m.x, crag.y - m.y) <= cfg.bladeRadius + 26) {
+        damageCrag(crag, cfg.bladeDmg);
       }
     }
   }
@@ -1003,6 +1035,15 @@ function updateDreadnought(dt) {
           if (dist <= cfg.rodRadius + e.r) {
             dealDamage(e, cfg.rodDmg, 'plasma', null);
             e.stunT = Math.max(e.stunT || 0, 2.5);
+          }
+        }
+
+        // 9.0 Dreadnought Kinetic Rod Damage to Destructible Crags
+        if (G && G.destructibleCrags && typeof damageCrag === 'function') {
+          for (const crag of G.destructibleCrags) {
+            if (!crag.collapsed && Math.hypot(crag.x - r.x, crag.y - r.y) <= cfg.rodRadius + 26) {
+              damageCrag(crag, cfg.rodDmg);
+            }
           }
         }
 
@@ -1254,13 +1295,30 @@ function dealDamage(e, amount, type, src, opts) {
     if (Math.random() < 0.25) addText(e.x, e.y - e.r - 22, 'NEMESIS RESIST -50%', '#a855f7', 12);
   }
 
-  // 9.0 Chaff Cloud Skimmer Projectile & Energy Mitigation
-  if ((type === 'phys' || type === 'energy') && G && G.enemies) {
-    const nearSkimmer = G.enemies.some(s => !s.dead && s.type === 'chaff_skimmer' && Math.hypot(s.x - e.x, s.y - e.y) <= 100);
-    if (nearSkimmer) {
+  // 9.0 Subterranean Sapper underground damage reduction (-75% vs direct fire/non-seismic)
+  if (e.burrowed) {
+    const isSeismic = (opts && opts.isSeismic) || (src && src.type === 'plasma') || (src && src.megaType === 'mantle_bore');
+    if (!isSeismic) {
+      a *= 0.25;
+      burst(e.x, e.y, 3, '#78350f', 40, 0.2, 1.5, false);
+      if (Math.random() < 0.2) addText(e.x, e.y - 15, 'UNDERGROUND RESIST -75%', '#b45309', 10);
+    }
+  }
+
+  // 9.0 Chaff Cloud Skimmer Projectile & Energy Mitigation (Skimmer aura or lingering Chaff Cloud hazard)
+  if ((type === 'phys' || type === 'energy') && G) {
+    const nearSkimmer = G.enemies && G.enemies.some(s => !s.dead && s.type === 'chaff_skimmer' && Math.hypot(s.x - e.x, s.y - e.y) <= 100);
+    const inChaffCloud = G.hazards && G.hazards.some(h => h.type === 'chaff_cloud' && Math.hypot(h.x - e.x, h.y - e.y) <= h.r + e.r);
+    if (nearSkimmer || inChaffCloud) {
       a *= 0.50;
       burst(e.x, e.y, 4, '#94a3b8', 50, 0.25, 2, false);
+      if (Math.random() < 0.2) addText(e.x, e.y - 14, 'CHAFF DEFLECTION -50%', '#cbd5e1', 11);
     }
+  }
+
+  // 9.0 Nemesis Neural Core Chip Armor Shred
+  if (src && src.chips && src.chips.includes('nemesis_neural_core') && e.armor > 0) {
+    e.shred = Math.min(e.armor, (e.shred || 0) + e.armor * 0.30);
   }
 
   // Reactive Hivemind Counter-Traits (4.0)
@@ -1725,8 +1783,11 @@ function killEnemy(e, src) {
   if (e.isNemesis) {
     G.gold += 100;
     addCores(35);
+    if (typeof addChip === 'function') {
+      addChip('nemesis_neural_core', 1);
+    }
     addText(e.x, e.y - 45, '+100G NEMESIS BOUNTY!', '#fbbf24', 18);
-    addText(e.x, e.y - 70, '+35 CORES & EXOTIC CHIP!', '#38bdf8', 15);
+    addText(e.x, e.y - 70, '+35 CORES & NEMESIS CORE CHIP!', '#38bdf8', 15);
     burst(e.x, e.y, 45, '#a855f7', 200, 0.8, 5, true);
     if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('vault_open');
     if (G.nemesisRoster) {

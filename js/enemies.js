@@ -62,7 +62,7 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
   }
 
   // 9.0 Symbiotic Parasite Attachment (Absorbs Slow & Stun until sniped)
-  if ((type === 'brute' || type === 'carrier') && n >= 5 && Math.random() < 0.30) {
+  if ((type === 'brute' || type === 'carrier' || type === 'gorger') && n >= 5 && Math.random() < 0.35) {
     e.hasParasite = true;
   }
 
@@ -468,6 +468,25 @@ function updateEnemy(e, dt) {
     }
   }
 
+  // 9.0 Deployable Road Barricades Blockage & Hostile Clearing
+  if (G && G.barricades && G.barricades.length > 0) {
+    for (let bIdx = G.barricades.length - 1; bIdx >= 0; bIdx--) {
+      const bar = G.barricades[bIdx];
+      if (bar.hp > 0 && Math.hypot(bar.x - e.x, bar.y - e.y) <= 32) {
+        sp = 0;
+        const atkDmg = (e.type === 'boss' ? 80 : (e.type === 'brute' || e.type === 'carrier' ? 45 : 18));
+        bar.hp -= atkDmg * dt;
+        if (Math.random() < 0.15) burst(bar.x, bar.y, 2, '#38bdf8', 35, 0.2, 1.5, false);
+        if (bar.hp <= 0) {
+          burst(bar.x, bar.y, 14, '#38bdf8', 90, 0.4, 2.5, true);
+          addText(bar.x, bar.y - 15, 'BARRICADE SHATTERED!', '#f87171', 12);
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shatter');
+          G.barricades.splice(bIdx, 1);
+        }
+      }
+    }
+  }
+
   // 9.0 Gorger Corpse Cannibalism
   if (e.type === 'gorger' && !e.dead && G && G.corpses && G.corpses.length > 0) {
     let nearestCorpse = null, minDist = 140;
@@ -512,20 +531,77 @@ function updateEnemy(e, dt) {
     if (e.burrowCd > 0) e.burrowCd -= dt;
   }
 
-  // 9.0 Harpoon Leecher Mech Tethering
-  if (e.type === 'harpoon_leecher' && !e.dead && G && G.mech && G.mech.active && !G.mech.isDocked) {
-    const dMech = Math.hypot(G.mech.x - e.x, G.mech.y - e.y);
-    if (dMech <= 200) {
-      e.isTetheringMech = true;
-      G.mech.rootedT = 0.5;
-      G.mech.battery = Math.max(0, G.mech.battery - 15 * dt);
-      if (Math.random() < 0.08 && typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('harpoon_tether');
-    } else {
-      e.isTetheringMech = false;
+  // 9.0 Chaff Cloud Skimmer aerosol mist deployment
+  if (e.type === 'chaff_skimmer' && !e.dead && !(e.stunT > 0) && (e.d === undefined || e.d > 0)) {
+    e.chaffCd = (e.chaffCd !== undefined ? e.chaffCd : 2.5) - dt;
+    if (e.chaffCd <= 0) {
+      e.chaffCd = 3.5;
+      G.hazards = G.hazards || [];
+      G.hazards.push({
+        type: 'chaff_cloud',
+        x: e.x,
+        y: e.y,
+        r: 38,
+        life: 6.0,
+        max: 6.0
+      });
+      burst(e.x, e.y, 8, '#cbd5e1', 50, 0.35, 2.5, false);
+      if (Math.random() < 0.35) addText(e.x, e.y - 16, 'CHAFF DEPLOYED', '#94a3b8', 11);
     }
   }
 
+  // 9.0 Harpoon Leecher Mech & Tower Tethering
+  if (e.type === 'harpoon_leecher' && !e.dead && !(e.stunT > 0)) {
+    if (G && G.mech && G.mech.active && !G.mech.isDocked) {
+      const dMech = Math.hypot(G.mech.x - e.x, G.mech.y - e.y);
+      if (dMech <= 200) {
+        e.isTetheringMech = true;
+        e.tetheredTower = null;
+        G.mech.rootedT = 0.5;
+        G.mech.battery = Math.max(0, G.mech.battery - 15 * dt);
+        if (Math.random() < 0.08 && typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('harpoon_tether');
+      } else {
+        e.isTetheringMech = false;
+      }
+    } else {
+      e.isTetheringMech = false;
+      if (G && G.towers && G.towers.length > 0) {
+        let nearT = null, minTD = 160;
+        for (const t of G.towers) {
+          const d = Math.hypot(t.x - e.x, t.y - e.y);
+          if (d < minTD) { minTD = d; nearT = t; }
+        }
+        if (nearT) {
+          e.tetheredTower = nearT;
+          nearT.empT = Math.max(nearT.empT || 0, 0.35); // suppress tower fire rate
+          if (Math.random() < 0.08 && typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('harpoon_tether');
+          for (const o of G.enemies) {
+            if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) <= 80) {
+              o.leecherBuffT = 0.5;
+            }
+          }
+        } else {
+          e.tetheredTower = null;
+        }
+      } else {
+        e.tetheredTower = null;
+      }
+    }
+  } else if (e.type === 'harpoon_leecher') {
+    e.isTetheringMech = false;
+    e.tetheredTower = null;
+  }
+
+  // 9.0 Symbiotic Parasite absorbs slow & stun for host
+  if (e.hasParasite) {
+    e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
+  }
+
   if (e.stunT > 0) sp = 0; else if (e.slowT > 0) sp *= 1 - e.slowAmt;
+  if (e.leecherBuffT > 0) {
+    e.leecherBuffT = Math.max(0, e.leecherBuffT - dt);
+    sp *= 1.25;
+  }
 
   // Cyber-Hijacked minion AI
   if (e.hijackedT > 0) {

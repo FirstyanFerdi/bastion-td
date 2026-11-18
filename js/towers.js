@@ -447,6 +447,11 @@ function updateTower(t, dt) {
     rateMult *= 2.0;
   }
 
+  // 9.0 Nemesis Neural Core Chip (+25% Fire Rate)
+  if (t.chips && t.chips.includes('nemesis_neural_core')) {
+    rateMult *= 1.25;
+  }
+
   let effRate = st.rate * rateMult;
   if (t.type === 'gatling' && t.branch === 'A') {
     effRate = lerp(st.rate, st.maxRate, t.spinup || 0) * rateMult;
@@ -593,8 +598,32 @@ function explode(p) {
   burst(p.x, p.y, 10, '#fff7ed', 120, 0.35, 3, true);
   shake(2.2); Sfx.play('boom');
   // 9.0 Reactive Dynamic Soil: Thermal Ash & Vitrified Soil
+  const pSoilKey = Math.floor(p.x / TILE) + '_' + Math.floor(p.y / TILE);
+  const existingSoil = G.soilTiles && G.soilTiles[pSoilKey];
+  if (existingSoil && existingSoil.type === 'thermal_ash') {
+    // 9.0 Thermite Bloom Chain Reaction Explosion!
+    shake(6);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('reaction');
+    addRing(p.x, p.y, 10, 110, 0.5, '#ea580c', 4);
+    burst(p.x, p.y, 28, '#f97316', 180, 0.55, 3.8, true);
+    addText(p.x, p.y - 25, '★ THERMITE BLOOM ★', '#f97316', 15);
+    for (const e of G.enemies) {
+      if (!e.dead && Math.hypot(e.x - p.x, e.y - p.y) <= 100) {
+        dealDamage(e, 220, 'plasma', p.src, { noReaction: true });
+        e.thermiteT = Math.max(e.thermiteT || 0, 4.0);
+      }
+    }
+  }
   if (typeof addSoilTile === 'function') {
     addSoilTile(Math.floor(p.x / TILE), Math.floor(p.y / TILE), 'thermal_ash', 18.0);
+  }
+  // 9.0 Plasma Splash Damage to Destructible Crags
+  if (G && G.destructibleCrags && typeof damageCrag === 'function') {
+    for (const crag of G.destructibleCrags) {
+      if (!crag.collapsed && Math.hypot(crag.x - p.x, crag.y - p.y) <= p.splash + 26) {
+        damageCrag(crag, p.dmg * 0.75);
+      }
+    }
   }
   // Nova Mortar leaves radiation puddle
   if (p.branch === 'A' && p.radDur) {
@@ -626,9 +655,23 @@ function explode(p) {
 }
 function cryoPulse(t, st, rangePx, effRate) {
   addTowerHeat(t, 2.5);
-  // 9.0 Reactive Dynamic Soil: Frost Slick Ice Slide
+  // 9.0 Reactive Dynamic Soil: Frost Slick Ice Slide on tower and covered road tiles
   if (typeof addSoilTile === 'function') {
     addSoilTile(t.c, t.r, 'frost_slick', 12.0);
+    const minC = Math.max(0, Math.floor((t.x - rangePx) / TILE));
+    const maxC = Math.min(COLS - 1, Math.floor((t.x + rangePx) / TILE));
+    const minR = Math.max(0, Math.floor((t.y - rangePx) / TILE));
+    const maxR = Math.min(ROWS - 1, Math.floor((t.y + rangePx) / TILE));
+    for (let c = minC; c <= maxC; c++) {
+      for (let r = minR; r <= maxR; r++) {
+        if (typeof pathTile !== 'undefined' && pathTile[r] && pathTile[r][c]) {
+          const cx = c * TILE + TILE / 2, cy = r * TILE + TILE / 2;
+          if (Math.hypot(cx - t.x, cy - t.y) <= rangePx) {
+            addSoilTile(c, r, 'frost_slick', 12.0);
+          }
+        }
+      }
+    }
   }
   t.cd = 1 / effRate; t.pulseN++; t.flash = 1;
   const isAbsZero = t.branch === 'A', isVortex = t.branch === 'B';

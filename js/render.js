@@ -336,6 +336,18 @@ function drawHazards(c, time) {
       c.fillStyle = g; c.beginPath(); c.arc(h.x, h.y, h.r, 0, TAU); c.fill();
       c.strokeStyle = 'rgba(147,197,253,' + (0.6 * k) + ')'; c.lineWidth = 1.5;
       c.beginPath(); c.arc(h.x, h.y, h.r * 0.7, 0, TAU); c.stroke();
+    } else if (h.type === 'chaff_cloud') {
+      const k = clamp(h.life / h.max, 0, 1);
+      const g = c.createRadialGradient(h.x, h.y, 2, h.x, h.y, h.r);
+      g.addColorStop(0, 'rgba(203,213,225,' + (0.5 * k) + ')');
+      g.addColorStop(0.6, 'rgba(148,163,184,' + (0.28 * k) + ')');
+      g.addColorStop(1, 'rgba(148,163,184,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(h.x, h.y, h.r, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(226,232,240,' + (0.55 * k) + ')'; c.lineWidth = 1.2;
+      for (let i = 0; i < 4; i++) {
+        const q = i * TAU / 4 + time * 0.8, sx = h.x + Math.cos(q) * (h.r * 0.6), sy = h.y + Math.sin(q) * (h.r * 0.6);
+        c.beginPath(); c.arc(sx, sy, 1.8, 0, TAU); c.stroke();
+      }
     } else if (h.type === 'singularity') {
       const k = clamp(h.life / h.max, 0, 1);
       c.save(); c.translate(h.x, h.y); c.rotate(time * 3);
@@ -506,6 +518,21 @@ function render() {
       c.fillStyle = ok ? conf.color : '#f43f5e';
       c.textAlign = 'center';
       c.fillText((ok ? 'VALID 2x2 SECTOR' : 'BLOCKED SECTOR'), x + mw / 2, y + mh / 2 + 4);
+    } else if (G.placingBarricade) {
+      const isRoad = typeof pathTile !== 'undefined' && pathTile[hr] && pathTile[hr][hc];
+      const hasBar = G.barricades && G.barricades.some(b => b.c === hc && b.r === hr);
+      const ok = isRoad && !hasBar;
+      const bCost = typeof DESTRUCTIBLE_TERRAIN_CONFIG !== 'undefined' ? DESTRUCTIBLE_TERRAIN_CONFIG.barricadeCost : 40;
+      const afford = G.gold >= bCost, good = ok && afford;
+      c.fillStyle = good ? 'rgba(56,189,248,0.22)' : 'rgba(244,63,94,0.25)';
+      c.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+      c.strokeStyle = good ? '#38bdf8' : '#f43f5e';
+      c.lineWidth = 2;
+      c.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+      c.font = '800 10px ' + FONT;
+      c.fillStyle = good ? '#38bdf8' : '#f43f5e';
+      c.textAlign = 'center';
+      c.fillText(ok ? (afford ? 'PLACE BARRICADE (40G)' : 'NEED 40G') : 'ROAD ONLY', x + TILE / 2, y + TILE / 2 + 4);
     } else if (G.placing) {
       const def = TD[G.placing];
       const cost = typeof getTowerCost === 'function' ? getTowerCost(G.placing) : def.cost;
@@ -612,8 +639,19 @@ function render() {
     c.restore();
   }
   if (G.state === 'prep' && G.wave === 0) {
-    c.save(); c.textAlign = 'center'; c.fillStyle = 'rgba(8,10,12,0.78)'; c.fillRect(W / 2 - 300, H - 52, 600, 40); c.fillStyle = '#e2a72e'; c.fillRect(W / 2 - 300, H - 52, 4, 40); c.font = '700 18px ' + FONT; c.fillStyle = '#dfe5e8';
-    c.fillText('Build your defenses, then press SPACE to launch wave 1', W / 2, H - 22); c.restore();
+    c.save(); c.textAlign = 'center';
+    const bY = 20, bW = 540, bH = 34;
+    c.fillStyle = 'rgba(8,12,18,0.85)';
+    c.fillRect(W / 2 - bW / 2, bY, bW, bH);
+    c.strokeStyle = '#e2a72e';
+    c.lineWidth = 1;
+    c.strokeRect(W / 2 - bW / 2, bY, bW, bH);
+    c.fillStyle = '#e2a72e';
+    c.fillRect(W / 2 - bW / 2, bY, 4, bH);
+    c.font = '700 14px ' + FONT;
+    c.fillStyle = '#f1f5f9';
+    c.fillText('Build defenses around the conduit, then press SPACE to launch Wave 1', W / 2 + 2, bY + 22);
+    c.restore();
   }
   if (G.paused && (G.state === 'prep' || G.state === 'active')) {
     c.fillStyle = 'rgba(4,8,18,0.55)'; c.fillRect(0, 0, W, H);
