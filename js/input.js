@@ -115,6 +115,13 @@ function onPointerDown(e) {
   // Titan Mech Manual Vulcan Fire (7.0)
   if (G.mech && G.mech.active && !G.casting) {
     const p = canvasPos(e);
+    const col = Math.floor(p.x / TILE), row = Math.floor(p.y / TILE);
+    if (col >= 0 && col < COLS && row >= 0 && row < ROWS && G.grid[row][col]) {
+      G.sel = G.grid[row][col];
+      G.uiDirty = true;
+      Sfx.play('click');
+      return;
+    }
     if (typeof mechFireVulcan === 'function') {
       mechFireVulcan(p.x, p.y);
     }
@@ -389,6 +396,17 @@ function onPointerDown(e) {
 
   if (!G.hover) return;
   const { c, r } = G.hover;
+  if (G.placingMegastructure) {
+    if (typeof placeMegastructure === 'function') {
+      const ms = placeMegastructure(c, r, G.placingMegastructure);
+      if (ms) {
+        if (!e.shiftKey) G.placingMegastructure = null;
+        G.sel = ms;
+        G.uiDirty = true;
+      }
+    }
+    return;
+  }
   if (G.placing) {
     if (pathTile[r][c] || G.grid[r][c]) { Sfx.play('error'); return; }
     const t = placeTower(c, r, G.placing);
@@ -444,8 +462,21 @@ function onKey(e) {
   switch (k) {
     case 'q': case 'Q': if (dSkills[0]) triggerSkill(dSkills[0]); break;
     case 'w': case 'W': if (dSkills[1]) triggerSkill(dSkills[1]); break;
-    case 'e': case 'E': if (dSkills[2]) triggerSkill(dSkills[2]); break;
+    case 'e': case 'E': {
+      if (G.grapplePrompt && G.grapplePrompt.boss && typeof mechGrappleStrike === 'function') {
+        mechGrappleStrike(G.grapplePrompt.boss);
+        break;
+      }
+      if (dSkills[2]) triggerSkill(dSkills[2]);
+      break;
+    }
     case 'r': case 'R': if (dSkills[3]) triggerSkill(dSkills[3]); break;
+    case 'g': case 'G': {
+      const ov = $('overlay');
+      const isOpen = ov && ov.classList.contains('show') && ov.innerHTML.includes('GENE-SPLICING');
+      showOverlay(isOpen ? (G && G.state === 'menu' ? 'menu' : null) : 'gene_lab');
+      break;
+    }
     case 'b': case 'B': {
       const ov = $('overlay');
       const isOpen = ov && ov.classList.contains('show') && ov.innerHTML.includes('WORKSHOP');
@@ -477,7 +508,7 @@ function onKey(e) {
       }
       break;
     }
-    case 'Escape': G.placing = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
+    case 'Escape': G.placing = null; G.placingMegastructure = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
     case 'p': case 'P': togglePause(); break;
     case 'm': case 'M': toggleMute(); break;
     case 'f': case 'F': setSpeed(G.speed % 3 + 1); break;

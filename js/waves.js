@@ -781,6 +781,29 @@ function update(dt) {
 
   // 7.0 Tactical Drop-Pods Update
   if (typeof updateDropPods === 'function') updateDropPods(dt);
+
+  // 8.0 Masterclass AAA/Indie Overhaul Updates
+  if (typeof updateMegastructures === 'function') updateMegastructures(dt);
+  if (typeof updateLogistics === 'function') updateLogistics(dt);
+  if (typeof updatePheromones === 'function') updatePheromones(dt);
+  if (G && G.grapplePrompt && G.grapplePrompt.timer > 0) {
+    G.grapplePrompt.timer = Math.max(0, G.grapplePrompt.timer - dt);
+    if (G.grapplePrompt.timer <= 0) G.grapplePrompt = null;
+  }
+  if (G && G.darkCurios && G.darkCurios.includes('blood_forge')) {
+    G.bloodForgeTimer = (G.bloodForgeTimer || 15.0) - dt;
+    if (G.bloodForgeTimer <= 0) {
+      G.bloodForgeTimer = 15.0;
+      if ((G.bloodForgeKills || 0) < 30) {
+        G.lives = Math.max(0, G.lives - 1);
+        shake(12);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('hit');
+        addText(W / 2, 90, 'BLOOD-FORGE SACRIFICE! -1 LIFE', '#e11d48', 18);
+        if (G.lives <= 0 && typeof endGame === 'function') endGame();
+      }
+      G.bloodForgeKills = 0;
+    }
+  }
 }
 
 /* ============================================================

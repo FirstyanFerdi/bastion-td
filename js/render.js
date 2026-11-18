@@ -468,6 +468,9 @@ function render() {
   drawReclaimedMinions(c, time);
   drawNeuralSynapses(c, time);
   drawGhostEchoes(c, time);
+  drawLogisticsConduits(c, time);
+  drawMegastructures(c, time);
+  drawTitanGrapple(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -486,7 +489,20 @@ function render() {
     drawCasting(c, time);
   } else if (G.hover) {
     const { c: hc, r: hr } = G.hover, x = hc * TILE, y = hr * TILE;
-    if (G.placing) {
+    if (G.placingMegastructure && typeof canPlaceMegastructure === 'function' && typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[G.placingMegastructure]) {
+      const conf = MEGASTRUCTURE_CONFIG[G.placingMegastructure];
+      const ok = canPlaceMegastructure(hc, hr, G.placingMegastructure);
+      const mw = 2 * TILE, mh = 2 * TILE;
+      c.fillStyle = ok ? 'rgba(56,189,248,0.2)' : 'rgba(244,63,94,0.25)';
+      c.fillRect(x + 1, y + 1, mw - 2, mh - 2);
+      c.strokeStyle = ok ? conf.color : '#f43f5e';
+      c.lineWidth = 2.5;
+      c.strokeRect(x + 2, y + 2, mw - 4, mh - 4);
+      c.font = '800 11px ' + FONT;
+      c.fillStyle = ok ? conf.color : '#f43f5e';
+      c.textAlign = 'center';
+      c.fillText((ok ? 'VALID 2x2 SECTOR' : 'BLOCKED SECTOR'), x + mw / 2, y + mh / 2 + 4);
+    } else if (G.placing) {
       const def = TD[G.placing];
       const cost = typeof getTowerCost === 'function' ? getTowerCost(G.placing) : def.cost;
       const fuelCellBlocked = G.fuelCells && G.fuelCells.some(fc => !fc.dead && fc.c === hc && fc.row === hr);
@@ -514,7 +530,7 @@ function render() {
   for (const t of G.towers) drawTowerSprite(c, t.type, t.tier, t, time);
   drawTowerHeatGauges(c, time);
   for (const e of G.enemies) if (e.type !== 'boss' && e.x > -30) drawEnemy(c, e, time);
-  for (const e of G.enemies) if (e.type === 'boss' && e.x > -40) drawEnemy(c, e, time);
+  for (const e of G.enemies) if (e.type === 'boss' && e.x > -40) { drawEnemy(c, e, time); drawBossAnatomicalParts(c, e, time); }
   for (const e of G.enemies) if (e.x > -10) drawBars(c, e);
   drawSyndicateGunship(c, time);
   drawTitanMech(c, time);
@@ -1476,5 +1492,209 @@ function drawMechHUD(c) {
   c.fillStyle = '#cbd5e1';
   c.fillText('WASD: Thrusters · Left Click: Vulcan Autocannon · Near Base: Auto Dock Recharge', hX + 16, hY + 58);
 
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 8.0: MASTERCLASS AAA/INDIE RENDER PIPELINE
+   ============================================================ */
+
+function drawMegastructures(c, time) {
+  if (!G || !G.megastructures || G.megastructures.length === 0) return;
+  for (const ms of G.megastructures) {
+    const conf = MEGASTRUCTURE_CONFIG[ms.type];
+    if (!conf) continue;
+    c.save();
+
+    const pad = 4;
+    const rx = ms.c * TILE + pad, ry = ms.r * TILE + pad;
+    const rw = 2 * TILE - pad * 2, rh = 2 * TILE - pad * 2;
+    c.fillStyle = '#090e17';
+    c.fillRect(rx, ry, rw, rh);
+    c.strokeStyle = conf.color;
+    c.lineWidth = 2.5;
+    c.strokeRect(rx, ry, rw, rh);
+
+    c.fillStyle = conf.color;
+    c.fillRect(rx, ry, 6, 6);
+    c.fillRect(rx + rw - 6, ry, 6, 6);
+    c.fillRect(rx, ry + rh - 6, 6, 6);
+    c.fillRect(rx + rw - 6, ry + rh - 6, 6, 6);
+
+    if (ms.type === 'ion_uplink') {
+      c.translate(ms.x, ms.y);
+      c.rotate(time * 0.8);
+      c.strokeStyle = 'rgba(56,189,248,0.7)';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(0, 0, 24, 0, Math.PI * 2);
+      c.stroke();
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 2;
+        c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * 24, Math.sin(a) * 24); c.stroke();
+      }
+      c.rotate(-time * 0.8);
+
+      const orbPulse = 6 + Math.sin(time * 6) * 2;
+      glow(c, 0, 0, 16, '#38bdf8', 0.8);
+      c.fillStyle = '#bae6fd';
+      c.beginPath(); c.arc(0, 0, orbPulse, 0, Math.PI * 2); c.fill();
+      c.translate(-ms.x, -ms.y);
+
+      if (ms.targetX !== null && ms.targetY !== null && ms.targetX !== undefined) {
+        c.save();
+        glow(c, ms.targetX, ms.targetY, conf.beamRadius, '#38bdf8', 0.6);
+        c.strokeStyle = 'rgba(56,189,248,0.85)';
+        c.lineWidth = 5 + Math.sin(time * 20) * 2;
+        c.beginPath();
+        c.moveTo(ms.targetX, -50);
+        c.lineTo(ms.targetX, ms.targetY);
+        c.stroke();
+        c.strokeStyle = '#fff';
+        c.lineWidth = 2;
+        c.stroke();
+        c.strokeStyle = '#38bdf8';
+        c.beginPath();
+        c.arc(ms.targetX, ms.targetY, conf.beamRadius, 0, Math.PI * 2);
+        c.stroke();
+        c.restore();
+      }
+    } else if (ms.type === 'drone_carrier') {
+      c.fillStyle = '#0f172a';
+      c.fillRect(ms.x - 22, ms.y - 22, 44, 44);
+      c.strokeStyle = '#10b981';
+      c.lineWidth = 2;
+      c.strokeRect(ms.x - 22, ms.y - 22, 44, 44);
+      c.fillStyle = '#34d399';
+      c.fillRect(ms.x - 18, ms.y - 2, 36, 4);
+
+      if (ms.drones) {
+        for (const d of ms.drones) {
+          glow(c, d.x, d.y, 8, d.type === 'interceptor' ? '#10b981' : '#38bdf8', 0.7);
+          c.fillStyle = d.type === 'interceptor' ? '#34d399' : '#38bdf8';
+          c.beginPath();
+          c.arc(d.x, d.y, d.type === 'interceptor' ? 4 : 3, 0, Math.PI * 2);
+          c.fill();
+        }
+      }
+    } else if (ms.type === 'tectonic_siphon') {
+      c.fillStyle = '#1c1917';
+      c.beginPath(); c.arc(ms.x, ms.y, 26, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#f59e0b';
+      c.lineWidth = 3;
+      c.stroke();
+
+      c.save();
+      c.translate(ms.x, ms.y);
+      c.rotate(time * 4);
+      for (let i = 0; i < 3; i++) {
+        const a = (i * Math.PI * 2) / 3;
+        c.fillStyle = '#fbbf24';
+        c.beginPath();
+        c.moveTo(0, 0);
+        c.lineTo(Math.cos(a - 0.2) * 24, Math.sin(a - 0.2) * 24);
+        c.lineTo(Math.cos(a + 0.2) * 24, Math.sin(a + 0.2) * 24);
+        c.fill();
+      }
+      c.restore();
+    }
+
+    c.font = '800 9px ' + FONT;
+    c.fillStyle = conf.color;
+    c.textAlign = 'center';
+    c.fillText(conf.name.toUpperCase(), ms.x, ms.y + 36);
+
+    c.restore();
+  }
+}
+
+function drawBossAnatomicalParts(c, e, time) {
+  if (!e.parts) return;
+  c.save();
+
+  if (e.parts.carapace && !e.parts.carapace.broken) {
+    const cpPct = e.parts.carapace.hp / e.parts.carapace.maxHp;
+    c.strokeStyle = cpPct > 0.5 ? '#94a3b8' : '#f87171';
+    c.lineWidth = 3;
+    c.setLineDash([8, 4]);
+    c.beginPath();
+    c.arc(e.x, e.y, (e.r || 24) + 6, 0, Math.PI * 2);
+    c.stroke();
+    c.setLineDash([]);
+  }
+
+  if (e.parts.mortar_pod && !e.parts.mortar_pod.broken) {
+    glow(c, e.x - 14, e.y - 14, 10, '#a3e635', 0.6);
+    c.fillStyle = '#a3e635';
+    c.beginPath();
+    c.arc(e.x - 14, e.y - 14, 6, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  if (e.parts.core && (e.parts.core.exposed || (e.parts.carapace && e.parts.carapace.broken))) {
+    const pulse = 8 + Math.sin(time * 8) * 3;
+    glow(c, e.x, e.y, 18, '#f43f5e', 0.85);
+    c.fillStyle = '#f43f5e';
+    c.beginPath();
+    c.arc(e.x, e.y, pulse, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = '#fff';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.arc(e.x, e.y, pulse + 6, 0, Math.PI * 2);
+    c.stroke();
+  }
+
+  if (e.staggerT > 0) {
+    c.font = '800 13px ' + FONT;
+    c.fillStyle = '#fbbf24';
+    c.textAlign = 'center';
+    c.fillText('★ STAGGERED (' + e.staggerT.toFixed(1) + 's) ★', e.x, e.y - (e.r || 24) - 24);
+  }
+
+  c.restore();
+}
+
+function drawLogisticsConduits(c, time) {
+  if (!G || !G.logisticsConduits || G.logisticsConduits.length === 0) return;
+  c.save();
+  for (const cond of G.logisticsConduits) {
+    const x1 = cond.c1 * TILE + TILE / 2, y1 = cond.r1 * TILE + TILE / 2;
+    const x2 = cond.c2 * TILE + TILE / 2, y2 = cond.r2 * TILE + TILE / 2;
+    c.strokeStyle = '#0f172a';
+    c.lineWidth = 6;
+    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+    c.strokeStyle = cond.color;
+    c.lineWidth = 2.5;
+    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+    const flowT = (time * 2) % 1;
+    const px = lerp(x1, x2, flowT), py = lerp(y1, y2, flowT);
+    c.fillStyle = '#ffffff';
+    c.beginPath(); c.arc(px, py, 3, 0, Math.PI * 2); c.fill();
+  }
+  c.restore();
+}
+
+function drawTitanGrapple(c, time) {
+  if (!G || !G.grapplePrompt || !G.grapplePrompt.boss) return;
+  const b = G.grapplePrompt.boss;
+  c.save();
+  const pulse = Math.sin(time * 10);
+  const promptY = b.y - (b.r || 24) - 38;
+  c.font = '800 14px ' + FONT;
+  c.fillStyle = '#fbbf24';
+  c.textAlign = 'center';
+  c.fillText('PRESS [E] TITAN GRAPPLE CLEAVE!', b.x, promptY);
+
+  if (G.mech && G.mech.active) {
+    c.strokeStyle = 'rgba(56,189,248,' + (0.5 + 0.3 * pulse) + ')';
+    c.lineWidth = 2.5;
+    c.setLineDash([6, 4]);
+    c.beginPath();
+    c.moveTo(G.mech.x, G.mech.y);
+    c.lineTo(b.x, b.y);
+    c.stroke();
+    c.setLineDash([]);
+  }
   c.restore();
 }

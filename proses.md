@@ -36,7 +36,7 @@ Konfigurasi awal `.gitignore` hanya memuat 3 baris dasar. Diperbarui secara meny
 * **Build & Cache:** `dist/`, `build/`, `.cache/`, file temporer `*.tmp`, `*.bak`.
 
 ### 2.3 Template `.env.example` & Inisialisasi Git
-* Dibuat file [`.env.example`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/.env.example) sebagai panduan aman jika di masa depan ditambahkan integrasi server lokal.
+* Dibuat file `.env.example` sebagai panduan aman jika di masa depan ditambahkan integrasi server lokal.
 * Inisialisasi git repository dijalankan dan branch utama diselaraskan ke standar modern `main`.
 
 ---
@@ -250,27 +250,27 @@ Menambahkan 4 mutator cuaca/kondisi krisis baru dengan visual badge tematik di W
 
 | Berkas | Jenis Perubahan | Detail Modifikasi |
 |---|---|---|
-| [`index.html`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/index.html) | Markup | Menambahkan chip status `CORES` (`#vCores`) dan tombol pintas `HQ` (`#btnWorkshop`) pada bilah atas. |
-| [`css/style.css`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/css/style.css) | Styling | Desain tombol ability commander, cooldown fill animation, branch selection grid di inspector, kartu modal tech draft, tag badge mutator, serta styling pemilih Ascension selector (`.asc-box`, `.asc-bar`, `.asc-nav`, `.asc-title`, `.asc-desc`, `.asc-pacts`, `.asc-badge`). |
-| [`js/core.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/core.js) | Core Persistence | Integrasi state `cores`, `workshop`, `ascension`, dan `maxAscension` ke `SAVE`, pengganda Cores `1 + ascension * 0.25` di `addCores()`, helper `setAscension()`, dan `unlockNextAscension()`. |
-| [`js/audio.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/audio.js) | Sound Synth | Menambahkan 8 instrumen sintetik audio baru: `orbital`, `overcharge`, `caltrops`, `shatter`, `perk`, `emp`, `reaction`, dan `shockwave`. |
-| [`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js) | Konfigurasi Data | Struktur `WP_BREACH`, `PATH_BREACH`, `SEG_BREACH`, `PLEN_BREACH`, koordinat `LEYLINE_NODES`, helper `getLeylineAt()`, `posAt()` multi-rute, struktur `branches` menara, `PERKS`, `COMMANDER_SKILLS`, `WAVE_MUTATORS` (ditambah 4 event krisis: *Solar Flare*, *Nanite Plague*, *Cryo Lockdown*, *Overcharge Anomaly*), kamus `ELEMENTAL_REACTIONS`, `CHAMPION_AFFIXES`, `THREAT_VARIANTS`, `WORKSHOP_UPGRADES`, kamus `ASCENSION_MODIFIERS` (Lv 0-5), `getAscensionData()`, serta eskalasi $+50\%$ swarm count pada Ascension $\ge 3$. |
-| [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) | State & Logic | Penanganan kalkulasi 4 Reaksi Elemen di `dealDamage`, mitigasi Deflector & Dome, teleportasi Phase-Shifter multi-path, inisialisasi `fuelCells` di `newGame()`, detonate fuel cells, inisialisasi `G.ascension`, pemotongan base lives menjadi 12 pada Ascension $\ge 2$, amplifikasi damage energi $+35\%$ pada *Solar Flare*, dan pemanggilan micro-swarm saat musuh mati di bawah *Nanite Plague*. |
-| [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js) | AI Musuh | Akselerasi $+15\%$ kecepatan gerak Swarm pada Ascension $\ge 3$, pemberian $+20\%$ HP shield pada semua musuh saat lahir pada Ascension $\ge 4$, pemanggilan 2 pengawal Elite Champion saat Boss memasuki fase Berserk pada Ascension $\ge 5$, serta modifikasi laju gerak akibat mutator krisis *Cryo Lockdown* ($0.8\times$) dan *Overcharge Anomaly* ($1.25\times$). |
-| [`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js) | Senjata & Targeting | Penambahan fungsi `getTowerCost(type)` dengan penyesuaian biaya $+15\%$ pada Ascension $\ge 1$, kekebalan eksekusi instan Boss dari Railgun Executioner pada Ascension $\ge 5$, serta penyesuaian laju tembak dan jangkauan saat mutator krisis aktif. |
-| [`js/waves.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/waves.js) | Wave Controller | Peringatan darurat wave 8 `STRUCTURAL BREACH!`, pengaliran `pathId`, pengganda skor Ascension pada `onWaveClear()`, auto-unlock tingkatan Ascension berikutnya dan bonus hadiah Cores $+15 + 5\times\text{Ascension}$ saat menang di `endGame(true)`. |
-| [`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js) | Rendering Pipeline | Visualisasi glowing runes `drawLeylineNodes()`, drum interaktif `drawFuelCells()` berserta crater ledakan, aliran panah merah jalur flanking, dan penanda darurat `! BREACH !` di perimeter utara. |
-| [`js/input.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/input.js) | Kontrol & Input | Deteksi klik interaktif langsung untuk meledakkan Fuel Cells di medan pertempuran. |
-| [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js) | Antarmuka HUD | Kartu informasi node Leyline di Tactical Inspector, penyelarasan biaya menara dinamis di dock toko dan inspector, badge tingkat Ascension di Wave Card, antarmuka interaktif pemilih Ascension (Pact of Punishment) di menu utama, dan banner kemenangan Ascension. |
-| [`tests/test_browser_init.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_browser_init.js) | DOM Regression Testing | Verifikasi inisialisasi lingkungan browser DOM nyata, parsing `data-ico`, inisialisasi canvas, dan eksekusi frame pertama. |
-| [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js) | Inisialisasi & Harness | Handler navigasi tombol `asc_prev` dan `asc_next` pada overlay menu, ekspor helper Ascension (`getTowerCost`, `ASCENSION_MODIFIERS`, `getAscensionData`, `setAscension`, `unlockNextAscension`) ke `window.__nb`. |
-| [`tests/test_reactions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_reactions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas dan formula 4 reaksi elemen (Fase 1). |
-| [`tests/test_champions.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_champions.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas Adaptive Threat Director & 4 Champion Affixes (Fase 2). |
-| [`tests/test_workshop.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_workshop.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas perolehan Cores, sistem riset workshop, diskon logistik, citadel turret, dan EMP Nuke (Fase 3). |
-| [`tests/test_map_dynamics.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_map_dynamics.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas node Leyline (Accelerator, Sensor, Catalyst), rute flanking breach, dan ledakan interaktif Fuel Cells (Fase 4). |
-| [`tests/test_ascension.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_ascension.js) | Unit Testing | Script otomasi verifikasi 100% fungsionalitas 5 tingkatan Ascension, akumulasi penalti pact, pelipatgandaan Cores, dan 4 mutator krisis baru (Fase 5). |
-| [`tests/smoke.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/smoke.js) | Otomasi Pengujian | Simulasi 20 wave standar dan 40 wave mode endless dengan bot otomatis (diperbarui dengan integrasi `getTowerCost`). |
-| [`dev.bat`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/dev.bat) | Launcher Windows | Penambahan eksekusi otomatis `test_ascension.js` ke dalam opsi pengetesan dev. |
+| `index.html` | Markup | Menambahkan chip status `CORES` (`#vCores`) dan tombol pintas `HQ` (`#btnWorkshop`) pada bilah atas. |
+| `css/style.css` | Styling | Desain tombol ability commander, cooldown fill animation, branch selection grid di inspector, kartu modal tech draft, tag badge mutator, serta styling pemilih Ascension selector (`.asc-box`, `.asc-bar`, `.asc-nav`, `.asc-title`, `.asc-desc`, `.asc-pacts`, `.asc-badge`). |
+| `js/core.js` | Core Persistence | Integrasi state `cores`, `workshop`, `ascension`, dan `maxAscension` ke `SAVE`, pengganda Cores `1 + ascension * 0.25` di `addCores()`, helper `setAscension()`, dan `unlockNextAscension()`. |
+| `js/audio.js` | Sound Synth | Menambahkan 8 instrumen sintetik audio baru: `orbital`, `overcharge`, `caltrops`, `shatter`, `perk`, `emp`, `reaction`, dan `shockwave`. |
+| `js/data.js` | Konfigurasi Data | Struktur `WP_BREACH`, `PATH_BREACH`, `SEG_BREACH`, `PLEN_BREACH`, koordinat `LEYLINE_NODES`, helper `getLeylineAt()`, `posAt()` multi-rute, struktur `branches` menara, `PERKS`, `COMMANDER_SKILLS`, `WAVE_MUTATORS` (ditambah 4 event krisis: *Solar Flare*, *Nanite Plague*, *Cryo Lockdown*, *Overcharge Anomaly*), kamus `ELEMENTAL_REACTIONS`, `CHAMPION_AFFIXES`, `THREAT_VARIANTS`, `WORKSHOP_UPGRADES`, kamus `ASCENSION_MODIFIERS` (Lv 0-5), `getAscensionData()`, serta eskalasi $+50\%$ swarm count pada Ascension $\ge 3$. |
+| `js/state.js` | State & Logic | Penanganan kalkulasi 4 Reaksi Elemen di `dealDamage`, mitigasi Deflector & Dome, teleportasi Phase-Shifter multi-path, inisialisasi `fuelCells` di `newGame()`, detonate fuel cells, inisialisasi `G.ascension`, pemotongan base lives menjadi 12 pada Ascension $\ge 2$, amplifikasi damage energi $+35\%$ pada *Solar Flare*, dan pemanggilan micro-swarm saat musuh mati di bawah *Nanite Plague*. |
+| `js/enemies.js` | AI Musuh | Akselerasi $+15\%$ kecepatan gerak Swarm pada Ascension $\ge 3$, pemberian $+20\%$ HP shield pada semua musuh saat lahir pada Ascension $\ge 4$, pemanggilan 2 pengawal Elite Champion saat Boss memasuki fase Berserk pada Ascension $\ge 5$, serta modifikasi laju gerak akibat mutator krisis *Cryo Lockdown* ($0.8\times$) dan *Overcharge Anomaly* ($1.25\times$). |
+| `js/towers.js` | Senjata & Targeting | Penambahan fungsi `getTowerCost(type)` dengan penyesuaian biaya $+15\%$ pada Ascension $\ge 1$, kekebalan eksekusi instan Boss dari Railgun Executioner pada Ascension $\ge 5$, serta penyesuaian laju tembak dan jangkauan saat mutator krisis aktif. |
+| `js/waves.js` | Wave Controller | Peringatan darurat wave 8 `STRUCTURAL BREACH!`, pengaliran `pathId`, pengganda skor Ascension pada `onWaveClear()`, auto-unlock tingkatan Ascension berikutnya dan bonus hadiah Cores $+15 + 5\times\text{Ascension}$ saat menang di `endGame(true)`. |
+| `js/render.js` | Rendering Pipeline | Visualisasi glowing runes `drawLeylineNodes()`, drum interaktif `drawFuelCells()` berserta crater ledakan, aliran panah merah jalur flanking, dan penanda darurat `! BREACH !` di perimeter utara. |
+| `js/input.js` | Kontrol & Input | Deteksi klik interaktif langsung untuk meledakkan Fuel Cells di medan pertempuran. |
+| `js/ui.js` | Antarmuka HUD | Kartu informasi node Leyline di Tactical Inspector, penyelarasan biaya menara dinamis di dock toko dan inspector, badge tingkat Ascension di Wave Card, antarmuka interaktif pemilih Ascension (Pact of Punishment) di menu utama, dan banner kemenangan Ascension. |
+| `tests/test_browser_init.js` | DOM Regression Testing | Verifikasi inisialisasi lingkungan browser DOM nyata, parsing `data-ico`, inisialisasi canvas, dan eksekusi frame pertama. |
+| `js/main.js` | Inisialisasi & Harness | Handler navigasi tombol `asc_prev` dan `asc_next` pada overlay menu, ekspor helper Ascension (`getTowerCost`, `ASCENSION_MODIFIERS`, `getAscensionData`, `setAscension`, `unlockNextAscension`) ke `window.__nb`. |
+| `tests/test_reactions.js` | Unit Testing | Script otomasi verifikasi 100% fungsionalitas dan formula 4 reaksi elemen (Fase 1). |
+| `tests/test_champions.js` | Unit Testing | Script otomasi verifikasi 100% fungsionalitas Adaptive Threat Director & 4 Champion Affixes (Fase 2). |
+| `tests/test_workshop.js` | Unit Testing | Script otomasi verifikasi 100% fungsionalitas perolehan Cores, sistem riset workshop, diskon logistik, citadel turret, dan EMP Nuke (Fase 3). |
+| `tests/test_map_dynamics.js` | Unit Testing | Script otomasi verifikasi 100% fungsionalitas node Leyline (Accelerator, Sensor, Catalyst), rute flanking breach, dan ledakan interaktif Fuel Cells (Fase 4). |
+| `tests/test_ascension.js` | Unit Testing | Script otomasi verifikasi 100% fungsionalitas 5 tingkatan Ascension, akumulasi penalti pact, pelipatgandaan Cores, dan 4 mutator krisis baru (Fase 5). |
+| `tests/smoke.js` | Otomasi Pengujian | Simulasi 20 wave standar dan 40 wave mode endless dengan bot otomatis (diperbarui dengan integrasi `getTowerCost`). |
+| `dev.bat` | Launcher Windows | Penambahan eksekusi otomatis `test_ascension.js` ke dalam opsi pengetesan dev. |
 
 ---
 
@@ -363,18 +363,18 @@ Audit menyeluruh dari Fase 1 hingga Fase 5 dilakukan untuk membuktikan bahwa **s
 
 ### 8.1 Bukti Realisasi Sistem ke Dalam Game Loop & Kanvas
 1. **Fase 1 (Sinergi & Reaksi Elemen):**
-   * *Formula Kerusakan:* Dihitung langsung di `dealDamage()` ([`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js)).
+   * *Formula Kerusakan:* Dihitung langsung di `dealDamage()` (`js/state.js`).
    * *Efek Visual:* Cincin ekspansi `addRing()`, percikan partikel `burst()`, proyektil petir rantai asam `addBolt()`, dan floating combat text (`addText()`).
    * *Audio:* Suara Web Audio API prosedural `shockwave` dan `reaction` dipicu secara real-time.
-   * *Status Debuff Kanvas:* Aura korosi asam lime `#a3e635` dan cincin thermite oranye `#f97316` digambar di sekitar sprite musuh pada [`js/sprites.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/sprites.js).
+   * *Status Debuff Kanvas:* Aura korosi asam lime `#a3e635` dan cincin thermite oranye `#f97316` digambar di sekitar sprite musuh pada `js/sprites.js`.
 2. **Fase 2 (Adaptive Threat & Elite Champions):**
-   * *Adaptive AI:* Menghitung rasio komposisi menara pemain di `getThreatDirectorAnalysis()` ([`js/data.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js)) dan memodifikasi antrean musuh di `buildSpawns()`.
+   * *Adaptive AI:* Menghitung rasio komposisi menara pemain di `getThreatDirectorAnalysis()` (`js/data.js`) dan memodifikasi antrean musuh di `buildSpawns()`.
    * *Mekanik & Sprite:* Visual cincin putar rune bergaris putus-putus di bawah musuh Champion, mahkota permata di atas bar HP, kubah peredam proyektil 40px aktif (*Anti-Projectile Dome*), dan ledakan mortir EMP Artillery Walker yang melumpuhkan menara kawan.
 3. **Fase 3 (Workshop HQ & Meta-Progression):**
-   * *Persistensi:* Saldo Nanite Cores dan level riset tersimpan permanen di `localStorage` melalui modul `Store` ([`js/core.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/core.js)).
+   * *Persistensi:* Saldo Nanite Cores dan level riset tersimpan permanen di `localStorage` melalui modul `Store` (`js/core.js`).
    * *In-Game Reality:* Modal emas awal bertambah otomatis, harga upgrade berkurang sesuai diskon logistik, meriam otomatis Citadel menembakkan laser merah dengan animasi barel berputar di kanvas, dan `[R]` Tactical EMP Nuke menghasilkan guncangan layar masif, cincin EMP global, serta melumpuhkan seluruh musuh di layar.
 4. **Fase 4 (Peta Dinamis & Leyline Conduit Nodes):**
-   * *Rendering Peta:* Rune bercahaya pulsing di atas tile Leyline ([`js/render.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js)), rute flanking Utara (Wave 8+) dengan panah chevrons merah di aspal, dan barel bahan bakar drum Fuel Cell bergaris hazard kuning-hitam.
+   * *Rendering Peta:* Rune bercahaya pulsing di atas tile Leyline (`js/render.js`), rute flanking Utara (Wave 8+) dengan panah chevrons merah di aspal, dan barel bahan bakar drum Fuel Cell bergaris hazard kuning-hitam.
    * *Interaktivitas:* Klik langsung barel memicu ledakan instan 450 AoE damage, pelucutan 100% armor, pembentukan kolam radiasi beracun, dan kawah hitam hangus (*crater*).
 5. **Fase 5 (Ascension Protocols & Special Event Mutators):**
    * *Multi-Modifier:* Biaya menara naik $+15\%$ nyata di toko dan kanvas, modal nyawa awal terpotong menjadi 12 nyawa di Ascension 2, musuh terlahir dengan perisai biru 20% HP berputar, dan Boss Berserk memanggil 2 pengawal Champion di jalurnya.
@@ -586,25 +586,25 @@ Seluruh komponen diuji secara mendalam melalui 8 suite pengujian otomatis mandir
 
 Telah dilakukan audit komprehensif terhadap seluruh file JavaScript, styling CSS, dan struktur HTML. Ditemukan dan diperbaiki 6 masalah kritis:
 
-1. **Perbaikan Hitungan Musuh Wave Card (`s.count` NaN Bug - [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js#L233)):**
+1. **Perbaikan Hitungan Musuh Wave Card (`s.count` NaN Bug - `js/ui.js:233`):**
    - Sebelumnya `ev.forEach(s => cnt[s.type] = (cnt[s.type] || 0) + s.count);` menghasilkan `NaN` karena spawn list individu tidak memiliki properti `s.count`. Akibatnya semua badge musuh di preview wave menampilkan `×NaN` dan tag musuh (`STEALTH`, `CARRIER`, `BREACHER`, dll.) tidak pernah muncul.
    - Diperbaiki menjadi `(cnt[s.type] || 0) + (s.count || 1);` sehingga jumlah musuh dan tag peringatan ancaman tampil akurat.
 
-2. **Penambahan Suara Synthesizer `'freeze'` ([`js/audio.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/audio.js#L9-L60)):**
+2. **Penambahan Suara Synthesizer `'freeze'` (`js/audio.js:9-60`):**
    - Detonasi Cryo Nitrogen Tank memanggil `Sfx.play('freeze')`, namun sebelumnya `Sfx.play()` belum memiliki kasus `'freeze'` sehingga hening.
    - Ditambahkan sintesis audio Flash-Freeze (kristalisasi nada tinggi + white noise burst) dan gap rate-limit 200ms.
 
-3. **Tombol Navigasi Kembali ke Sector Dossier Menu ([`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js#L656), [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js#L129)):**
+3. **Tombol Navigasi Kembali ke Sector Dossier Menu (`js/ui.js:656`, `js/main.js:129`):**
    - Layar Game Over dan Victory sebelumnya hanya memiliki opsi "Play Again" (memulai ulang peta yang sama) dan "Workshop HQ", sehingga pemain terjebak tidak bisa kembali memilih sektor lain tanpa me-refresh browser.
    - Ditambahkan tombol `Sector Dossier` (`data-ov="to_menu"`) untuk kembali ke menu ekspedisi kapan saja.
 
-4. **Navigasi Cepat Topbar Chip Sektor ([`index.html`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/index.html#L21), [`js/main.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/main.js#L87), [`css/style.css`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/css/style.css#L216)):**
+4. **Navigasi Cepat Topbar Chip Sektor (`index.html:21`, `js/main.js:87`, `css/style.css:216`):**
    - Mengklik chip `#chipSector` pada header permainan kini langsung membuka menu Sector Dossier untuk melihat status peta dan tantangan bintang.
 
-5. **Pengembalian Chip Modular Saat Menara Dijual ([`js/towers.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js#L187)):**
+5. **Pengembalian Chip Modular Saat Menara Dijual (`js/towers.js:187`):**
    - Menara yang telah dipasangi Modular Chip kini secara otomatis mengembalikan seluruh chip yang terpasang ke inventaris pemain saat dijual (`addChip`), mencegah hilangnya chip langka.
 
-6. **Proteksi Nilai Aman NaN & Bound Spawning Koordinat ([`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js#L254), [`js/enemies.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js#L20), [`js/ui.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/ui.js#L437)):**
+6. **Proteksi Nilai Aman NaN & Bound Spawning Koordinat (`js/state.js:254`, `js/enemies.js:20`, `js/ui.js:437`):**
    - Guard default `(e.armor || 0)`, `(e.shred || 0)`, dan `(e.brittle || 0.35)` di `dealDamage` untuk mencegah kontaminasi `NaN` ke HP musuh.
    - Clamping koordinat radar mini-map dan proteksi spawn breach jika `PATH_BREACH` kosong.
 
@@ -612,7 +612,7 @@ Telah dilakukan audit komprehensif terhadap seluruh file JavaScript, styling CSS
 
 ## 14. Tahap 13: Eksekusi Penuh Addictive Loop & Super-Weapon Fusions (Bastion TD 4.0)
 
-Berdasarkan blueprint yang telah disetujui pengguna ([`bastion_td_addictive_loop_blueprint.md`](file:///C:/Users/User/.gemini/antigravity/brain/3483d84c-61da-4d36-985d-fb72d3571a51/bastion_td_addictive_loop_blueprint.md)), seluruh 5 pilar adiktif dieksekusi secara terintegrasi:
+Berdasarkan blueprint yang telah disetujui pengguna (`bastion_td_addictive_loop_blueprint.md`), seluruh 5 pilar adiktif dieksekusi secara terintegrasi:
 
 ### 14.1 Pilar 1: Sistem Risk-and-Reward Ekstrem
 1. **Adrenaline Multi-Wave Calling Streak:**
@@ -724,13 +724,13 @@ Dilakukan audit mendalam terhadap seluruh data statis dan logika game untuk mema
 ### 16.1 Temuan & Perbaikan Audit Realisasi Efek:
 1. **`command_protocol` (Workshop HQ Upgrade):**
    - *Sebelum:* Peningkatan dibeli dengan 30 Cores namun variabelnya tidak dipanggil di game loop.
-   - *Sesudah:* Diimplementasikan nyata di [`js/waves.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/waves.js) (memberikan akselerasi pemulihan cooldown semua skill sebesar **+25%**) dan di [`js/input.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/input.js) (ketika skill slot ke-4 $[R]$ diaktifkan, memancarkan gelombang pulsa EMP sekunder dari markas yang mengikis 50% perisai musuh dan melumpuhkan musuh selama 1.2 detik).
+   - *Sesudah:* Diimplementasikan nyata di `js/waves.js` (memberikan akselerasi pemulihan cooldown semua skill sebesar **+25%**) dan di `js/input.js` (ketika skill slot ke-4 $[R]$ diaktifkan, memancarkan gelombang pulsa EMP sekunder dari markas yang mengikis 50% perisai musuh dan melumpuhkan musuh selama 1.2 detik).
 2. **`entropy_conduit` (Cursed Black Market Protocol):**
    - *Sebelum:* Memberikan kapasitas grid tak terbatas (9999 MW) dan overdrive permanen, namun penalti ubin radiasi periodik belum diaktifkan.
-   - *Sesudah:* Diintegrasikan ke loop pertempuran di [`js/waves.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/waves.js) di mana setiap 14 detik ubin radiasi meledak menyambar menara acak kawan dengan efek panas +35 Heat dan disrupsi EMP 3.0 detik.
+   - *Sesudah:* Diintegrasikan ke loop pertempuran di `js/waves.js` di mana setiap 14 detik ubin radiasi meledak menyambar menara acak kawan dengan efek panas +35 Heat dan disrupsi EMP 3.0 detik.
 3. **`spore_mortar` (Reactive Hive Counter-Trait):**
    - *Sebelum:* Musuh bermutasi dengan sifat `spore_mortar` namun saat mati tidak melancarkan tembakan balasan.
-   - *Sesudah:* Diimplementasikan di [`js/state.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js) di mana musuh dengan trait ini yang tereliminasi akan memuntahkan mortir spora korosif ke menara terdekat dalam radius 140px, melumpuhkan menara selama 2.5s dan mencemari petak tersebut dengan lendir biomassa.
+   - *Sesudah:* Diimplementasikan di `js/state.js` di mana musuh dengan trait ini yang tereliminasi akan memuntahkan mortir spora korosif ke menara terdekat dalam radius 140px, melumpuhkan menara selama 2.5s dan mencemari petak tersebut dengan lendir biomassa.
 
 ### 16.2 Hasil Pengujian Otomatis (13 Rangkaian Test Suites Lulus 100%):
 1. `tests/audit_bugs.js`: **0 inkonsistensi statis** (39 efek suara terhubung, 25 aksi UI, 30 elemen DOM HTML tervalidasi).
@@ -814,7 +814,7 @@ Menolak formula Tower Defense klise (seperti angka statik "+10% damage" atau gel
 ## 19. Bastion TD 7.0: The Grand Expedition & Titan Mech Warfare
 
 ### 19.1 Transformasi 4 Dimensi Gameplay
-Sesuai cetak biru grand ekspansi yang disetujui pada [`bastion_td_grand_expansion_blueprint.md`](file:///c:/Users/User/.gemini/antigravity/brain/3483d84c-61da-4d36-985d-fb72d3571a51/bastion_td_grand_expansion_blueprint.md), Bastion TD 7.0 mengimplementasikan ekspansi menyeluruh pada 4 pilar utama:
+Sesuai cetak biru grand ekspansi yang disetujui pada `bastion_td_grand_expansion_blueprint.md`, Bastion TD 7.0 mengimplementasikan ekspansi menyeluruh pada 4 pilar utama:
 
 ```
 +-------------------------------------------------------------------------------------------------------+
@@ -872,7 +872,7 @@ Sesuai cetak biru grand ekspansi yang disetujui pada [`bastion_td_grand_expansio
    * **Inkursi Drop-Pod:** Mulai Wave 7, AI Director mendeteksi titik buta pertahanan pemain dan meluncurkan drop-pod taktis bergaris merah dari langit yang mendarat di belakang garis depan untuk mengerahkan pasukan penyerbu elit.
 
 ### 19.3 Hasil Uji Mutu & Verifikasi Komprehensif (15 Test Suites 100% Lulus):
-* Telah dibuat rangkaian pengujian unit baru [`tests/test_grand_expansion.js`](file:///d:/PROJEK%20COBA%20COBA/bastion-td/tests/test_grand_expansion.js) yang memvalidasi seluruh fungsionalitas 7.0 secara end-to-end.
+* Telah dibuat rangkaian pengujian unit baru `tests/test_grand_expansion.js` yang memvalidasi seluruh fungsionalitas 7.0 secara end-to-end.
 * **Hasil Eksekusi 15 Test Suites Keseluruhan:**
   1. `tests/smoke.js` -> **PASS** (Simulasi 20 wave penuh 0 crash)
   2. `tests/test_workshop.js` -> **PASS** (Meta-progression & Nanite Cores)
@@ -889,6 +889,72 @@ Sesuai cetak biru grand ekspansi yang disetujui pada [`bastion_td_grand_expansio
   13. `tests/audit_bugs.js` -> **PASS** (Audit Statis: 0 Error, 0 Missing SFX, 0 Unhandled Action)
   14. `tests/test_paradox_reality.js` -> **PASS** (Chrono 4D Rewind & Paradox Reality)
   15. `tests/test_grand_expansion.js` -> **PASS** (Titan Mech Warfare, Dreadnought, Vaults, Cyber-Logic, Market)
+
+---
+
+## 20. FASE 20: BASTION TD 8.0 — MASTERCLASS AAA/INDIE OVERHAUL
+
+Berdasarkan blueprint yang telah disetujui (`bastion_td_veteran_lead_designer_blueprint.md`), kami mengimplementasikan 6 Pilar Masterclass AAA / Indie Tier-1 (*Factorio*, *Into the Breach*, *Frostpunk*, *Risk of Rain 2*) ke dalam arsitektur murni JavaScript (Vanilla JS, HTML5 Canvas, Web Audio API):
+
+### 20.1 Enam Pilar Utama yang Direalisasikan:
+
+1. **Pilar 1: Subterranean Munitions Logistics & Fluidics Network (Logistik Bawah Tanah):**
+   * **Pipa Sabot Kinetik (`kinetic_belt`):** Menghubungkan menara dengan sabuk konveyor bawah tanah yang mengangkut amunisi Tungsten Sabot: memberikan bonus $+50\%$ Armor Pierce dan $+35\%$ Fire Rate.
+   * **Pipa Nitrogen Super-Krio (`cryo_pipe`):** Saluran nitrogen bertekanan tinggi yang langsung membuang $100\%$ akumulasi panas menara seketika menjadi 0, serta memberikan kekebalan permanen terhadap fenomena Overheat.
+   * **Konduit Bahan Bakar Plasma (`plasma_pipe`):** Pipa plasma magnetis yang memperluas radius ledakan sebesar $+40\%$ dan memicu pembakaran Thermite Incineration.
+
+2. **Pilar 2: Colossal Multi-Part Titans & Destructible Anatomies (Bos Raksasa Multi-Bagian):**
+   * Setiap Titan Boss kini memiliki modul anatomi target independen:
+     - **Armored Carapace Plating (`carapace`, 800 HP):** Mengurangi $80\%$ damage ke tubuh bos hingga plat baja dihancurkan.
+     - **Bio-Spore Artillery Pod (`mortar_pod`, 500 HP):** Meluncurkan artileri spora setiap 5 detik yang meng-EMP menara ramah hingga hancur.
+     - **Locomotive Knee Tendons (`joints`, 650 HP):** Meremukkan urat kaki bos melumpuhkannya ke dalam status **Stagger (6 detik)** dan memicu prompt tombol `[E]`.
+     - **Exposed Nerve Core (`core`, 1200 HP):** Inti syaraf yang terbuka menerima $300\%$ damage kritikal.
+   * **Tactical Mech Grapple Mount (`mechGrappleStrike`):** Saat bos dalam keadaan Stagger, pemain dapat menekan tombol `[E]` untuk meluncurkan kait kabel grapple magnetik Titan Mech dan mengeksekusi sabetan pedang raksasa sebesar **2400 True Damage**.
+
+3. **Pilar 3: Adaptive Hivemind Strategic Director 2.0 (Heatmap Feromon Kematian):**
+   * Setiap kematian alien mendepositkan jejak feromon kematian (`pheromoneMap`) di koordinat grid terkait.
+   * Semakin banyak alien tewas di satu choke-point, feromon bertumpuk dan alien berikutnya secara cerdas melakukan manuver penghindaran lateral (`e.off`) agar tidak masuk ke zona pembantaian. Feromon memudar secara alami seiring waktu (`updatePheromones`).
+
+4. **Pilar 4: Modular Multi-Tile Megastructure Engineering ($2\times 2$ Grid):**
+   * Bangunan raksasa yang menempati 4 petak grid ($2\times 2$) dengan status fasilitas terintegrasi:
+     - **Ion Beam Orbital Uplink Array (`ion_uplink`, 280 Gold, 25 MW):** Menyalurkan pilar sinar laser surya vertikal berkekuatan 420 DPS terus-menerus ke target dengan HP tertinggi.
+     - **Autonomous Drone Carrier Base (`drone_carrier`, 260 Gold, 20 MW):** Hangar lapis baja yang menerbangkan 4 Interceptor Drones (mengejar & menembak alien secara mandiri) dan 2 Mobile Repair/Cooling Bots (mendinginkan menara sekitar).
+     - **Tectonic Resonance Siphon (`tectonic_siphon`, 300 Gold, 30 MW):** Bor mantel bumi yang melepaskan gempa setiap 3 detik, menghancurkan musuh dalam radius 180px dan langsung menelan (*instakill*) musuh non-bos dengan sisa HP $<25\%$.
+
+5. **Pilar 5: Biochemical Gene-Splicing & Void Paradox Alchemy (Gene Lab `[G]`):**
+   * **Bio-Chitin Weave (`brute_chitin`):** Memberikan bio-shield reaktif sebesar 120 HP pada semua menara per ronde.
+   * **Bio-Corrosive Leeching (`healer_leech`):** Melelehkan $20\%$ armor musuh secara permanen dan memulihkan +1 Nyawa Markas setiap 25 alien terbunuh.
+   * **Tachyon Displacement Genome (`chrono_slip`):** $15\%$ peluang serangan mendistorsi musuh 50px mundur ke belakang jalur.
+   * **The Blood-Forge Reactor (`blood_forge`):** Semua menara mendapat $+200\%$ Kecepatan Tembak & 0 MW Daya, namun mengorbankan 1 Nyawa Markas setiap 15 detik kecuali berhasil membantai minimal 30 musuh per siklus.
+   * **Singularity Core of Agony (`singularity_agony`):** Setiap musuh yang mati menciptakan lubang hitam mini yang menyedot lawan di sekitarnya, dengan penalti jangkauan menara $-40\%$.
+
+6. **Pilar 6: Tactical Inspector Universal untuk Semua Pertahanan & Megastruktur:**
+   * Memperbaiki dan menyempurnakan Tactical Inspector (`#inspector`):
+     - Pertahanan lama dan baru (Gatling, Plasma, Cryo, Tesla, Rail, Relay, dan 4 Fusion Super-Weapons) menampilkan data spesifikasi lengkap, tombol Upgrade/Sell yang reaktif, laju tembak, jangkauan, dan soket modular chip.
+     - Megastruktur $2\times 2$ memiliki panel inspektur khusus yang menampilkan status operasional, log akumulasi kill/damage, serta tombol *Dismantle Facility* (pengembalian 70% Gold).
+     - Colossal Titan Boss menampilkan diagram kesehatan anatomi (Carapace, Artillery Pod, Tendons, Core) dengan tombol targetting selektif dan eksekusi Grapple `[E]`.
+
+### 20.2 Verifikasi Komprehensif (16 Test Suites 100% Lulus):
+* Dibuat test suite baru `tests/test_masterclass_overhaul.js` yang menguji seluruh fungsionalitas 8.0 secara ketat.
+* **Hasil Uji 16 Test Suites:**
+  1. `tests/smoke.js` -> **PASS**
+  2. `tests/test_workshop.js` -> **PASS**
+  3. `tests/test_ascension.js` -> **PASS**
+  4. `tests/test_sectors.js` -> **PASS**
+  5. `tests/test_mastery.js` -> **PASS**
+  6. `tests/test_map_dynamics.js` -> **PASS**
+  7. `tests/test_overdrive_fusions.js` -> **PASS**
+  8. `tests/test_champions.js` -> **PASS**
+  9. `tests/test_reactions.js` -> **PASS**
+  10. `tests/test_deep_synergy.js` -> **PASS**
+  11. `tests/test_effects_realization.js` -> **PASS**
+  12. `tests/test_browser_init.js` -> **PASS**
+  13. `tests/audit_bugs.js` -> **PASS**
+  14. `tests/test_paradox_reality.js` -> **PASS**
+  15. `tests/test_grand_expansion.js` -> **PASS**
+  16. `tests/test_masterclass_overhaul.js` -> **PASS**
+  **RINGKASAN: 16/16 TEST SUITES LULUS 100% TANPA REGRESI.**
+
 
 
 

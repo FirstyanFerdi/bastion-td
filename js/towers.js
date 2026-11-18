@@ -59,6 +59,7 @@ function getTowerCost(type) {
 }
 
 function getTowerPower(type, tier) {
+  if (G && G.darkCurios && G.darkCurios.includes('blood_forge')) return 0;
   if (type && typeof type === 'object') {
     tier = type.tier;
     type = type.type;
@@ -397,6 +398,12 @@ function updateTower(t, dt) {
       t.heat = Math.max(0, (t.heat || 0) - dt * 25);
     }
   }
+
+  // 8.0 Masterclass AAA Mechanics: Kinetic Belt Logistics & Forbidden Curios
+  if (t.kineticAmmoBuff) rateMult *= 1.35;
+  if (t.cryoCooling) t.heat = 0;
+  if (G && G.darkCurios && G.darkCurios.includes('blood_forge')) rateMult *= 3.0;
+  if (G && G.darkCurios && G.darkCurios.includes('singularity_agony')) rangeMult *= 0.60;
 
   // Power Grid: Brownout penalty
   const gp = getGridPowerStatus();

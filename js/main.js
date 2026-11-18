@@ -53,7 +53,12 @@ function init() {
   $('btnPause').addEventListener('click', () => { Sfx.init(); togglePause(); });
   $('btnMute').addEventListener('click', toggleMute);
   $('btnCall').addEventListener('click', () => { Sfx.init(); Sfx.resume(); if (G.state === 'menu') return; Sfx.play('click'); callWave(); });
-  $('dock').addEventListener('click', e => { const s = e.target.closest('.shop'); if (s) { Sfx.init(); Sfx.resume(); selectShop(s.dataset.type); } });
+  $('dock').addEventListener('click', e => {
+    const ms = e.target.closest('.megastructure-shop');
+    if (ms) { Sfx.init(); Sfx.resume(); selectMegaShop(ms.dataset.megaType); return; }
+    const s = e.target.closest('.shop');
+    if (s) { Sfx.init(); Sfx.resume(); selectShop(s.dataset.type); }
+  });
   const wc = $('waveCard');
   if (wc) {
     wc.addEventListener('click', e => {
@@ -102,6 +107,35 @@ function init() {
       if (typeof removeNeuralSynapse === 'function') removeNeuralSynapse(b.dataset.syn);
       G.uiDirty = true;
       Sfx.play('click');
+    }
+    else if (act === 'dismantle_mega' && G.sel && MEGASTRUCTURE_CONFIG && MEGASTRUCTURE_CONFIG[G.sel.type]) {
+      const ms = G.sel;
+      const refund = Math.floor(MEGASTRUCTURE_CONFIG[ms.type].cost * 0.7);
+      G.gold += refund;
+      for (let r = ms.r; r <= ms.r + 1; r++) {
+        for (let c = ms.c; c <= ms.c + 1; c++) {
+          if (G.grid[r][c] === ms) G.grid[r][c] = null;
+        }
+      }
+      const idx = G.megastructures.indexOf(ms);
+      if (idx !== -1) G.megastructures.splice(idx, 1);
+      burst(ms.x, ms.y, 20, ms.color, 100, 0.4, 3, false);
+      addText(ms.x, ms.y - 20, '+' + refund + 'G DISMANTLED', '#fbbf24', 13);
+      G.sel = null; G.uiDirty = true;
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('sell');
+    }
+    else if (act === 'target_part') {
+      if (G.sel && G.sel.parts) {
+        G.sel.activeTargetPart = b.dataset.part;
+        G.uiDirty = true;
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+      }
+    }
+    else if (act === 'titan_grapple') {
+      if (G.activeBossTitan && typeof mechGrappleStrike === 'function') {
+        mechGrappleStrike(G.activeBossTitan);
+        G.uiDirty = true;
+      }
     }
     else if (act === 'set_cyber_logic') {
       // Handled via inspector change listener
@@ -165,6 +199,12 @@ function init() {
     $('btnDreadnought').addEventListener('click', () => {
       Sfx.init(); Sfx.resume();
       if (typeof triggerDreadnoughtStrike === 'function') triggerDreadnoughtStrike();
+    });
+  }
+  if ($('btnGeneLab')) {
+    $('btnGeneLab').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('gene_lab');
     });
   }
   if ($('chipSector')) {
@@ -246,6 +286,22 @@ function init() {
         selectAnomalyVault(b.dataset.vault);
       }
     }
+    else if (a === 'buy_splice') {
+      if (b.dataset.splice && typeof applyGeneSplice === 'function') {
+        applyGeneSplice(b.dataset.splice);
+        showOverlay('gene_lab');
+      }
+    }
+    else if (a === 'bind_curio') {
+      if (b.dataset.curio && typeof applyDarkCurio === 'function') {
+        applyDarkCurio(b.dataset.curio);
+        showOverlay('gene_lab');
+      }
+    }
+    else if (a === 'close_gene_lab') {
+      showOverlay(G && G.state === 'menu' ? 'menu' : null);
+      Sfx.play('click');
+    }
     else if (a === 'close_smuggler' || a === 'close_codex' || a === 'close') {
       showOverlay(G && G.state === 'menu' ? 'menu' : null);
       Sfx.play('click');
@@ -257,4 +313,7 @@ function init() {
 init();
 
 // Small debug/test hook (harmless in production)
-window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive, MAP_SECTORS, loadSector, setSector, getSectorMastery, recordSectorProgress, isSectorUnlocked, FUSION_RECIPES, CURSED_PROTOCOLS, FIELD_ANOMALIES, HIVE_COUNTER_TRAITS, fuseTowers, triggerCoreOverload, applyCursedProtocol, getEligibleFusion, isCodexDiscovered, recordCodexDiscovery, getCodexProgress, spawnFieldAnomaly, RESONANCE_CONDUITS, THERMAL_CONFIG, BIOMASS_CONFIG, TACTICAL_MATRIX_PROTOCOLS, updateResonanceConduits, triggerThermalPurge, addBiomassCreep, cleanseBiomassCreep, hasMatrixProtocol, unlockMatrixProtocol, recordTimeSnapshot, triggerChronoRewind, createNeuralSynapse, removeNeuralSynapse, getTowerSynapses, reclaimCorpse, bribeSyndicate, raidSyndicate, triggerTectonicShift, CHRONO_CONFIG, NEURAL_SYNAPSE_CONFIG, RECLAIMER_CONFIG, SYNDICATE_CONFIG, toggleMechPilot, mechFireVulcan, mechSwingBlade, triggerDreadnoughtStrike, triggerAnomalyVault, selectAnomalyVault, spawnDropPod, updateWartimeMarket, hasRelic, TITAN_MECH_CONFIG, DREADNOUGHT_CONFIG, ANOMALY_RELICS, ANOMALY_VAULTS, CYBER_LOGIC_PRESETS, MARKET_CONFIG };
+window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive, MAP_SECTORS, loadSector, setSector, getSectorMastery, recordSectorProgress, isSectorUnlocked, FUSION_RECIPES, CURSED_PROTOCOLS, FIELD_ANOMALIES, HIVE_COUNTER_TRAITS, fuseTowers, triggerCoreOverload, applyCursedProtocol, getEligibleFusion, isCodexDiscovered, recordCodexDiscovery, getCodexProgress, spawnFieldAnomaly, RESONANCE_CONDUITS, THERMAL_CONFIG, BIOMASS_CONFIG, TACTICAL_MATRIX_PROTOCOLS, updateResonanceConduits, triggerThermalPurge, addBiomassCreep, cleanseBiomassCreep, hasMatrixProtocol, unlockMatrixProtocol, recordTimeSnapshot, triggerChronoRewind, createNeuralSynapse, removeNeuralSynapse, getTowerSynapses, reclaimCorpse, bribeSyndicate, raidSyndicate, triggerTectonicShift, CHRONO_CONFIG, NEURAL_SYNAPSE_CONFIG, RECLAIMER_CONFIG, SYNDICATE_CONFIG, toggleMechPilot, mechFireVulcan, mechSwingBlade, triggerDreadnoughtStrike, triggerAnomalyVault, selectAnomalyVault, spawnDropPod, updateWartimeMarket, hasRelic, TITAN_MECH_CONFIG, DREADNOUGHT_CONFIG, ANOMALY_RELICS, ANOMALY_VAULTS, CYBER_LOGIC_PRESETS, MARKET_CONFIG,
+  // 8.0 Masterclass AAA/Indie Exports
+  canPlaceMegastructure, placeMegastructure, updateMegastructures, setupBossMultiParts, damageBossPart, mechGrappleStrike, routeLogistics, updateLogistics, recordPheromoneDeath, updatePheromones, applyGeneSplice, applyDarkCurio, MEGASTRUCTURE_CONFIG, MULTI_PART_TITAN_CONFIG, LOGISTICS_CONFIG, GENE_SPLICING_CONFIG, DARK_TECH_CURIOS
+};

@@ -61,6 +61,11 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     if (G.hiveMutation === 'rubber') e.grounded = true;
   }
 
+  // 8.0 Colossal Multi-Part Titan Boss Anatomies
+  if (type === 'boss' && typeof setupBossMultiParts === 'function') {
+    setupBossMultiParts(e);
+  }
+
   // Defense Contract: Hyper-Velocity Influx
   if (G && G.activeContract === 'hyper_velocity') {
     e.speed *= 1.60; e.curSpeed = e.speed;
@@ -465,6 +470,40 @@ function updateEnemy(e, dt) {
   if (e.reversed > 0) {
     e.reversed -= dt;
     sp = -Math.abs(sp);
+  }
+
+  // 8.0 Multi-Part Titan Boss: Locomotive Tendon Stagger
+  if (e.staggerT > 0) {
+    e.staggerT -= dt;
+    sp = 0;
+    if (Math.random() < 0.25) burst(e.x + rand(-15, 15), e.y + rand(-15, 15), 3, '#f97316', 50, 0.25, 2, true);
+    if (e.staggerT <= 0) {
+      e.staggerT = 0;
+      if (G.grapplePrompt && G.grapplePrompt.boss === e) G.grapplePrompt = null;
+    }
+  }
+
+  // 8.0 Multi-Part Titan Boss: Bio-Spore Artillery Mortar Pod
+  if (e.parts && e.parts.mortar_pod && !e.parts.mortar_pod.broken && e.stunT <= 0 && e.staggerT <= 0 && !e.dead && e.d > 0) {
+    e.parts.mortar_pod.timer = (e.parts.mortar_pod.timer || 0) + dt;
+    if (e.parts.mortar_pod.timer >= (MULTI_PART_TITAN_CONFIG.parts.mortar_pod.fireInterval || 5.0) && G.towers.length > 0) {
+      e.parts.mortar_pod.timer = 0;
+      const targetTower = G.towers[Math.floor(Math.random() * G.towers.length)];
+      targetTower.empT = 3.0;
+      addFx('tracer', e.x, e.y, targetTower.x, targetTower.y, 0.45, '#a3e635', 3.5);
+      burst(targetTower.x, targetTower.y, 18, '#a3e635', 130, 0.5, 3.5, false);
+      addText(targetTower.x, targetTower.y - 20, 'BIO-SPORE ARTILLERY', '#a3e635', 13);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+    }
+  }
+
+  // 8.0 Strategic Hivemind: Pheromone Avoidance Steering
+  if (G && G.pheromoneMap && e.type !== 'boss') {
+    const curC = Math.floor(e.x / TILE), curR = Math.floor(e.y / TILE);
+    const phVal = G.pheromoneMap[curC + '_' + curR] || 0;
+    if (phVal > 2.5) {
+      e.off = Math.sin(G.time * 3 + e.id) * 16;
+    }
   }
 
   // Sektor 03 Bio-Quarantine: Corrosive Acid Runoffs (continuous armor shred)

@@ -1403,3 +1403,152 @@ const HIVEMIND_FORMATIONS = {
     desc: 'Orbital pods drop hostiles directly into unfortified grid sectors.'
   }
 };
+
+/* ============================================================
+   BASTION TD 8.0: MASTERCLASS AAA/INDIE OVERHAUL SPECIFICATIONS
+   ============================================================ */
+
+const MEGASTRUCTURE_CONFIG = {
+  ion_uplink: {
+    id: 'ion_uplink',
+    name: 'Ion Beam Orbital Uplink Array',
+    color: '#38bdf8',
+    size: 2, // 2x2 grid
+    cost: 280,
+    power: 25,
+    role: 'Solar Laser Pillar',
+    desc: '2x2 Orbital relay that channels a continuous solar laser beam from the stratosphere (420 DPS).',
+    beamRadius: 65,
+    dps: 420
+  },
+  drone_carrier: {
+    id: 'drone_carrier',
+    name: 'Autonomous Drone Carrier Base',
+    color: '#10b981',
+    size: 2, // 2x2 grid
+    cost: 260,
+    power: 20,
+    role: 'Airborne Carrier Hangar',
+    desc: '2x2 Armored hangar launching 4 Interceptor Drones (seek & shoot) and 2 Mobile Repair/Cooling Bots.',
+    interceptorCount: 4,
+    repairBotCount: 2,
+    droneDmg: 28,
+    droneRate: 2.2
+  },
+  tectonic_siphon: {
+    id: 'tectonic_siphon',
+    name: 'Tectonic Resonance Siphon',
+    color: '#f59e0b',
+    size: 2, // 2x2 grid
+    cost: 300,
+    power: 30,
+    role: 'Seismic Chasm Pulverizer',
+    desc: '2x2 Core mantle drill that pulses earthquakes every 3s, opening chasms that swallow non-bosses <25% HP.',
+    pulseInterval: 3.0,
+    quakeRadius: 180,
+    quakeDmg: 250
+  }
+};
+
+const MULTI_PART_TITAN_CONFIG = {
+  parts: {
+    carapace: {
+      id: 'carapace',
+      name: 'Armored Carapace Plating',
+      color: '#94a3b8',
+      maxHp: 800,
+      damageReduction: 0.80, // blocks 80% damage to boss until broken
+      breakText: 'CARAPACE SHATTERED! CORE EXPOSED!'
+    },
+    mortar_pod: {
+      id: 'mortar_pod',
+      name: 'Bio-Spore Artillery Pod',
+      color: '#a3e635',
+      maxHp: 500,
+      fireInterval: 5.0,
+      breakText: 'MORTAR POD SEVERED! ARTILLERY DISABLED!'
+    },
+    joints: {
+      id: 'joints',
+      name: 'Locomotive Knee Tendons',
+      color: '#f97316',
+      maxHp: 650,
+      breakText: 'LOCOMOTIVE CRIPPLED! TITAN STAGGERED (6s)!'
+    },
+    core: {
+      id: 'core',
+      name: 'Exposed Nerve Core',
+      color: '#f43f5e',
+      maxHp: 1200,
+      critMultiplier: 3.0, // 300% damage when vulnerable
+      grappleMultiplier: 4.5 // 450% damage when grappled by Titan Mech
+    }
+  }
+};
+
+const LOGISTICS_CONFIG = {
+  types: {
+    kinetic_belt: {
+      id: 'kinetic_belt',
+      name: 'Tungsten Kinetic Belt',
+      color: '#fbbf24',
+      cost: 25,
+      desc: 'Pneumatic conveyer carrying Tungsten Sabot Slugs: +50% Piercing & +35% Fire Rate to connected turrets.'
+    },
+    cryo_pipe: {
+      id: 'cryo_pipe',
+      name: 'Super-Cryo Coolant Pipe',
+      color: '#38bdf8',
+      cost: 25,
+      desc: 'High-pressure liquid nitrogen pipe: Dumps 100% turret heat instantly and grants permanent immunity to Overheat.'
+    },
+    plasma_pipe: {
+      id: 'plasma_pipe',
+      name: 'Thermonuclear Fuel Conduit',
+      color: '#f97316',
+      cost: 30,
+      desc: 'Magnetic plasma conduit: +40% Explosion Splash Radius and ignites targets with Thermite Incineration.'
+    }
+  },
+  overpressureThreshold: 100
+};
+
+const GENE_SPLICING_CONFIG = {
+  brute_chitin: {
+    id: 'brute_chitin',
+    name: 'Brute Bio-Chitin Weave',
+    color: '#f43f5e',
+    cost: 40, // Cores
+    desc: 'All defenses gain reactive bio-shield absorbing first 120 damage per wave.'
+  },
+  healer_leech: {
+    id: 'healer_leech',
+    name: 'Bio-Corrosive Leeching',
+    color: '#34d399',
+    cost: 40,
+    desc: 'Projectiles melt 20% enemy armor permanently and every 25 kills restores 1 Base Life.'
+  },
+  chrono_slip: {
+    id: 'chrono_slip',
+    name: 'Tachyon Displacement Genome',
+    color: '#818cf8',
+    cost: 50,
+    desc: '15% chance on hit to warp hostile 50px backward along path.'
+  }
+};
+
+const DARK_TECH_CURIOS = {
+  blood_forge: {
+    id: 'blood_forge',
+    name: 'The Blood-Forge Reactor',
+    color: '#e11d48',
+    desc: 'All turrets gain +200% Fire Rate & 0 MW Power Cost. SACRIFICE: Lose 1 Base Life every 15s unless 30 hostiles are killed per cycle.'
+  },
+  singularity_agony: {
+    id: 'singularity_agony',
+    name: 'Singularity Core of Agony',
+    color: '#a855f7',
+    desc: 'Hostile kills create mini-black holes sucking in nearby foes. SACRIFICE: All turrets suffer -40% Range penalty.'
+  }
+};
+

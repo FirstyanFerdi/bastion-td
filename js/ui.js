@@ -67,21 +67,48 @@ function buildDock() {
     ic.scale(1.0, 1.0);
     drawTowerSprite(ic, k, 0, { x: 24, y: 24, angle: -Math.PI / 4, spin: 0.6, charge: 1 }, 0.9);
   });
+
+  // 8.0 Megastructure Dock Facilities
+  if (typeof MEGASTRUCTURE_CONFIG !== 'undefined') {
+    Object.keys(MEGASTRUCTURE_CONFIG).forEach(mk => {
+      const md = MEGASTRUCTURE_CONFIG[mk];
+      const el = document.createElement('div');
+      el.className = 'shop megastructure-shop';
+      el.dataset.megaType = mk;
+      el.style.setProperty('--tc', md.color);
+      el.style.borderTop = '2px solid ' + md.color;
+      el.innerHTML = '<span class="key" style="background:' + md.color + ';color:#0f172a">2x2</span><div class="meta" style="padding-left:4px"><div class="nm" style="color:' + md.color + '">' + md.name.split(' ')[0] + ' ' + (md.name.split(' ')[1] || '') + '</div><div class="cost"><i class="coin"></i>' + md.cost + '</div><div class="role">' + md.role + '</div></div>' +
+        '<div class="tip"><b style="color:' + md.color + '">★ MEGASTRUCTURE (2x2): ' + md.name + '</b>' + md.desc + '<div class="st"><span><em>POWER</em> -' + md.power + ' MW</span></div></div>';
+      dock.appendChild(el);
+    });
+  }
 }
 function selectShop(type) {
   if (!G || (G.state !== 'prep' && G.state !== 'active')) return;
   if (G.placing === type) { G.placing = null; Sfx.play('click'); return; }
-  G.placing = type; G.sel = null; G.casting = null; G.uiDirty = true; Sfx.play('click');
+  G.placing = type; G.placingMegastructure = null; G.sel = null; G.casting = null; G.uiDirty = true; Sfx.play('click');
   const cost = typeof getTowerCost === 'function' ? getTowerCost(type) : TD[type].cost;
   if (G.gold < cost) {
     const el = document.querySelector('.shop[data-type="' + type + '"]');
     if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
   }
 }
+function selectMegaShop(type) {
+  if (!G || (G.state !== 'prep' && G.state !== 'active')) return;
+  if (G.placingMegastructure === type) { G.placingMegastructure = null; Sfx.play('click'); return; }
+  G.placingMegastructure = type; G.placing = null; G.sel = null; G.casting = null; G.uiDirty = true; Sfx.play('click');
+}
 function renderInspector() {
   const box = $('inspector');
   const t = G.sel;
   if (!t) {
+    if (G.placingMegastructure && typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[G.placingMegastructure]) {
+      const d = MEGASTRUCTURE_CONFIG[G.placingMegastructure];
+      box.innerHTML = '<h3>DEPLOYING MEGASTRUCTURE (2x2)</h3><div class="insp-name"><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>' + d.role.toUpperCase() + ' · <i class="coin"></i>' + d.cost + ' · ' + d.power + ' MW</small></div></div>' +
+        '<div class="note" style="border-left:3px solid ' + d.color + ';background:' + d.color + '15;color:#f8fafc;margin:6px 0">' + d.desc + '</div>' +
+        '<div class="note">Requires a free 2x2 grid sector. Click valid ground to construct. Esc / Right-Click to cancel.</div>';
+      return;
+    }
     if (G.placing) {
       const d = TD[G.placing];
       const cost = typeof getTowerCost === 'function' ? getTowerCost(G.placing) : d.cost;
@@ -116,6 +143,48 @@ function renderInspector() {
       '<div style="margin-top:6px;font-size:9.5px;font-weight:800;color:#f8fafc;letter-spacing:0.4px">LEYLINE CONDUIT NODES</div>' +
       '<div style="display:flex;flex-direction:column;gap:3px">' + lnList + '</div>' +
       '</div>';
+    return;
+  }
+
+  // 8.0 Megastructure Inspector
+  if (t && typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[t.type]) {
+    const d = MEGASTRUCTURE_CONFIG[t.type];
+    const killCount = t.kills || 0;
+    const dmgCount = Math.round(t.dmg || 0);
+    box.innerHTML = '<h3>SELECTED MEGASTRUCTURE (2x2)</h3>' +
+      '<div class="insp-name"><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>' + d.role.toUpperCase() + ' · ' + killCount + ' KILLS (' + dmgCount + ' DMG)</small></div></div>' +
+      '<div style="margin:5px 0;padding:6px;background:rgba(15,23,42,0.8);border-left:3px solid ' + d.color + ';border-radius:2px">' +
+      '<div style="font-size:10px;color:#f8fafc;font-weight:700">FACILITY STATUS: ONLINE</div>' +
+      '<div style="font-size:9.5px;color:#cbd5e1;line-height:1.25;margin-top:2px">' + d.desc + '</div>' +
+      '</div>' +
+      '<button class="sell" tabindex="-1" data-act="dismantle_mega" style="width:100%;margin-top:6px">' + svg('tag') + 'Dismantle Facility <i class="coin"></i>' + Math.floor(d.cost * 0.7) + '</button>';
+    return;
+  }
+
+  // 8.0 Colossal Multi-Part Titan Boss Inspector
+  if (t && t.parts) {
+    const b = t;
+    const partsHtml = Object.keys(b.parts).map(pk => {
+      const p = b.parts[pk];
+      const conf = MULTI_PART_TITAN_CONFIG.parts[pk];
+      const pct = Math.round((p.hp / p.maxHp) * 100);
+      const isSel = b.activeTargetPart === pk;
+      return '<div style="margin:4px 0;padding:5px;background:' + (p.broken ? '#1e1b2e' : '#0f172a') + ';border-left:3px solid ' + (p.broken ? '#64748b' : conf.color) + ';border-radius:2px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-size:10px;font-weight:800;color:' + (p.broken ? '#64748b' : conf.color) + '">' + conf.name.toUpperCase() + (p.broken ? ' (SEVERED)' : '') + '</span>' +
+        (!p.broken ? '<button data-act="target_part" data-part="' + pk + '" style="font-size:8.5px;padding:2px 6px;background:' + (isSel ? conf.color : '#1e293b') + ';color:' + (isSel ? '#0f172a' : '#fff') + ';border:none;border-radius:2px;font-weight:800;cursor:pointer">' + (isSel ? 'TARGETING' : 'TARGET') + '</button>' : '') +
+        '</div>' +
+        '<div style="font-size:9px;color:#94a3b8;margin:2px 0">' + p.hp + ' / ' + p.maxHp + ' HP (' + pct + '%)</div>' +
+        '<div style="width:100%;height:3px;background:#334155;border-radius:2px;overflow:hidden">' +
+        '<div style="width:' + pct + '%;height:100%;background:' + (p.broken ? '#64748b' : conf.color) + '"></div>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+
+    box.innerHTML = '<h3>ANATOMICAL TITAN TARGETING</h3>' +
+      '<div class="insp-name"><div><h4 style="color:#f43f5e">COLOSSAL TITAN BOSS</h4><small>' + (b.staggerT > 0 ? '★ STAGGERED (PRESS [E] GRAPPLE)' : 'ACTIVE ANATOMY') + '</small></div></div>' +
+      partsHtml +
+      (b.staggerT > 0 ? '<button class="primary" data-act="titan_grapple" style="width:100%;margin-top:6px;background:#f59e0b;color:#0f172a;font-weight:800">★ EXECUTE TITAN MECH GRAPPLE [E]</button>' : '');
     return;
   }
 
@@ -1031,6 +1100,50 @@ function showOverlay(kind) {
       }).join('') +
       '</div>' +
       '<div style="font-size:9.5px;color:#94a3b8;text-align:center">Exotic relics from Anomaly Vaults alter fundamental physics rules for the remainder of this defense run.</div>' +
+      '</div>';
+  } else if (kind === 'gene_lab') {
+    const cores = (typeof SAVE !== 'undefined' && SAVE.cores) || 0;
+    const splicesHtml = (typeof GENE_SPLICING_CONFIG !== 'undefined') ? Object.keys(GENE_SPLICING_CONFIG).map(sk => {
+      const sp = GENE_SPLICING_CONFIG[sk];
+      const hasSplice = G && G.geneSplices && G.geneSplices[sk];
+      const canAfford = cores >= sp.cost;
+      return '<div style="margin:6px 0;padding:8px;background:rgba(15,23,42,0.85);border-left:3px solid ' + sp.color + ';border-radius:3px;display:flex;justify-content:space-between;align-items:center">' +
+        '<div>' +
+        '<div style="font-size:11px;font-weight:800;color:' + sp.color + '">' + sp.name.toUpperCase() + '</div>' +
+        '<div style="font-size:9.5px;color:#cbd5e1;margin-top:2px">' + sp.desc + '</div>' +
+        '</div>' +
+        '<div>' +
+        (hasSplice ? '<span style="font-size:10px;font-weight:800;color:#34d399">ACTIVE</span>' :
+          '<button class="primary" data-ov="buy_splice" data-splice="' + sk + '"' + (!canAfford ? ' disabled' : '') + ' style="font-size:9.5px;padding:3px 8px;background:' + sp.color + ';color:#0f172a;font-weight:800">' + sp.cost + ' Cores</button>') +
+        '</div>' +
+        '</div>';
+    }).join('') : '';
+
+    const curiosHtml = (typeof DARK_TECH_CURIOS !== 'undefined') ? Object.keys(DARK_TECH_CURIOS).map(ck => {
+      const cur = DARK_TECH_CURIOS[ck];
+      const hasCurio = G && G.darkCurios && G.darkCurios.includes(ck);
+      return '<div style="margin:6px 0;padding:8px;background:rgba(225,29,72,0.1);border-left:3px solid ' + cur.color + ';border-radius:3px;display:flex;justify-content:space-between;align-items:center">' +
+        '<div>' +
+        '<div style="font-size:11px;font-weight:800;color:' + cur.color + '">★ ' + cur.name.toUpperCase() + '</div>' +
+        '<div style="font-size:9.5px;color:#fca5a5;margin-top:2px">' + cur.desc + '</div>' +
+        '</div>' +
+        '<div>' +
+        (hasCurio ? '<span style="font-size:10px;font-weight:800;color:#e11d48">BOUND</span>' :
+          '<button class="sell" data-ov="bind_curio" data-curio="' + ck + '" style="font-size:9.5px;padding:3px 8px;background:#e11d48;color:#fff;font-weight:800">SACRIFICE & BIND</button>') +
+        '</div>' +
+        '</div>';
+    }).join('') : '';
+
+    h = '<div class="draft-box" style="border-top-color:#34d399;max-width:620px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<h2 style="margin:0;color:#34d399;letter-spacing:.12em">🧬 BIOCHEMICAL GENE-SPLICING & VOID ALCHEMY</h2>' +
+      '<button class="ghost" data-ov="close_gene_lab" style="padding:2px 8px;font-size:11px">✕ CLOSE</button>' +
+      '</div>' +
+      '<div class="sub">Splice harvested mutant genomes into defensive bio-structures using Nanite Cores (' + cores + ' Cores available).</div>' +
+      '<div style="font-size:10px;font-weight:800;color:#38bdf8;margin:8px 0 4px;letter-spacing:0.08em">GENOMIC SPLICING PROTOCOLS:</div>' +
+      splicesHtml +
+      '<div style="font-size:10px;font-weight:800;color:#f43f5e;margin:12px 0 4px;letter-spacing:0.08em">FORBIDDEN DARK TECH CURIOS (HIGH RISK / HIGH REWARD):</div>' +
+      curiosHtml +
       '</div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;

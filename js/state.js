@@ -131,7 +131,18 @@ function newGame(keepSpeed) {
     activeVaultModal: null,
     wartimeMarket: {},
     dropPods: [],
-    mechKeys: { w: false, a: false, s: false, d: false }
+    mechKeys: { w: false, a: false, s: false, d: false },
+    // 8.0 Masterclass AAA/Indie Systems
+    megastructures: [],
+    logisticsConduits: [],
+    pheromoneMap: {},
+    geneSplices: {},
+    darkCurios: [],
+    bloodForgeTimer: 0,
+    bloodForgeKills: 0,
+    activeBossTitan: null,
+    grapplePrompt: null,
+    placingMegastructure: null
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -1212,6 +1223,31 @@ function dealDamage(e, amount, type, src, opts) {
     burst(e.x, e.y, 4, '#f97316', 70, 0.25, 2, false);
   }
 
+  // 8.0 Multi-Part Titan Boss Carapace Mitigation & Stagger
+  if (e.parts && e.parts.carapace && !e.parts.carapace.broken) {
+    if (typeof damageBossPart === 'function') damageBossPart(e, 'carapace', a * 0.5, type, src);
+    a *= 0.20; // 80% reduction to main body
+  } else if (e.staggerT > 0) {
+    a *= 1.50; // Staggered damage amplification
+  }
+
+  // 8.0 Biochemical Gene-Splicing Effects
+  if (G && G.geneSplices) {
+    if (G.geneSplices.healer_leech && e.armor > 0) {
+      e.shred = Math.min(e.armor, (e.shred || 0) + e.armor * 0.20);
+    }
+    if (G.geneSplices.chrono_slip && Math.random() < 0.15) {
+      e.d = Math.max(0, e.d - 50);
+      burst(e.x, e.y, 8, '#818cf8', 80, 0.3, 2, true);
+      addText(e.x, e.y - e.r - 20, 'TACHYON SLIP', '#818cf8', 11);
+    }
+  }
+
+  // 8.0 Kinetic Logistics Belt Pierce & Plasma Explosion Buffs
+  if (src && src.kineticAmmoBuff && type === 'phys') {
+    a *= 1.35;
+  }
+
   // Hive Mutation: Chitin Armor Plating (deflects first 4 physical hits)
   if (e.chitinHits > 0 && type === 'phys') {
     e.chitinHits--;
@@ -1507,6 +1543,40 @@ function killEnemy(e, src) {
   G.gold += finalReward; G.score += finalScore; G.kills++;
   if (src) src.kills++;
 
+  // 8.0 Strategic Hivemind: Record Pheromone Death Heatmap
+  if (typeof recordPheromoneDeath === 'function') {
+    recordPheromoneDeath(e.x, e.y);
+  }
+
+  // 8.0 Dark Tech Curios: Blood-Forge Kills Tracking
+  if (G && G.bloodForgeTimer > 0) {
+    G.bloodForgeKills = (G.bloodForgeKills || 0) + 1;
+  }
+
+  // 8.0 Biochemical Gene-Splicing: Healer Leeching Life Siphon
+  if (G && G.geneSplices && G.geneSplices.healer_leech) {
+    G.leechKillCount = (G.leechKillCount || 0) + 1;
+    if (G.leechKillCount % 25 === 0 && G.lives < 20) {
+      G.lives++;
+      addText(e.x, e.y - 30, '+1 LIFE (BIO-LEECH)', '#34d399', 14);
+      burst(e.x, e.y, 10, '#34d399', 100, 0.4, 3, true);
+    }
+  }
+
+  // 8.0 Void Alchemy: Singularity Core of Agony Pull
+  if (G && G.darkCurios && G.darkCurios.includes('singularity_agony')) {
+    addRing(e.x, e.y, 4, 85, 0.4, '#a855f7', 3);
+    for (const o of G.enemies) {
+      if (o.dead || o === e) continue;
+      const dist = Math.hypot(o.x - e.x, o.y - e.y);
+      if (dist <= 85 && dist > 5) {
+        o.x += ((e.x - o.x) / dist) * 18;
+        o.y += ((e.y - o.y) / dist) * 18;
+        dealDamage(o, 20, 'energy', null);
+      }
+    }
+  }
+
   // 7.0 Dreadnought Gauge Charge from Kills
   if (typeof chargeDreadnought === 'function') {
     chargeDreadnought(typeof DREADNOUGHT_CONFIG !== 'undefined' ? DREADNOUGHT_CONFIG.chargePerKill : 0.8);
@@ -1682,4 +1752,303 @@ function killEnemy(e, src) {
     }
   }
   G.uiDirty = G.sel ? true : G.uiDirty;
+}
+
+/* ============================================================
+   BASTION TD 8.0: MASTERCLASS AAA/INDIE SYSTEMS STATE ENGINE
+   ============================================================ */
+
+function canPlaceMegastructure(col, row, type) {
+  if (!G || !MEGASTRUCTURE_CONFIG || !MEGASTRUCTURE_CONFIG[type]) return false;
+  const conf = MEGASTRUCTURE_CONFIG[type];
+  if (col < 0 || row < 0 || col + 1 >= COLS || row + 1 >= ROWS) return false;
+  for (let r = row; r <= row + 1; r++) {
+    for (let c = col; c <= col + 1; c++) {
+      if (pathTile[r][c] || G.grid[r][c]) return false;
+      if (G.fuelCells && G.fuelCells.some(fc => !fc.dead && fc.c === c && fc.row === r)) return false;
+    }
+  }
+  return G.gold >= conf.cost;
+}
+
+function placeMegastructure(col, row, type) {
+  if (!canPlaceMegastructure(col, row, type)) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return null;
+  }
+  const conf = MEGASTRUCTURE_CONFIG[type];
+  G.gold -= conf.cost;
+  const ms = {
+    id: 'mega_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    type,
+    name: conf.name,
+    color: conf.color,
+    c: col,
+    r: row,
+    x: (col + 1) * TILE,
+    y: (row + 1) * TILE,
+    w: 2 * TILE,
+    h: 2 * TILE,
+    timer: 0,
+    kills: 0,
+    dmg: 0,
+    active: true,
+    drones: type === 'drone_carrier' ? [] : null
+  };
+
+  if (type === 'drone_carrier') {
+    for (let i = 0; i < (conf.interceptorCount || 4); i++) {
+      ms.drones.push({ type: 'interceptor', angle: (i * Math.PI * 2) / 4, dist: 38, cd: 0 });
+    }
+    for (let i = 0; i < (conf.repairBotCount || 2); i++) {
+      ms.drones.push({ type: 'repair', angle: (i * Math.PI * 2) / 2 + Math.PI / 4, dist: 24, cd: 0 });
+    }
+  }
+
+  for (let r = row; r <= row + 1; r++) {
+    for (let c = col; c <= col + 1; c++) {
+      G.grid[r][c] = ms;
+    }
+  }
+  G.megastructures.push(ms);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('megastructure_build');
+  shake(8);
+  burst(ms.x, ms.y, 35, conf.color, 160, 0.7, 4, true);
+  addRing(ms.x, ms.y, 10, 80, 0.5, conf.color, 4);
+  addText(ms.x, ms.y - 30, conf.name.toUpperCase(), conf.color, 14);
+  G.uiDirty = true;
+  return ms;
+}
+
+function updateMegastructures(dt) {
+  if (!G || !G.megastructures || G.megastructures.length === 0) return;
+  for (const ms of G.megastructures) {
+    ms.timer += dt;
+    const conf = MEGASTRUCTURE_CONFIG[ms.type];
+    if (!conf) continue;
+
+    if (ms.type === 'ion_uplink') {
+      let target = null, maxHp = -1;
+      for (const e of G.enemies) {
+        if (e.dead) continue;
+        if (e.hp > maxHp) { maxHp = e.hp; target = e; }
+      }
+      if (target) {
+        ms.targetX = target.x;
+        ms.targetY = target.y;
+        const beamR = conf.beamRadius || 65;
+        for (const e of G.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - ms.targetX, e.y - ms.targetY) <= beamR + (e.r || 12)) {
+            dealDamage(e, conf.dps * dt, 'energy', ms);
+            ms.dmg += conf.dps * dt;
+          }
+        }
+        if (Math.floor(ms.timer * 4) !== Math.floor((ms.timer - dt) * 4)) {
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('ion_beam');
+        }
+      } else {
+        ms.targetX = null;
+        ms.targetY = null;
+      }
+    } else if (ms.type === 'drone_carrier') {
+      if (ms.drones) {
+        for (const d of ms.drones) {
+          d.angle += dt * 1.8;
+          d.x = ms.x + Math.cos(d.angle) * d.dist;
+          d.y = ms.y + Math.sin(d.angle) * d.dist;
+          d.cd = Math.max(0, d.cd - dt);
+
+          if (d.type === 'interceptor' && d.cd <= 0) {
+            let nearest = null, nearDist = 180;
+            for (const e of G.enemies) {
+              if (e.dead) continue;
+              const dst = Math.hypot(e.x - d.x, e.y - d.y);
+              if (dst < nearDist) { nearDist = dst; nearest = e; }
+            }
+            if (nearest) {
+              d.cd = 1 / (conf.droneRate || 2.2);
+              dealDamage(nearest, conf.droneDmg || 28, 'phys', ms);
+              addFx('tracer', d.x, d.y, nearest.x, nearest.y, 0.15, '#10b981', 1.5);
+              burst(nearest.x, nearest.y, 3, '#10b981', 40, 0.2, 1.5, false);
+            }
+          } else if (d.type === 'repair') {
+            for (const t of G.towers) {
+              if (Math.hypot(t.x - ms.x, t.y - ms.y) <= 120) {
+                t.heat = Math.max(0, (t.heat || 0) - 30 * dt);
+              }
+            }
+          }
+        }
+      }
+    } else if (ms.type === 'tectonic_siphon') {
+      const pInt = conf.pulseInterval || 3.0;
+      if (ms.timer >= pInt) {
+        ms.timer -= pInt;
+        const qRad = conf.quakeRadius || 180;
+        shake(7);
+        addRing(ms.x, ms.y, 10, qRad, 0.6, '#f59e0b', 4);
+        burst(ms.x, ms.y, 25, '#f59e0b', 140, 0.5, 3.5, true);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+
+        for (const e of G.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - ms.x, e.y - ms.y) <= qRad + (e.r || 12)) {
+            if (e.type !== 'boss' && e.hp <= e.maxHp * 0.25) {
+              addText(e.x, e.y - e.r - 12, 'CHASM SWALLOWED', '#ef4444', 12);
+              burst(e.x, e.y, 16, '#ef4444', 110, 0.45, 3, true);
+              killEnemy(e, ms);
+            } else {
+              dealDamage(e, conf.quakeDmg || 250, 'phys', ms);
+              e.slowT = Math.max(e.slowT || 0, 2.0);
+              e.slowVal = 0.5;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+function setupBossMultiParts(bossEnemy) {
+  if (!bossEnemy || bossEnemy.parts) return;
+  bossEnemy.parts = {
+    carapace: { hp: 800, maxHp: 800, broken: false },
+    mortar_pod: { hp: 500, maxHp: 500, broken: false, timer: 0 },
+    joints: { hp: 650, maxHp: 650, broken: false },
+    core: { hp: 1200, maxHp: 1200, broken: false, exposed: false }
+  };
+  bossEnemy.activeTargetPart = 'carapace';
+  G.activeBossTitan = bossEnemy;
+}
+
+function damageBossPart(bossEnemy, partKey, amount, type, src) {
+  if (!bossEnemy || !bossEnemy.parts || !bossEnemy.parts[partKey]) return;
+  const p = bossEnemy.parts[partKey];
+  if (p.broken) return;
+  p.hp = Math.max(0, p.hp - amount);
+  if (p.hp <= 0) {
+    p.broken = true;
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('titan_break');
+    burst(bossEnemy.x, bossEnemy.y, 25, '#f43f5e', 160, 0.6, 4, true);
+    shake(8);
+    const breakMsg = (MULTI_PART_TITAN_CONFIG && MULTI_PART_TITAN_CONFIG.parts[partKey]) ? MULTI_PART_TITAN_CONFIG.parts[partKey].breakText : 'PART DESTROYED!';
+    addText(bossEnemy.x, bossEnemy.y - (bossEnemy.r || 24) - 25, breakMsg, '#f43f5e', 14);
+
+    if (partKey === 'carapace') {
+      bossEnemy.parts.core.exposed = true;
+    } else if (partKey === 'joints') {
+      bossEnemy.staggerT = 6.0;
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('titan_stagger');
+      G.grapplePrompt = { boss: bossEnemy, timer: 6.0 };
+      addText(bossEnemy.x, bossEnemy.y - (bossEnemy.r || 24) - 45, 'TITAN STAGGERED! PRESS [E] TO GRAPPLE!', '#fbbf24', 16);
+    }
+  }
+}
+
+function mechGrappleStrike(bossEnemy) {
+  if (!bossEnemy || bossEnemy.staggerT <= 0 || !G || !G.mech || !G.mech.active) return false;
+  bossEnemy.staggerT = 0;
+  G.grapplePrompt = null;
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('mech_grapple');
+  shake(15);
+  addFx('tracer', G.mech.x, G.mech.y, bossEnemy.x, bossEnemy.y, 0.45, '#38bdf8', 4.0);
+  burst(bossEnemy.x, bossEnemy.y, 50, '#38bdf8', 220, 0.9, 5, true);
+  addRing(bossEnemy.x, bossEnemy.y, 10, 100, 0.6, '#38bdf8', 5);
+  const dmg = 2400;
+  dealDamage(bossEnemy, dmg, 'energy', G.mech);
+  addText(bossEnemy.x, bossEnemy.y - 50, 'MECH TITAN CLEAVE! 2400 DMG', '#38bdf8', 18);
+  return true;
+}
+
+function routeLogistics(c1, r1, c2, r2, type) {
+  if (!G || !LOGISTICS_CONFIG || !LOGISTICS_CONFIG.types[type]) return false;
+  const conf = LOGISTICS_CONFIG.types[type];
+  if (G.gold < conf.cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.gold -= conf.cost;
+  const conduit = {
+    id: 'conduit_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    c1, r1, c2, r2,
+    type,
+    color: conf.color,
+    name: conf.name,
+    active: true
+  };
+  G.logisticsConduits.push(conduit);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+  G.uiDirty = true;
+  return conduit;
+}
+
+function updateLogistics(dt) {
+  if (!G || !G.logisticsConduits || G.logisticsConduits.length === 0) return;
+  for (const c of G.logisticsConduits) {
+    const t1 = G.grid[c.r1] && G.grid[c.r1][c.c1];
+    const t2 = G.grid[c.r2] && G.grid[c.r2][c.c2];
+    [t1, t2].forEach(t => {
+      if (t && t.type && TD[t.type]) {
+        if (c.type === 'kinetic_belt') {
+          t.kineticAmmoBuff = true;
+        } else if (c.type === 'cryo_pipe') {
+          t.heat = 0;
+          t.cryoCooling = true;
+        } else if (c.type === 'plasma_pipe') {
+          t.plasmaExplosiveBuff = true;
+        }
+      }
+    });
+  }
+}
+
+function recordPheromoneDeath(x, y) {
+  if (!G || !G.pheromoneMap) return;
+  const col = Math.floor(x / TILE), row = Math.floor(y / TILE);
+  const key = col + '_' + row;
+  G.pheromoneMap[key] = (G.pheromoneMap[key] || 0) + 1.0;
+}
+
+function updatePheromones(dt) {
+  if (!G || !G.pheromoneMap) return;
+  for (const k in G.pheromoneMap) {
+    G.pheromoneMap[k] = Math.max(0, G.pheromoneMap[k] - dt * 0.15);
+    if (G.pheromoneMap[k] <= 0.05) delete G.pheromoneMap[k];
+  }
+}
+
+function applyGeneSplice(spliceId) {
+  if (!G || !GENE_SPLICING_CONFIG || !GENE_SPLICING_CONFIG[spliceId]) return false;
+  const conf = GENE_SPLICING_CONFIG[spliceId];
+  if (!SAVE || (SAVE.cores || 0) < conf.cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  SAVE.cores -= conf.cost;
+  if (typeof saveGame === 'function') saveGame();
+  G.geneSplices = G.geneSplices || {};
+  G.geneSplices[spliceId] = true;
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('gene_splice');
+  if (spliceId === 'brute_chitin' && G.towers) {
+    for (const t of G.towers) {
+      t.bioShield = 120;
+    }
+  }
+  G.uiDirty = true;
+  return true;
+}
+
+function applyDarkCurio(curioId) {
+  if (!G || !DARK_TECH_CURIOS || !DARK_TECH_CURIOS[curioId]) return false;
+  G.darkCurios = G.darkCurios || [];
+  if (G.darkCurios.includes(curioId)) return false;
+  G.darkCurios.push(curioId);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('vault_open');
+  if (curioId === 'blood_forge') {
+    G.bloodForgeTimer = 15.0;
+    G.bloodForgeKills = 0;
+  }
+  G.uiDirty = true;
+  return true;
 }
