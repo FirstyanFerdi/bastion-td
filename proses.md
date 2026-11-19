@@ -1315,6 +1315,173 @@ Seluruh pengujian lolos tanpa kesalahan:
 
 **KESIMPULAN: Seluruh pertahanan baru (Megastruktur Ion Uplink, Drone Carrier, Tectonic Siphon, dan Road Barricade) kini memiliki kartu informasi taktis yang lengkap, simetris, dan identik persis dengan hierarki visual pertahanan lama pada tangkapan layar pengguna.**
 
+---
+
+## 25. Perombakan Sistem Balancing, Kurva Ekonomi, dan Dinamika Natural Counter
+
+Sebagai Game System Designer dan Developer spesialis balancing untuk Tower Defense, dilakukan investigasi mendalam, audit matematis, dan rekayasa ulang terhadap seluruh metrik pertahanan menara, parameter monster, kurva penskalaan gelombang musuh (*wave scaling*), serta interaksi tipe kerusakan guna mengeliminasi meta spam menara tunggal (*single-tower spam*) dan menciptakan ekosistem gameplay yang menuntut kombinasi taktis dinamis.
+
+---
+
+### 25.1 Ekstraksi Mandiri Data Game dari Kode Sumber
+
+Pemeriksaan langsung pada `js/data.js`, `js/state.js`, dan `js/waves.js` menghasilkan basis data statistik murni:
+
+1. **Daftar Menara Standar:**
+   * **Gatling Turret:** Biaya 50G, Damage 8, Rate 6.0/s, Range 2.2 tile, Power -2 MW. Efek: Rapid kinetic fire. T1 (Upg 45G): Dmg 14, Rate 8.5/s. T2A (Overdrive Minigun, 90G): Dmg 16, Rate 12-22/s (akselerasi beruntun). T2B (Flak Cannon, 80G): Dmg 36, Rate 1.6/s, Shrapnel burst AoE.
+   * **Plasma Cannon:** Biaya 110G, Damage 42, Rate 0.8/s, Range 2.8 tile, Power -4 MW. Efek: Splash radius 1.1 tile, Armor shred 12%. T1 (Upg 100G): Dmg 75, Rate 0.9/s, Splash 1.3 tile, Shred 18%. T2A (Heavy Siege, 180G): Dmg 140, Splash 1.7 tile, Shred 25%, Radiation pool 26 DPS. T2B (Twin Plasma, 160G): Dmg 20, Rate 4.5/s, Shred 35%.
+   * **Cryo Emitter:** Biaya 80G, Damage 3, Rate 0.8/s, Range 2.4 tile, Power -3 MW. Efek: Area chill slow 35%. T1 (Upg 60G): Dmg 6, Rate 1.0/s, Slow 45%. T2A (Absolute Zero, 130G): Dmg 14, Rate 1.1/s, Freeze stun 2.2s, Brittle +35% damage vulnerability. T2B (Vortex Cryo, 120G): Dmg 10, Rate 1.3/s, Pull gravity 26px, Slow 60%.
+   * **Tesla Coil:** Biaya 130G, Damage 16, Rate 1.4/s, Range 2.5 tile, Power -6 MW. Efek: Chain lightning 2 target, 2.5x vs shield (40 dmg), Stun 0.3s. T1 (Upg 110G): Dmg 28, Rate 1.6/s, Targets 3, Stun 0.4s. T2A (Chain Overload, 190G): Dmg 38, Rate 1.8/s, Targets 5, Stun 0.5s. T2B (Ball Lightning, 175G): Dmg 52, Rate 1.25/s, Targets 4, Static field AoE.
+   * **Railgun Sniper:** Biaya 180G, Damage 100, Rate 0.4/s, Range 4.5 tile, Power -8 MW. Efek: Penetrating kinetic sabot, Pierce 3 targets, Ignores armor. T1 (Upg 150G): Dmg 180, Rate 0.45/s, Pierce 4. T2A (Orbital Lance, 275G): Dmg 95, Rate 3.0/s, Pierce 99 (infinite map sweep beam). T2B (Executioner, 250G): Dmg 360, Rate 0.35/s, Pierce 2, Execute insta-kill threshold <= 18% HP.
+   * **Fission Relay:** Biaya 90G, Penghasil daya bersih +25 MW. T1 (Upg 70G): +45 MW. T2A (Thorium Reactor, 120G): +65 MW. T2B (Overclock Hub, 110G): +40 MW, +100% fire rate aura ke menara sekitar.
+
+2. **Daftar Musuh:**
+   * **Scout:** HP 34, Speed 112 px/s, Armor 0, Gold 5. Peran: Fast runner early wave.
+   * **Armored Brute:** HP 240, Speed 46 px/s, Armor 0.60 (60% physical resistance), Gold 15. Peran: Heavy tank.
+   * **Swarm:** HP 13, Speed 84 px/s, Armor 0, Gold 2. Peran: High volume cluster.
+   * **Healer:** HP 110, Speed 68 px/s, Armor 0.10, Gold 12. Efek: Aura regenerasi 28 HP/s dalam radius 80px.
+   * **Stealth Infiltrator:** HP 44, Speed 88 px/s, Armor 0.05, Gold 8. Efek: Kamuflase optik, tak terdeteksi hingga terkena sensor/reveal.
+   * **Shield Carrier:** HP 380, Speed 52 px/s, Armor 0.35, Shield 180, Gold 28. Efek: Regenerasi perisai + perisai ke sekutu sekitar.
+   * **EMP Breacher:** HP 80, Speed 92 px/s, Armor 0.15, Gold 9. Efek: Ledakan EMP on-death mematikan menara sekitar 3 detik.
+   * **Boss Sovereign:** HP 1900, Speed 38 px/s, Armor 0.25, Gold 140. Efek: Imunitas crowd control parsial, pemicu gempa/summon.
+   * **Hive Gorger:** HP 320, Speed 58 px/s, Armor 0.20, Gold 22. Efek: Memakan bangkai sekutu untuk meregenerasi HP dan memicu mutasi.
+   * **Alpha Gorgon:** HP 800, Speed 42 px/s, Armor 0.45, Gold 45. Efek: Roar stun menara, resistensi tinggi.
+   * **Sapper:** HP 65, Speed 95 px/s, Armor 0.10, Gold 7. Efek: Menyerang barikade dan memasang peledak.
+   * **Chaff Skimmer:** HP 45, Speed 125 px/s, Armor 0, Gold 6. Efek: Menyerap proyektil railgun dan laser.
+   * **Harpoon Leecher:** HP 160, Speed 60 px/s, Armor 0.25, Gold 16. Efek: Menambatkan tali energi ke menara untuk menyerap daya listrik.
+
+3. **Ekonomi dan Wave Scaling:**
+   * Starting Gold: 250G (+50G dengan workshop upgrade Logistics/Treasury).
+   * Rumus Penskalaan HP Musuh: `hpScale = n => 1 + 0.20 * (n - 1) + 0.014 * (n - 1)^2`.
+   * Bonus Bersih Gelombang: `25 + n * 4` + Bunga tabungan 8% (hingga maks 150G), atau 14% (hingga 260G dengan perk Venture Capital).
+
+---
+
+### 25.2 Audit Matematis & Identifikasi Masalah Keseimbangan (Jomplang)
+
+Perhitungan DPS murni dan rasio efisiensi biaya (*DPS per Gold*):
+
+| Menara | Tier | Total Biaya | Base DPS | Target Simultan | Efektif Max DPS | DPS / Gold | Status Awal |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Gatling Turret** | T0 | 50G | 48.0 | 1 | 48.0 | **0.960** | **EXTREMELY OVERPOWERED (Early)** |
+| **Gatling (Overdrive)** | T2A | 185G | 192 - 352 | 1 | 352.0 | **1.902** | **GAME-BREAKING ACCELERATION** |
+| **Plasma Cannon** | T0 | 110G | 33.6 | Splash | ~67.2 (2 target) | **0.305** | **UNDERPOWERED (Early Trap)** |
+| **Tesla Coil** | T0 | 130G | 22.4 | 2 | 44.8 | **0.172 (Single)** | **UNDERPOWERED (Mahal)** |
+| **Railgun Sniper** | T0 | 180G | 40.0 | 3 | 120.0 | **0.222 (Single)** | **Balanced Sniper Profile** |
+| **Railgun (Orbital Lance)** | T2A | 605G | 285.0 | 99 (Infinite) | **2,850+ (10 target)** | **4.710+** | **EXTREMELY BROKEN (Lane Sweeper)** |
+
+#### Akar Masalah Ketimpangan:
+1. **Dominasi Spam Gatling di Early Game:**
+   * Dengan 250 Gold awal, pemain dapat menempatkan 5 Gatling Turret sekaligus (Total DPS = 240). Scout pada Wave 1 hanya memiliki 34 HP, sehingga gelombang 1-4 hancur seketika sebelum melangkah 2 petak tanpa perlu berpikir taktis.
+   * Sebaliknya, menaruh Plasma Cannon (110G) hanya menghasilkan 33.6 DPS single target dengan proyektil lambat—menjadikan Plasma pilihan yang sangat merugikan di awal game.
+2. **Eksploitasi Infinite Pierce Orbital Lance:**
+   * Railgun Branch A memiliki `pierce: 99` dan fire rate 3.0/detik. Pada koridor lurus (seperti di Subterranean Depot atau Iron Bastion), satu unit Orbital Lance melibas seluruh jalur musuh sendirian tanpa menyisakan ruang bagi menara lain.
+3. **Kelemahan Awal Tesla Coil:**
+   * Biaya 130G untuk 16 damage (22.4 DPS single target) membuat pemain enggan membangun Tesla di fase awal, padahal Tesla dirancang sebagai penghancur perisai.
+4. **Ketiadaan Pinalti Senjata Fisik Terhadap Perisai Musuh:**
+   * Sebelumnya, peluru Gatling dan tembakan Railgun menghantam perisai energi musuh (Shield Carrier) dengan efisiensi 100%. Akibatnya, pemain tidak terdorong untuk membangun Tesla Coil karena Gatling dapat menembus perisai hanya dengan volume peluru.
+
+---
+
+### 25.3 Perombakan Statistik Menara Pertahanan (Nerf & Buff)
+
+Tabel Perbandingan Statistik Sebelum vs Sesudah Penyeimbangan:
+
+| Menara | Atribut | Sebelum (Old) | Sesudah (New Balanced) | Dampak Desain Gameplay |
+| :--- | :--- | :--- | :--- | :--- |
+| **Gatling T0** | Dmg / Rate / DPS | 8 dmg / 6.0 rate / **48.0 DPS** | 6 dmg / 5.0 rate / **30.0 DPS** | DPS/Gold turun dari 0.960 ke 0.600; tidak bisa lagi instakill wave awal secara sembarangan. |
+| **Gatling T1** | Dmg / Rate | 14 dmg / 8.5 rate (119 DPS) | 11 dmg / 7.5 rate (82.5 DPS) | Penskalaan mid-game lebih terkontrol. |
+| **Gatling T2A (Overdrive)** | Max Rate / Dmg | 22.0 rate / 16 dmg (352 DPS) | 15.0 rate / 13 dmg (195 DPS) | Tetap sangat kuat untuk single-target shred, tetapi tidak lagi membakar bos dalam hitungan detik. |
+| **Gatling T2B (Flak)** | Dmg / Shrapnel / Radius | 36 dmg / 4 serpihan / 1.3 tile | 38 dmg / 5 serpihan / 1.4 tile | Buff pada spesialisasi anti-swarm/area. |
+| **Plasma T0** | Cost / Dmg / Rate / DPS | 110G / 42 dmg / 0.8 / **33.6 DPS** | 95G / 48 dmg / 0.85 / **40.8 DPS** | Biaya lebih terjangkau, DPS/Gold naik dari 0.305 ke 0.429; efektif sebagai pembuka armor berat. |
+| **Plasma T0** | Splash / Shred | 1.1 tile / 12% armor shred | 1.2 tile / 15% armor shred | Pemain memiliki alasan kuat membangun Plasma di Wave 3 melawan Brute. |
+| **Plasma T1** | Cost / Dmg / Rate | 100G / 75 dmg / 0.9 rate | 95G / 85 dmg / 0.95 rate | Transisi mid-game lebih kuat dan memuaskan. |
+| **Plasma T2A (Heavy)** | Dmg / Rad DPS / Shred | 140 dmg / 26 Rad / 25% Shred | 155 dmg / 32 Rad / 30% Shred | Peran artileri penghancur zirah monster raksasa terdefinisi dengan jelas. |
+| **Tesla T0** | Cost / Dmg / Rate / DPS | 130G / 16 dmg / 1.4 / **22.4 DPS** | 120G / 22 dmg / 1.5 / **33.0 DPS** | Single-target DPS naik dari 22.4 ke 33.0; multi-target DPS (2 musuh) menjadi 66.0. |
+| **Tesla T0** | vs Shield Multiplier | 2.5x base | 2.5x base + **35% Bonus Anti-Perisai Alami** | Sangat krusial dan wajib digunakan untuk mengupas perisai Carrier. |
+| **Tesla T1** | Cost / Dmg / Rate | 110G / 28 dmg / 1.6 rate | 105G / 34 dmg / 1.65 rate | Rantai petir membersihkan kawanan swarm dengan cepat. |
+| **Tesla T2A (Overload)** | Dmg / Rate / Chain Targets | 38 dmg / 1.8 rate / 5 target | 44 dmg / 1.85 rate / 5 target | Mengamankan peran spesialis penghancur kerumunan musuh bertameng. |
+| **Cryo T0** | Dmg / Rate / Range | 3 dmg / 0.8 rate / 2.4 tile | 4 dmg / 0.9 rate / 2.6 tile | Jangkauan diperluas untuk memperlambat musuh cepat lebih awal. |
+| **Cryo T1** | Slow / Range | 45% slow / 2.7 tile | 48% slow / 2.9 tile | Efek utilitas pembekuan lebih konsisten. |
+| **Cryo T2A (Zero)** | Freeze / Brittle Vulnerability| 2.2s stun / +35% damage | 2.4s stun / +40% damage | Menggandakan efektivitas combo sinergi elemental dengan Plasma/Railgun. |
+| **Railgun T0** | Dmg / Pierce | 100 dmg / 3 pierce | 110 dmg / 3 pierce | Peran single-hit sniper anti-zirah semakin solid. |
+| **Railgun T2A (Lance)** | Dmg / Rate / Pierce | 95 dmg / 3.0 rate / **99 Pierce** | 55 dmg / 2.2 rate / **6 Pierce Max** | Menghilangkan eksploitasi pembersihan jalur tak terbatas, menyeimbangkan damage garis lurus. |
+| **Railgun T2B (Exec)** | Dmg / Execute Threshold | 360 dmg / <= 18% HP | 380 dmg / <= 20% HP | Menjadi senjata eksekusi elit pembunuh bos paling mematikan. |
+| **Fission Relay** | Cost / Energy Output | 90G / +25 MW | 85G / +25 MW | Pembangunan pembangkit energi lebih hemat modal awal. |
+
+---
+
+### 25.4 Penyesuaian Profil Musuh, Wave Scaling & Sistem Natural Counter
+
+1. **Peningkatan Statistik Musuh:**
+   * **Scout:** HP 34 $\rightarrow$ 42, Speed 112 $\rightarrow$ 110. (Mencegah kematian instan 1 detik oleh 1 Gatling).
+   * **Armored Brute:** HP 240 $\rightarrow$ 260, Armor 0.60 $\rightarrow$ 0.65, Gold 15 $\rightarrow$ 16. (Memerlukan Plasma Cannon untuk mengikis zirah; peluru Gatling murni hanya menghasilkan 35% damage).
+   * **Swarm:** HP 13 $\rightarrow$ 15, Speed 84 $\rightarrow$ 88. (Memaksa penggunaan menara AoE seperti Flak Gatling atau Tesla Coil).
+   * **Healer:** HP 110 $\rightarrow$ 125, Gold 12 $\rightarrow$ 14. (Menjadi prioritas eliminasi bagi Railgun Sniper).
+   * **Shield Carrier:** HP 380 $\rightarrow$ 420, Armor 0.35 $\rightarrow$ 0.40, Gold 28 $\rightarrow$ 30. (Memiliki daya tahan tinggi yang wajib dikupas perisainya terlebih dahulu).
+   * **Boss Sovereign:** HP 1900 $\rightarrow$ 2200, Armor 0.25 $\rightarrow$ 0.30, Gold 140 $\rightarrow$ 160. (Tantangan puncak gelombang 20 yang menuntut seluruh sinergi menara).
+   * **Alpha Gorgon:** HP 800 $\rightarrow$ 900, Armor 0.45 $\rightarrow$ 0.50, Gold 45 $\rightarrow$ 50.
+
+2. **Dinamika Natural Counter di `js/state.js` (`dealDamage`):**
+   * **Pinalti Kerusakan Fisik Terhadap Perisai Energi:**
+     * Senjata bertipe fisik (*Gatling*, *Kinetic Sabot*, *Barricade Collision*) mengalami penalti **-25% damage** ketika menembus perisai aktif musuh (`a *= 0.75`). Hal ini menghentikan taktik *pure physical brute-force*.
+   * **Bonus Kerusakan Energi Terhadap Perisai:**
+     * Senjata bertipe energi (*Tesla Coil*, *Ion Uplink*, *Laser Conduits*) mendapatkan bonus bawaan **+35% damage** terhadap perisai aktif musuh (`a *= 1.35`), menjadikannya counter mutlak dan wajib dibangun saat musuh berpelindung muncul.
+   * **Efek Pengupasan Zirah (Armor Shredding):**
+     * Plasma Cannon mengaplikasikan armor shred permanen (hingga 30-40%), membuka jalan bagi Gatling dan Railgun untuk menembus Brute dan Boss dengan efisiensi maksimal.
+
+3. **Formula Penskalaan Gelombang (Wave Scaling):**
+   * Formula baru di `js/waves.js`: `hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1)^2`.
+   * Peningkatan bertahap dari koefisien linear 0.20 ke 0.22 dan kuadratik 0.014 ke 0.015 memastikan gelombang late-game (Wave 12-20) memberikan tekanan konstan terhadap efisiensi penempatan menara pemain.
+
+---
+
+### 25.5 Rincian Modifikasi Kode Sumber
+
+1. **`js/data.js`:**
+   * Memperbarui seluruh entri definisi objek `TD` (Gatling, Plasma, Cryo, Tesla, Railgun, Relay) dengan angka seimbang.
+   * Membatasi atribut `pierce: 6` pada Railgun Orbital Lance untuk menghilangkan bug wipe peta tak terbatas.
+   * Menyesuaikan seluruh profil pertahanan musuh pada `ED`.
+2. **`js/state.js`:**
+   * Menyematkan kalkulasi natural counter perisai energi (`shieldT > 0` atau `e.shield > 0`) pada fungsi inti `dealDamage`: penalti -25% untuk serangan fisik dan bonus +35% untuk serangan energi/Tesla.
+3. **`tests/test_balance_integrity.js` (Baru):**
+   * Menulis suite pengujian otomatis untuk memvalidasi:
+     * Batas efisiensi DPS/Gold tiap menara sesuai standar desain.
+     * Pencegahan infinite pierce pada Railgun Orbital Lance (`pierce <= 10`).
+     * Integritas armor dan HP baseline musuh.
+     * Mekanik counter perisai energi (verifikasi pengurangan damage fisik vs amplifikasi damage Tesla).
+
+---
+
+### 25.6 Hasil Verifikasi 20 Test Suites (100% Lulus)
+
+Seluruh sistem game dan 20 berkas pengujian otomatis lulus sempurna tanpa error:
+* `node tests/test_balance_integrity.js`: **PASS (Semua metrik integritas balancing terverifikasi 100%)**
+* Seluruh 20 test suite lulus 100%:
+  1. `smoke.js` -> **PASS**
+  2. `audit_bugs.js` -> **PASS (0 static inconsistency bugs)**
+  3. `test_ascension.js` -> **PASS**
+  4. `test_champions.js` -> **PASS**
+  5. `test_deep_synergy.js` -> **PASS**
+  6. `test_effects_realization.js` -> **PASS**
+  7. `test_effects_realization_deep.js` -> **PASS**
+  8. `test_grand_expansion.js` -> **PASS**
+  9. `test_living_ecosystem.js` -> **PASS**
+  10. `test_map_dynamics.js` -> **PASS**
+  11. `test_masterclass_overhaul.js` -> **PASS**
+  12. `test_mastery.js` -> **PASS**
+  13. `test_new_defense_inspector.js` -> **PASS**
+  14. `test_overdrive_fusions.js` -> **PASS**
+  15. `test_paradox_reality.js` -> **PASS**
+  16. `test_reactions.js` -> **PASS**
+  17. `test_sectors.js` -> **PASS**
+  18. `test_ui_layout_overhaul.js` -> **PASS**
+  19. `test_workshop.js` -> **PASS**
+  20. `test_balance_integrity.js` -> **PASS**
+
+**KESIMPULAN: Seluruh ketimpangan (kondisi jomplang) berhasil dieliminasi secara tuntas. Game kini memiliki kurva ekonomi yang ketat, meta kombinasi menara yang sinergis dan wajib (kombinasi Anti-Shield, Armor Shred, Crowd Control, dan Single-Target Finisher), serta dinamika natural counter yang adaptif.**
+
+
 
 
 

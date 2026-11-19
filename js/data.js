@@ -335,72 +335,72 @@ const TD = {
     id: 'gatling', name: 'Gatling Turret', color: '#22d3ee', cost: 50, key: '1', role: 'Rapid fire / Physical', power: [2, 3, 4],
     tip: 'Cheap, relentless single-target fire. Armor blunts physical damage, pair with Plasma (shreds armor) and Cryo (brittle = +damage taken).',
     tiers: [
-      { dmg: 8, rate: 6, range: 2.8, upg: 0, power: 2 },
-      { dmg: 14, rate: 8.5, range: 3.1, upg: 65, power: 3 }
+      { dmg: 6, rate: 5.0, range: 2.8, upg: 0, power: 2 },
+      { dmg: 11, rate: 7.5, range: 3.0, upg: 65, power: 3 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Overdrive Minigun', role: 'Accelerating Fire', color: '#38bdf8', dmg: 16, rate: 11, maxRate: 22, range: 3.3, upg: 135, power: 4, tip: 'Heat ramps rate up to 22/s on focused targets.' },
-      B: { branch: 'B', name: 'Flak Cannon', role: 'Burst Shrapnel AoE', color: '#0ea5e9', dmg: 36, rate: 3.2, range: 3.5, flakRadius: 1.3, shrapnel: 4, upg: 135, power: 4, tip: 'Proximity flak bursts tear into clusters of light enemies.' }
+      A: { branch: 'A', name: 'Overdrive Minigun', role: 'Accelerating Fire', color: '#38bdf8', dmg: 13, rate: 9, maxRate: 15, range: 3.2, upg: 135, power: 4, tip: 'Heat ramps rate up to 15/s on focused targets.' },
+      B: { branch: 'B', name: 'Flak Cannon', role: 'Burst Shrapnel AoE', color: '#0ea5e9', dmg: 38, rate: 3.2, range: 3.5, flakRadius: 1.4, shrapnel: 5, upg: 135, power: 4, tip: 'Proximity flak bursts tear into clusters of light enemies.' }
     }
   },
   plasma: {
-    id: 'plasma', name: 'Plasma Cannon', color: '#fb923c', cost: 110, key: '2', role: 'Splash / Armor shred', power: [5, 7, 9],
+    id: 'plasma', name: 'Plasma Cannon', color: '#fb923c', cost: 95, key: '2', role: 'Splash / Armor shred', power: [5, 7, 9],
     tip: 'Slow AoE shells ignore armor and permanently shred it, so Gatlings and Railguns hit Brutes far harder afterward. Crushes Swarms.',
     tiers: [
-      { dmg: 42, rate: 0.8, range: 2.7, splash: 1.1, shred: 0.12, upg: 0, power: 5 },
-      { dmg: 75, rate: 0.9, range: 3.0, splash: 1.3, shred: 0.18, upg: 100, power: 7 }
+      { dmg: 48, rate: 0.85, range: 2.7, splash: 1.2, shred: 0.15, upg: 0, power: 5 },
+      { dmg: 85, rate: 0.95, range: 3.0, splash: 1.4, shred: 0.22, upg: 95, power: 7 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Nova Mortar', role: 'Nuclear Radiation', color: '#f97316', dmg: 140, rate: 0.55, range: 3.6, splash: 1.7, shred: 0.25, radDur: 4.5, radDps: 26, upg: 185, power: 9, tip: 'Nuclear blast leaves radioactive pool burning and shredding enemies.' },
-      B: { branch: 'B', name: 'Acid Melter', role: 'Corrosive Beam', color: '#ea580c', dmg: 20, rate: 4.5, range: 3.2, splash: 0.7, shred: 0.35, acidAmp: 0.25, upg: 175, power: 9, tip: 'Rapid acid spray melts armor to 0 and amplifies all damage taken.' }
+      A: { branch: 'A', name: 'Nova Mortar', role: 'Nuclear Radiation', color: '#f97316', dmg: 155, rate: 0.55, range: 3.6, splash: 1.7, shred: 0.30, radDur: 4.5, radDps: 32, upg: 180, power: 9, tip: 'Nuclear blast leaves radioactive pool burning and shredding enemies.' },
+      B: { branch: 'B', name: 'Acid Melter', role: 'Corrosive Beam', color: '#ea580c', dmg: 24, rate: 4.8, range: 3.2, splash: 0.8, shred: 0.40, acidAmp: 0.25, upg: 170, power: 9, tip: 'Rapid acid spray melts armor to 0 and amplifies all damage taken.' }
     }
   },
   cryo: {
     id: 'cryo', name: 'Cryo Emitter', color: '#60a5fa', cost: 80, key: '3', role: 'Slow / Brittle', power: [4, 5, 7],
     tip: 'Pulses slow enemies 40% and make them brittle (+20% damage from everything). Tier III pulses periodically freeze enemies (bosses are immune).',
     tiers: [
-      { dmg: 3, rate: 0.8, range: 2.4, slow: 0.4, brittle: 0.2, freeze: 0, upg: 0, power: 4 },
-      { dmg: 6, rate: 1.0, range: 2.7, slow: 0.45, brittle: 0.25, freeze: 0, upg: 75, power: 5 }
+      { dmg: 4, rate: 0.9, range: 2.6, slow: 0.4, brittle: 0.2, freeze: 0, upg: 0, power: 4 },
+      { dmg: 7, rate: 1.1, range: 2.9, slow: 0.48, brittle: 0.25, freeze: 0, upg: 75, power: 5 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Absolute Zero', role: 'Deep Freeze Shatter', color: '#93c5fd', dmg: 14, rate: 0.75, range: 3.1, slow: 0.55, brittle: 0.35, freezeDur: 2.2, shatter: true, upg: 140, power: 7, tip: 'Radial blast freezes all targets solid. Frozen units shatter on death.' },
-      B: { branch: 'B', name: 'Vortex Siphon', role: 'Gravity Anomaly', color: '#3b82f6', dmg: 16, rate: 1.3, range: 2.9, slow: 0.45, brittle: 0.25, pullDist: 26, upg: 140, power: 7, tip: 'Gravitational pulse pulls enemies backwards toward the center.' }
+      A: { branch: 'A', name: 'Absolute Zero', role: 'Deep Freeze Shatter', color: '#93c5fd', dmg: 16, rate: 0.8, range: 3.2, slow: 0.55, brittle: 0.40, freezeDur: 2.4, shatter: true, upg: 140, power: 7, tip: 'Radial blast freezes all targets solid. Frozen units shatter on death.' },
+      B: { branch: 'B', name: 'Vortex Siphon', role: 'Gravity Anomaly', color: '#3b82f6', dmg: 18, rate: 1.4, range: 3.0, slow: 0.45, brittle: 0.25, pullDist: 32, upg: 140, power: 7, tip: 'Gravitational pulse pulls enemies backwards toward the center.' }
     }
   },
   tesla: {
-    id: 'tesla', name: 'Tesla Coil', color: '#facc15', cost: 130, key: '4', role: 'Chain lightning / Energy', power: [6, 8, 10],
+    id: 'tesla', name: 'Tesla Coil', color: '#facc15', cost: 120, key: '4', role: 'Chain lightning / Energy', power: [6, 8, 10],
     tip: 'Lightning chains across up to 4 enemies. Energy damage ignores armor and deals bonus damage to shields, the answer to shielded waves and bosses.',
     tiers: [
-      { dmg: 16, rate: 1.4, range: 2.5, targets: 2, sm: 1.75, upg: 0, power: 6 },
-      { dmg: 28, rate: 1.6, range: 2.8, targets: 3, sm: 2.0, upg: 110, power: 8 }
+      { dmg: 22, rate: 1.5, range: 2.6, targets: 2, sm: 1.75, upg: 0, power: 6 },
+      { dmg: 34, rate: 1.65, range: 2.9, targets: 3, sm: 2.0, upg: 105, power: 8 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Grid Overcharger', role: 'Pylon Buff Conduit', color: '#eab308', dmg: 38, rate: 1.8, range: 3.2, targets: 4, sm: 2.2, buffAura: 0.35, upg: 195, power: 10, tip: 'Chains lightning and grants +35% attack speed to adjacent friendly towers.' },
-      B: { branch: 'B', name: 'EMP Disrupter', role: 'Shield Stripper / Stun', color: '#ca8a04', dmg: 52, rate: 1.25, range: 3.0, targets: 3, sm: 3.5, empStun: 1.6, stripShield: true, upg: 195, power: 10, tip: 'Instantly overloads enemy shields and disables healer/boss abilities.' }
+      A: { branch: 'A', name: 'Grid Overcharger', role: 'Pylon Buff Conduit', color: '#eab308', dmg: 44, rate: 1.85, range: 3.3, targets: 5, sm: 2.2, buffAura: 0.35, upg: 190, power: 10, tip: 'Chains lightning and grants +35% attack speed to adjacent friendly towers.' },
+      B: { branch: 'B', name: 'EMP Disrupter', role: 'Shield Stripper / Stun', color: '#ca8a04', dmg: 58, rate: 1.3, range: 3.1, targets: 4, sm: 3.0, empStun: 1.6, stripShield: true, upg: 190, power: 10, tip: 'Instantly overloads enemy shields and disables healer/boss abilities.' }
     }
   },
   rail: {
     id: 'rail', name: 'Railgun Sniper', color: '#e11d48', cost: 180, key: '5', role: 'Pierce / Crit / Long range', power: [8, 11, 14],
     tip: 'Enormous range and critical hits; the slug pierces every enemy in a straight line. Place it on long straights to rake whole columns of Brutes.',
     tiers: [
-      { dmg: 100, rate: 0.4, range: 5.5, crit: 0.2, cm: 2.5, pierce: 3, upg: 0, power: 8 },
-      { dmg: 180, rate: 0.45, range: 6.5, crit: 0.25, cm: 2.5, pierce: 5, upg: 155, power: 11 }
+      { dmg: 110, rate: 0.38, range: 5.5, crit: 0.2, cm: 2.5, pierce: 3, upg: 0, power: 8 },
+      { dmg: 195, rate: 0.42, range: 6.5, crit: 0.25, cm: 2.5, pierce: 4, upg: 155, power: 11 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Orbital Lance', role: 'Continuous Thermal Beam', color: '#f43f5e', dmg: 95, rate: 3.0, range: 8.0, pierce: 99, beam: true, crit: 0.2, cm: 2.0, upg: 270, power: 14, tip: 'Sustained thermal laser cuts through entire columns continuously.' },
-      B: { branch: 'B', name: 'Executioner', role: 'Anti-Boss Heavy Slug', color: '#be123c', dmg: 360, rate: 0.35, range: 8.5, crit: 0.35, cm: 3.5, pierce: 4, execThresh: 0.18, upg: 270, power: 14, tip: 'Hyper-kinetic round executes non-boss enemies under 18% HP instantly.' }
+      A: { branch: 'A', name: 'Orbital Lance', role: 'Continuous Thermal Beam', color: '#f43f5e', dmg: 55, rate: 2.2, range: 8.0, pierce: 6, beam: true, crit: 0.2, cm: 1.8, upg: 260, power: 14, tip: 'Sustained thermal laser cuts through up to 6 enemies simultaneously.' },
+      B: { branch: 'B', name: 'Executioner', role: 'Anti-Boss Heavy Slug', color: '#be123c', dmg: 380, rate: 0.33, range: 8.5, crit: 0.35, cm: 3.2, pierce: 4, execThresh: 0.20, upg: 270, power: 14, tip: 'Hyper-kinetic round executes non-boss enemies under 20% HP instantly.' }
     }
   },
   relay: {
-    id: 'relay', name: 'Fission Relay', color: '#10b981', cost: 90, key: '6', role: 'Infrastructure / +25 MW', power: [0, 0, 0],
+    id: 'relay', name: 'Fission Relay', color: '#10b981', cost: 85, key: '6', role: 'Infrastructure / +25 MW', power: [0, 0, 0],
     tip: 'Auxiliary fission sub-reactor providing +25 MW to the grid. Click an active relay to trigger Sector Overdrive (+75% Fire Rate nearby).',
     tiers: [
       { dmg: 0, rate: 0, range: 2.2, upg: 0, powerSupply: 25, power: 0 },
-      { dmg: 0, rate: 0, range: 2.5, upg: 80, powerSupply: 40, power: 0 }
+      { dmg: 0, rate: 0, range: 2.5, upg: 75, powerSupply: 40, power: 0 }
     ],
     branches: {
-      A: { branch: 'A', name: 'Fusion Reactor', role: '+60 MW Clean Power', color: '#059669', dmg: 0, rate: 0, range: 2.8, upg: 140, powerSupply: 60, power: 0, tip: 'Advanced fusion core providing massive clean power (+60 MW capacity).' },
-      B: { branch: 'B', name: 'Overcharge Pylon', role: 'Surge Emitter / +35 MW', color: '#34d399', dmg: 0, rate: 0, range: 3.0, upg: 140, powerSupply: 35, power: 0, overdriveBoost: 1.0, tip: 'Amplifies Sector Overdrive to +100% Fire Rate for nearby defenses.' }
+      A: { branch: 'A', name: 'Fusion Reactor', role: '+65 MW Clean Power', color: '#059669', dmg: 0, rate: 0, range: 2.8, upg: 135, powerSupply: 65, power: 0, tip: 'Advanced fusion core providing massive clean power (+65 MW capacity).' },
+      B: { branch: 'B', name: 'Overcharge Pylon', role: 'Surge Emitter / +40 MW', color: '#34d399', dmg: 0, rate: 0, range: 3.0, upg: 135, powerSupply: 40, power: 0, overdriveBoost: 1.0, tip: 'Amplifies Sector Overdrive to +100% Fire Rate for nearby defenses.' }
     }
   },
   fusion_hellfire: {
@@ -915,21 +915,21 @@ function getAscensionData(lv) {
 }
 
 const ED = {
-  scout: { name: 'Scout', hp: 34, speed: 112, r: 10, armor: 0, reward: 4, leak: 1 },
-  brute: { name: 'Armored Brute', hp: 240, speed: 46, r: 18, armor: 0.6, reward: 15, leak: 2 },
-  swarm: { name: 'Swarm', hp: 13, speed: 84, r: 6, armor: 0, reward: 2, leak: 1 },
-  healer: { name: 'Healer', hp: 110, speed: 62, r: 12, armor: 0, reward: 12, leak: 1 },
-  stealth: { name: 'Stealth Infiltrator', hp: 44, speed: 115, r: 9, armor: 0, reward: 8, leak: 1, stealth: true },
-  carrier: { name: 'Shield Carrier', hp: 380, speed: 40, r: 20, armor: 0.35, reward: 28, leak: 2, carrier: true },
-  breacher: { name: 'EMP Breacher', hp: 80, speed: 92, r: 12, armor: 0, reward: 9, leak: 1, breacher: true },
-  boss: { name: 'Boss', hp: 1900, speed: 34, r: 28, armor: 0.25, reward: 140, leak: 8 },
-  gorger: { name: 'Hive Gorger', hp: 320, speed: 65, r: 16, armor: 0.2, reward: 16, leak: 2, gorger: true },
-  alpha_gorgon: { name: 'Alpha Gorgon Apex', hp: 800, speed: 50, r: 26, armor: 0.45, reward: 45, leak: 4 },
-  sapper: { name: 'Subterranean Sapper', hp: 180, speed: 75, r: 13, armor: 0.15, reward: 14, leak: 2, sapper: true },
-  chaff_skimmer: { name: 'Chaff Cloud Skimmer', hp: 220, speed: 70, r: 15, armor: 0.25, reward: 18, leak: 2, skimmer: true },
-  harpoon_leecher: { name: 'Harpoon Leecher', hp: 260, speed: 60, r: 16, armor: 0.3, reward: 22, leak: 2, leecher: true }
+  scout: { name: 'Scout', hp: 42, speed: 110, r: 10, armor: 0, reward: 4, leak: 1 },
+  brute: { name: 'Armored Brute', hp: 260, speed: 44, r: 18, armor: 0.65, reward: 16, leak: 2 },
+  swarm: { name: 'Swarm', hp: 15, speed: 88, r: 6, armor: 0, reward: 2, leak: 1 },
+  healer: { name: 'Healer', hp: 125, speed: 62, r: 12, armor: 0, reward: 14, leak: 1 },
+  stealth: { name: 'Stealth Infiltrator', hp: 52, speed: 115, r: 9, armor: 0, reward: 9, leak: 1, stealth: true },
+  carrier: { name: 'Shield Carrier', hp: 420, speed: 38, r: 20, armor: 0.40, reward: 30, leak: 2, carrier: true },
+  breacher: { name: 'EMP Breacher', hp: 95, speed: 95, r: 12, armor: 0, reward: 10, leak: 1, breacher: true },
+  boss: { name: 'Boss', hp: 2200, speed: 32, r: 28, armor: 0.30, reward: 160, leak: 8 },
+  gorger: { name: 'Hive Gorger', hp: 360, speed: 60, r: 16, armor: 0.35, reward: 18, leak: 2, gorger: true },
+  alpha_gorgon: { name: 'Alpha Gorgon Apex', hp: 900, speed: 48, r: 26, armor: 0.50, reward: 50, leak: 4 },
+  sapper: { name: 'Subterranean Sapper', hp: 210, speed: 72, r: 13, armor: 0.20, reward: 16, leak: 2, sapper: true },
+  chaff_skimmer: { name: 'Chaff Cloud Skimmer', hp: 240, speed: 68, r: 15, armor: 0.30, reward: 20, leak: 2, skimmer: true },
+  harpoon_leecher: { name: 'Harpoon Leecher', hp: 280, speed: 58, r: 16, armor: 0.35, reward: 24, leak: 2, leecher: true }
 };
-const hpScale = n => 1 + 0.2 * (n - 1) + 0.014 * (n - 1) * (n - 1);
+const hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
 
 /* ============================================================

@@ -1426,7 +1426,12 @@ function dealDamage(e, amount, type, src, opts) {
   if (e.brittleT > 0) a *= 1 + (e.brittle || 0.35);
   if (hasPerk('titan_hunter') && (e.type === 'boss' || e.type === 'brute' || e.type === 'carrier')) a *= 1.30;
   if (G.mutator && G.mutator.id === 'ion_storm' && (type === 'energy' || (src && src.type === 'tesla'))) a *= 1.25;
-  if (e.shield > 0 && opts.shieldMult) a *= opts.shieldMult;
+  // Natural Counter Dynamics: Shields deflect kinetic (-25%), conducted by energy (+35%)
+  if (e.shield > 0) {
+    if (type === 'phys') a *= 0.75;
+    else if (type === 'energy' || (src && src.type === 'tesla')) a *= 1.35;
+    if (opts.shieldMult) a *= opts.shieldMult;
+  }
   if (G.mutator && G.mutator.id === 'solar_flare' && (type === 'energy' || type === 'plasma' || (src && (src.type === 'tesla' || src.type === 'plasma')))) a *= 1.35;
 
   // Sector Climates:
