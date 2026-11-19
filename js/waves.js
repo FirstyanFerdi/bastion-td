@@ -192,6 +192,29 @@ function onWaveClear() {
     triggerAnomalyVault(n);
   }
 
+  // 8.0 Megastructure Wave Degradation & Maintenance Requirement
+  if (G.megastructures && G.megastructures.length > 0) {
+    for (const ms of G.megastructures) {
+      if (!ms.isBroken && ms.active) {
+        const maxD = ms.maxDurability || (typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[ms.type] ? MEGASTRUCTURE_CONFIG[ms.type].maxDurability : 3);
+        ms.durability = (ms.durability !== undefined ? ms.durability : maxD) - 1;
+        if (ms.durability <= 0) {
+          ms.durability = 0;
+          ms.isBroken = true;
+          ms.active = false;
+          shake(6);
+          burst(ms.x, ms.y, 25, '#ef4444', 130, 0.6, 3.5, true);
+          addRing(ms.x, ms.y, 10, 60, 0.5, '#ef4444', 4);
+          addText(ms.x, ms.y - 35, 'FACILITY MALFUNCTION! REPAIR NEEDED', '#ef4444', 14);
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+        } else {
+          addText(ms.x, ms.y - 28, 'INTEGRITY: ' + ms.durability + '/' + maxD + ' WAVES', '#38bdf8', 12);
+        }
+      }
+    }
+    G.uiDirty = true;
+  }
+
   saveBest();
 
   // Boss Wave Roguelite Tech Requisition Draft

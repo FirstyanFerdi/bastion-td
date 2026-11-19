@@ -136,7 +136,7 @@ function init() {
     else if (act === 'overclock_mega' && G.sel && MEGASTRUCTURE_CONFIG && MEGASTRUCTURE_CONFIG[G.sel.type]) {
       const ms = G.sel;
       const ocCost = 40;
-      if (G.gold >= ocCost && !ms.overclockT) {
+      if (G.gold >= ocCost && !ms.overclockT && !ms.isBroken) {
         G.gold -= ocCost;
         ms.overclockT = 15;
         burst(ms.x, ms.y, 25, ms.color, 140, 0.6, 4, true);
@@ -144,6 +144,26 @@ function init() {
         addText(ms.x, ms.y - 25, 'CORE OVERCLOCKED!', '#f59e0b', 14);
         G.uiDirty = true;
         if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+      } else {
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+      }
+    }
+    else if (act === 'repair_mega' && G.sel && MEGASTRUCTURE_CONFIG && MEGASTRUCTURE_CONFIG[G.sel.type]) {
+      const ms = G.sel;
+      const conf = MEGASTRUCTURE_CONFIG[ms.type];
+      const maxDur = ms.maxDurability || conf.maxDurability || 3;
+      const repCost = conf.repairCost || Math.floor(conf.cost * 0.35);
+      const isDamaged = ms.isBroken || (ms.durability !== undefined && ms.durability < maxDur);
+      if (G.gold >= repCost && isDamaged) {
+        G.gold -= repCost;
+        ms.durability = maxDur;
+        ms.isBroken = false;
+        ms.active = true;
+        burst(ms.x, ms.y, 30, '#38bdf8', 150, 0.6, 4, true);
+        addRing(ms.x, ms.y, 10, 80, 0.5, '#38bdf8', 4);
+        addText(ms.x, ms.y - 30, 'FACILITY REPAIRED & ONLINE!', '#34d399', 14);
+        G.uiDirty = true;
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
       } else {
         if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
       }

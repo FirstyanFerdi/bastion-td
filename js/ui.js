@@ -22,6 +22,7 @@ const ICONS = {
   redo: ['<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>', 0],
   inf: ['<path d="M12 12c-2-2.6-3.7-4-5.7-4a4 4 0 0 0 0 8c2 0 3.7-1.4 5.7-4s3.7-4 5.7-4a4 4 0 0 1 0 8c-2 0-3.7-1.4-5.7-4z"/>', 0],
   tag: ['<path d="M3.5 12.5L12 4h8v8l-8.5 8.5z"/><circle cx="16" cy="8" r="1.3"/>', 0],
+  wrench: ['<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>', 0],
   spark: ['<path d="M12 2.5L14.5 9.5L21.5 12L14.5 14.5L12 21.5L9.5 14.5L2.5 12L9.5 9.5z"/>', 1],
   bolt: ['<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>', 1]
 };
@@ -176,8 +177,9 @@ function buildDock() {
       el.dataset.megaType = mk;
       el.style.setProperty('--tc', md.color);
       el.style.borderTop = '2px solid ' + md.color;
-      el.innerHTML = '<span class="key" style="background:' + md.color + ';color:#0f172a">2x2</span><canvas width="48" height="48"></canvas><div class="meta"><div class="nm" style="color:' + md.color + '">' + md.name.split(' ')[0] + ' ' + (md.name.split(' ')[1] || '') + '</div><div class="cost"><i class="coin"></i>' + md.cost + '</div><div class="role">' + md.role + '</div></div>' +
-        '<div class="tip"><b style="color:' + md.color + '">★ MEGASTRUCTURE (2x2): ' + md.name + '</b>' + md.desc + '<div class="st"><span><em>POWER</em> -' + md.power + ' MW</span></div></div>';
+      const dispName = md.shortName || (md.name.split(' ')[0] + ' ' + (md.name.split(' ')[1] || ''));
+      el.innerHTML = '<span class="key" style="background:' + md.color + ';color:#0f172a">2x2</span><canvas width="48" height="48"></canvas><div class="meta"><div class="nm" style="color:' + md.color + '">' + dispName + '</div><div class="cost"><i class="coin"></i>' + md.cost + '</div><div class="role">' + md.role + '</div></div>' +
+        '<div class="tip"><b style="color:' + md.color + '">★ MEGASTRUCTURE (2x2): ' + md.name + '</b>' + md.desc + '<div class="st"><span><em>POWER</em> -' + md.power + ' MW</span><span><em>LIFESPAN</em> ' + (md.maxDurability || 3) + ' WAVES</span></div></div>';
       dock.appendChild(el);
       const ic = el.querySelector('canvas').getContext('2d');
       drawMegastructureDockIcon(ic, mk, md);
@@ -242,7 +244,7 @@ function renderInspector() {
         stat3 = ['RADIUS', '180 px']; stat4 = ['POWER', '-' + d.power + ' MW'];
       }
       box.innerHTML = '<h3>DEPLOYING DEFENSE</h3>' +
-        '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>MEGASTRUCTURE (2x2) · <i class="coin"></i>' + d.cost + ' · -' + d.power + ' MW</small></div></div>' +
+        '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>MEGASTRUCTURE (2x2) · <i class="coin"></i>' + d.cost + ' · -' + d.power + ' MW · ' + (d.maxDurability || 3) + ' WAVES</small></div></div>' +
         '<div class="stats-grid">' +
         '<div class="srow"><span>' + stat1[0] + '</span><span class="sv">' + stat1[1] + '</span></div>' +
         '<div class="srow"><span>' + stat2[0] + '</span><span class="sv">' + stat2[1] + '</span></div>' +
@@ -344,6 +346,10 @@ function renderInspector() {
     const killCount = ms.kills || 0;
     const refund = Math.floor(d.cost * 0.7);
     const isOverclocked = (ms.overclockT || 0) > 0;
+    const maxDur = ms.maxDurability || d.maxDurability || 3;
+    const curDur = ms.durability !== undefined ? ms.durability : maxDur;
+    const isBroken = ms.isBroken || curDur <= 0;
+    const repCost = d.repairCost || Math.floor(d.cost * 0.35);
 
     let meterLabel = 'FACILITY POWER LOAD';
     let meterVal = '-' + d.power + ' MW (ONLINE)';
@@ -353,36 +359,70 @@ function renderInspector() {
 
     if (ms.type === 'drone_carrier') {
       meterLabel = 'CARRIER SQUADRON';
-      meterVal = '6 DRONES ACTIVE';
+      meterVal = isBroken ? '0 DRONES (DOCKED)' : '6 DRONES ACTIVE';
       stat1 = ['INTERCEPT', '4 Drones']; stat2 = ['REPAIR', '2 Drones'];
       stat3 = ['DMG', '28 x 2.2/s']; stat4 = ['POWER', '-' + d.power + ' MW'];
     } else if (ms.type === 'tectonic_siphon') {
       meterLabel = 'MANTLE RESONANCE';
-      meterVal = '-' + d.power + ' MW (ONLINE)';
+      meterVal = isBroken ? 'OFFLINE (SEIZED)' : ('-' + d.power + ' MW (ONLINE)');
       stat1 = ['DMG', '250 Quake']; stat2 = ['PULSE', 'Every 3.0s'];
       stat3 = ['RADIUS', '180 px']; stat4 = ['POWER', '-' + d.power + ' MW'];
     }
 
-    if (isOverclocked) {
+    if (isBroken) {
+      meterLabel = 'FACILITY POWER LOAD';
+      meterVal = '0 MW (MALFUNCTION - OFFLINE)';
+      meterPct = 0;
+      meterColor = '#ef4444';
+    } else if (isOverclocked) {
       meterLabel = '★ OVERCLOCK BOOST';
       meterVal = Math.ceil(ms.overclockT) + 's (+50% SPD)';
       meterPct = Math.min(100, (ms.overclockT / 15) * 100);
       meterColor = '#f59e0b';
     }
 
-    const ocBtn = isOverclocked ?
-      '<button class="primary" disabled style="width:100%;background:#059669;color:#fff;font-weight:800">★ OVERCLOCKED</button>' :
-      '<button class="primary" data-act="overclock_mega" style="width:100%">' + svg('up') + 'Overclock <i class="coin"></i>40</button>';
+    // Durability / Operational Lifespan bar
+    const durPct = Math.max(0, Math.min(100, (curDur / maxDur) * 100));
+    const durColor = isBroken ? '#ef4444' : curDur === 1 ? '#f97316' : curDur === 2 ? '#f59e0b' : '#10b981';
+    const durStatus = isBroken ? '0 / ' + maxDur + ' WAVES (BROKEN)' : curDur + ' / ' + maxDur + ' WAVES REMAINING';
+
+    let actionBtns = '';
+    if (isBroken) {
+      const canAfford = G.gold >= repCost;
+      actionBtns = canAfford ?
+        '<button class="primary" data-act="repair_mega" style="width:100%;background:#e11d48;color:#fff;font-weight:800;border:1px solid #fda4af">' + svg('wrench') + 'Repair Facility <i class="coin"></i>' + repCost + '</button>' :
+        '<button class="primary" disabled style="width:100%;background:#334155;color:#94a3b8;font-weight:800">' + svg('wrench') + 'Repair Needs <i class="coin"></i>' + repCost + '</button>';
+    } else {
+      const ocPart = isOverclocked ?
+        '<button class="primary" disabled style="width:100%;background:#059669;color:#fff;font-weight:800">★ OVERCLOCKED</button>' :
+        '<button class="primary" data-act="overclock_mega" style="width:100%">' + svg('up') + 'Overclock <i class="coin"></i>40</button>';
+      const repPart = (curDur < maxDur && G.gold >= repCost) ?
+        '<button class="primary" data-act="repair_mega" style="width:100%;background:#0284c7;color:#fff;margin-top:4px">' + svg('wrench') + 'Overhaul <i class="coin"></i>' + repCost + '</button>' : '';
+      actionBtns = ocPart + repPart;
+    }
     const dismantleBtn = '<button class="sell" tabindex="-1" data-act="dismantle_mega">' + svg('tag') + 'Dismantle Facility <i class="coin"></i>' + refund + '</button>';
 
     const prioHtml = '<div class="prio" id="prioBox">' +
       PRIOS.map(p => '<button tabindex="-1" data-act="prio" data-prio="' + p[0] + '" class="' + ((ms.prio || 'first') === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') +
       '</div>';
 
+    const subtitleText = isBroken ?
+      '<small style="color:#ef4444;font-weight:700">SELECTED MEGASTRUCTURE (2x2) · OFFLINE (NEEDS REPAIR)</small>' :
+      '<small>SELECTED MEGASTRUCTURE (2x2) · ' + curDur + '/' + maxDur + ' WAVES · ' + killCount + ' KILLS</small>';
+
     box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
-      '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + d.color + '">' + d.name + '</h4><small>SELECTED MEGASTRUCTURE (2x2) · ' + killCount + ' KILLS</small></div></div>' +
-      '<div style="margin:5px 0;padding:5px 8px;background:rgba(15,23,42,0.6);border:1px solid ' + d.color + '40;border-radius:3px">' +
-      '<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-bottom:3px">' +
+      '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + d.color + '">' + d.name + '</h4>' + subtitleText + '</div></div>' +
+      '<div style="margin:4px 0;padding:4px 8px;background:rgba(15,23,42,0.7);border:1px solid ' + durColor + '50;border-radius:3px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:9.5px;font-weight:700;margin-bottom:2px">' +
+      '<span style="color:#94a3b8">OPERATIONAL LIFESPAN</span>' +
+      '<span style="color:' + durColor + '">' + durStatus + '</span>' +
+      '</div>' +
+      '<div style="width:100%;height:4px;background:#1e293b;border-radius:2px;overflow:hidden">' +
+      '<div style="width:' + durPct + '%;height:100%;background:' + durColor + '"></div>' +
+      '</div>' +
+      '</div>' +
+      '<div style="margin:4px 0 5px;padding:4px 8px;background:rgba(15,23,42,0.6);border:1px solid ' + meterColor + '40;border-radius:3px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:9.5px;font-weight:700;margin-bottom:2px">' +
       '<span style="color:#94a3b8">' + meterLabel + '</span>' +
       '<span style="color:' + meterColor + '">' + meterVal + '</span>' +
       '</div>' +
@@ -390,16 +430,16 @@ function renderInspector() {
       '<div style="width:' + meterPct + '%;height:100%;background:' + meterColor + '"></div>' +
       '</div>' +
       '</div>' +
-      '<div class="tower-actions">' + ocBtn + dismantleBtn + '</div>' +
+      '<div class="tower-actions">' + actionBtns + dismantleBtn + '</div>' +
       '<div class="stats-grid">' +
-      '<div class="srow"><span>' + stat1[0] + '</span><span class="sv">' + stat1[1] + '</span></div>' +
-      '<div class="srow"><span>' + stat2[0] + '</span><span class="sv">' + stat2[1] + '</span></div>' +
+      '<div class="srow"><span>' + stat1[0] + '</span><span class="sv">' + (isBroken ? '0 (OFFLINE)' : stat1[1]) + '</span></div>' +
+      '<div class="srow"><span>' + stat2[0] + '</span><span class="sv">' + (isBroken ? 'DISABLED' : stat2[1]) + '</span></div>' +
       '<div class="srow"><span>' + stat3[0] + '</span><span class="sv">' + stat3[1] + '</span></div>' +
-      '<div class="srow"><span>' + stat4[0] + '</span><span class="sv">' + stat4[1] + '</span></div>' +
+      '<div class="srow"><span>' + stat4[0] + '</span><span class="sv">' + (isBroken ? '0 MW' : stat4[1]) + '</span></div>' +
       '</div>' +
       prioHtml +
-      '<div class="note" style="border-left:3px solid ' + d.color + ';background:' + d.color + '15;color:#f8fafc;margin-top:6px">' +
-      d.desc +
+      '<div class="note" style="border-left:3px solid ' + (isBroken ? '#ef4444' : d.color) + ';background:' + (isBroken ? 'rgba(239,68,68,0.12)' : (d.color + '15')) + ';color:#f8fafc;margin-top:6px">' +
+      (isBroken ? '⚠️ <b>FACILITY SEIZED:</b> Core mechanics fractured from operational wear. Pay repair cost to restore operational integrity.' : d.desc) +
       '</div>';
 
     const ic = $('inspIcon');

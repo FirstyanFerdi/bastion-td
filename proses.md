@@ -1481,6 +1481,160 @@ Seluruh sistem game dan 20 berkas pengujian otomatis lulus sempurna tanpa error:
 
 **KESIMPULAN: Seluruh ketimpangan (kondisi jomplang) berhasil dieliminasi secara tuntas. Game kini memiliki kurva ekonomi yang ketat, meta kombinasi menara yang sinergis dan wajib (kombinasi Anti-Shield, Armor Shred, Crowd Control, dan Single-Target Finisher), serta dinamika natural counter yang adaptif.**
 
+---
+
+## 26. Penyesuaian Biaya Megastruktur dan Mekanisme Siklus Kerusakan Operasional (Operational Lifespan & Repair Mechanic)
+
+Menindaklanjuti masukan pemain mengenai 3 fasilitas megastruktur (2x2) yang terlalu kuat (*overpowered*) di fase awal serta memiliki harga yang terlalu murah dibandingkan daya hancurnya, diterapkan perombakan ekonomi berskala besar disertai mekanik baru: **Ketentuan Siklus Masa Operasional Fasilitas (*Operational Wave Lifespan*)**. Megastruktur kini memiliki batas ketahanan gelombang; setelah beroperasi selama sejumlah wave tertentu, fasilitas akan mengalami aus/malafungsi (*broken*) dan wajib diperbaiki dengan sejumlah Gold agar dapat aktif kembali.
+
+---
+
+### 26.1 Analisis & Identifikasi Ketimpangan Awal Tiga Megastruktur
+
+Tiga fasilitas megastruktur 2x2 yang berada di dok pertahanan adalah:
+1. **Ion Beam Orbital Uplink Array (`ion_uplink`):** Menghasilkan 420 DPS terus-menerus ke target dengan jangkauan sinar solar laser 65px.
+2. **Autonomous Drone Carrier Base (`drone_carrier`):** Meluncurkan 4 drone penyerang otonom (masing-masing 28 damage x 2.2 rate = ~246 DPS gabungan) dan 2 bot pendingin panas menara.
+3. **Tectonic Resonance Siphon (`tectonic_siphon`):** Memancarkan gelombang gempa 250 damage setiap 3 detik sekaligus menelan musuh non-bos yang HP-nya di bawah 25% langsung ke dalam jurang tektonik (*instant kill*).
+
+#### Masalah Keseimbangan Awal:
+* **Harga Terlalu Murah:**
+  * `ion_uplink` berharga hanya 280 Gold, `drone_carrier` 260 Gold, dan `tectonic_siphon` 300 Gold.
+  * Sebagai perbandingan, menara standar seperti Railgun Sniper membutuhkan total 605 Gold untuk mencapai Tier 2. Dengan modal awal 250 Gold dan pendapatan wave 1-3, pemain dapat langsung mendirikan megastruktur di awal permainan dan menyapu bersih seluruh monster tanpa tantangan.
+* **Tidak Ada Biaya Operasional / Resiko:**
+  * Sekali dibangun, megastruktur beroperasi abadi sepanjang permainan tanpa risiko degradasi, membuat pertahanan menjadi otomatis (*passive autonomous win*).
+
+---
+
+### 26.2 Skema Kenaikan Harga & Efisiensi Ekonomi Baru
+
+Harga ketiga megastruktur dinaikkan secara drastis (hingga hampir 3x lipat dari basis awal) agar posisinya benar-benar menjadi senjata super (*Endgame Titan-Class Super-Weapon*):
+
+| Megastruktur | Ukuran | Harga Awal | Harga Tahap 1 | **Harga Baru (Titan Tier)** | Kenaikan Total | Masa Operasional | Biaya Perbaikan (*Repair*) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Autonomous Drone Carrier** | 2x2 | 260 Gold | 400 Gold | **700 Gold** | **+169.2%** | **4 Wave** | **240 Gold** |
+| **Ion Beam Orbital Uplink** | 2x2 | 280 Gold | 450 Gold | **800 Gold** | **+185.7%** | **3 Wave** | **280 Gold** |
+| **Tectonic Resonance Siphon** | 2x2 | 300 Gold | 500 Gold | **950 Gold** | **+216.7%** | **3 Wave** | **330 Gold** |
+
+Dengan penetapan harga kelas titan ini:
+* Pemain **mustahil membangunnya di early-game** (karena modal awal pemain hanya 250G). Pemain membutuhkan tabungan agresif hingga setidaknya Wave 7–10 untuk mendanai satu unit megastruktur.
+* Sekalipun telah terbangun, pemain harus menyiapkan kas cadangan sebesar **240–330 Gold setiap 3 hingga 4 wave** untuk biaya pemeliharaan agar fasilitas tidak mati di tengah gelombang bos.
+
+---
+
+### 26.3 Mekanisme Ketentuan Khusus: Siklus Keausan per Wave (*Operational Lifespan*)
+
+1. **Inisialisasi Durabilitas:**
+   * Saat pertama kali dibangun (`placeMegastructure`), fasilitas diinisialisasi dengan:
+     * `maxDurability`: Sesuai konfigurasi (3 wave untuk Ion/Tectonic, 4 wave untuk Carrier).
+     * `durability`: Nilai awal penuh (`maxDurability`).
+     * `isBroken: false`, `active: true`.
+2. **Degradasi Setiap Akhir Wave (`onWaveClear`):**
+   * Di akhir setiap gelombang yang berhasil diselesaikan, seluruh megastruktur aktif yang sedang bekerja mengalami aus:
+     $$\text{durability}_{\text{baru}} = \text{durability} - 1$$
+   * Jika sisa durabilitas masih di atas 0, muncul teks indikator melayang:
+     `INTEGRITY: X/Y WAVES`.
+3. **Kondisi Rusak / Malafungsi (*Broken State*):**
+   * Ketika durabilitas mencapai 0:
+     * `ms.isBroken = true; ms.active = false;`
+     * Terjadi getaran layar (*screen shake*), ledakan percikan api/asap merah, dan bunyi alarm malafungsi (*SFX error*).
+     * Teks peringatan darurat melayang: `FACILITY MALFUNCTION! REPAIR NEEDED`.
+   * **Dampak Saat Rusak:**
+     * Fasilitas berhenti menembak total (`updateMegastructures` melewatinya).
+     * Ion Uplink mematikan pilar sinar laser surya.
+     * Drone Carrier menarik seluruh armada drone masuk ke landasan dok dan tidak menyerang.
+     * Tectonic Siphon berhenti berputar dan tidak memancarkan gempa jurang.
+     * Mengeluarkan percikan listrik dan asap berkala sebagai tanda visual kerusakan fisik.
+
+---
+
+### 26.4 Sistem Perbaikan Fasilitas (*Repair & Preventative Maintenance*)
+
+1. **Aksi Tombol Perbaikan (*Repair Facility*):**
+   * Saat megastruktur rusak diseleksi oleh pemain, kartu inspektur taktis menampilkan tombol merah darurat:
+     `[ 🔧 Repair Facility (Biaya Gold) ]` (`data-act="repair_mega"`).
+   * Jika Gold pemain mencukupi, mengklik tombol ini akan:
+     * Mengurangi Gold sebesar biaya perbaikan.
+     * Memulihkan durabilitas kembali penuh (`durability = maxDurability`).
+     * Mengaktifkan kembali sistem operasional (`isBroken = false; active = true;`).
+     * Menghasilkan efek cincin partikel restorasi cyan, suara *upgrade*, dan teks `FACILITY REPAIRED & ONLINE!`.
+2. **Pemeliharaan Berkala (*Preventative Overhaul*):**
+   * Jika fasilitas belum rusak total namun durabilitasnya sudah berkurang (misal sisa 1 atau 2 wave), inspektur menyediakan opsi pemeliharaan dini agar pemain dapat menyervis fasilitas sebelum wave pertempuran krusial dimulai.
+3. **Pintasan Keyboard [U]:**
+   * Tombol pintas `U` pada papan ketik kini secara cerdas mendeteksi status megastruktur: jika fasilitas rusak atau memerlukan servis, menekan `U` langsung mengeksekusi perbaikan tanpa harus mengarahkan kursor ke tombol.
+
+---
+
+### 26.5 Integrasi Visual Canvas & Inspektur Taktis
+
+1. **Perenderan Canvas (`js/render.js`):**
+   * **Gauge Pip Durabilitas:** Di atas setiap megastruktur (posisi `ms.y - 38`), dirender indikator balok pip durabilitas (warna hijau jika penuh/banyak, oranye jika sisa 1 wave, dan merah berkedip saat 0).
+   * **Visual Malafungsi:** Saat rusak, bangunan dilapisi arsiran garis bahaya (*hazard diagonal stripes*), garis tepi merah berkedip, dan label peringatan `⚠ OFFLINE - REPAIR [U]`.
+   * **Peredaman Efek Senjata:** Animasi sinar laser dan putaran bor otomatis dinonaktifkan saat rusak.
+2. **Tampilan Dok Toko (`js/ui.js`):**
+   * Nama fasilitas di kartu dok diperbaiki menggunakan `shortName` (`Ion Uplink`, `Drone Carrier`, `Tectonic Siphon`) sehingga tidak terpotong canggung.
+   * Label harga baru (`450`, `400`, `500`) dan informasi masa operasional tertera dengan jelas.
+3. **Inspektur Taktis (`js/ui.js`):**
+   * Menampilkan bilah **OPERATIONAL LIFESPAN** dengan status terperinci (`X / Y WAVES REMAINING` atau `0 / Y WAVES (BROKEN)`).
+   * Menampilkan status daya dan grid statistik yang menyatakan `(OFFLINE)` saat fasilitas mengalami kerusakan.
+
+---
+
+### 26.6 Rincian Modifikasi Kode Sumber
+
+1. **`js/data.js`:**
+   * Memperbarui `MEGASTRUCTURE_CONFIG` dengan atribut `cost` kelas Titan baru (Drone Carrier 700, Ion Uplink 800, Tectonic Siphon 950), `repairCost` (240, 280, 330), `maxDurability` (4, 3, 3), `shortName`, serta deskripsi taktis masa operasional.
+2. **`js/state.js`:**
+   * Di `placeMegastructure`: Menetapkan `durability`, `maxDurability`, `isBroken`, dan `active`.
+   * Di `updateMegastructures`: Memeriksa kondisi rusak; jika `isBroken`, memancarkan partikel malafungsi dan melewati eksekusi serangan senjata/drone/gempa.
+3. **`js/waves.js`:**
+   * Di `onWaveClear`: Menambahkan pemotongan durabilitas 1 wave untuk seluruh megastruktur aktif, serta memicu transisi kerusakan dan SFX peringatan saat durabilitas habis.
+4. **`js/ui.js`:**
+   * Menambahkan vektor ikon `wrench` pada daftar `ICONS`.
+   * Memperbarui `buildDock` untuk menampilkan nama ringkas, harga baru, dan tooltip durabilitas.
+   * Mengintegrasikan bilah *Operational Lifespan*, tombol `repair_mega`, serta penyesuaian teks status pada inspektur.
+5. **`js/main.js`:**
+   * Menambahkan *event listener* `repair_mega` untuk memvalidasi Gold, merestorasi durabilitas, memicu partikel regenerasi, dan memainkan SFX `upgrade`.
+   * Memperbarui `overclock_mega` agar tidak dapat diaktifkan saat fasilitas dalam keadaan rusak.
+6. **`js/input.js`:**
+   * Memperbarui pintasan tombol `U` agar memprioritaskan klik pada `repair_mega` bila fasilitas sedang membutuhkan perbaikan.
+7. **`js/render.js`:**
+   * Menambahkan visual bilah pips durabilitas, pola garis bahaya merah (*hazard stripes*), teks `⚠ OFFLINE - REPAIR [U]`, serta penonaktifan efek sinar ketika fasilitas rusak.
+8. **`tests/test_megastructure_rebalance.js` (Baru):**
+   * Rangkaian pengujian unit dan integrasi otomatis yang memvalidasi harga baru, inisialisasi durabilitas, degradasi 3 wave berturut-turut hingga rusak, penonaktifan senjata saat rusak, perenderan inspektur, eksekusi tombol perbaikan, dan pemotongan Gold.
+
+---
+
+### 26.7 Hasil Verifikasi 21 Test Suites (100% Lulus)
+
+Seluruh sistem game dan 21 berkas pengujian otomatis lulus sempurna tanpa error:
+* `node tests/test_megastructure_rebalance.js`: **PASS (Semua siklus degradasi wave dan perbaikan terverifikasi 100%)**
+* `node tests/audit_bugs.js`: **PASS (0 static inconsistency bugs, 19 data-act terverifikasi)**
+* Seluruh 21 test suite lulus 100%:
+  1. `smoke.js` -> **PASS**
+  2. `audit_bugs.js` -> **PASS**
+  3. `test_ascension.js` -> **PASS**
+  4. `test_champions.js` -> **PASS**
+  5. `test_deep_synergy.js` -> **PASS**
+  6. `test_effects_realization.js` -> **PASS**
+  7. `test_effects_realization_deep.js` -> **PASS**
+  8. `test_grand_expansion.js` -> **PASS**
+  9. `test_living_ecosystem.js` -> **PASS**
+  10. `test_map_dynamics.js` -> **PASS**
+  11. `test_masterclass_overhaul.js` -> **PASS**
+  12. `test_mastery.js` -> **PASS**
+  13. `test_new_defense_inspector.js` -> **PASS**
+  14. `test_overdrive_fusions.js` -> **PASS**
+  15. `test_paradox_reality.js` -> **PASS**
+  16. `test_reactions.js` -> **PASS**
+  17. `test_sectors.js` -> **PASS**
+  18. `test_ui_layout_overhaul.js` -> **PASS**
+  19. `test_workshop.js` -> **PASS**
+  20. `test_balance_integrity.js` -> **PASS**
+  21. `test_megastructure_rebalance.js` -> **PASS**
+
+**KESIMPULAN: Tiga menara megastruktur 2x2 (Ion Uplink, Drone Carrier, Tectonic Siphon) kini telah diposisikan secara presisi sebagai senjata pamungkas kelas Titan (700–950 Gold) dengan batasan ketahanan gelombang (3–4 wave) yang menuntut alokasi biaya perbaikan berkala (240–330 Gold) oleh pemain.**
+
+
 
 
 

@@ -83,7 +83,7 @@ const nb = window.__nb;
 nb.begin();
 const G = nb.G;
 G.state = 'active';
-G.gold = 500;
+G.gold = 2000;
 
 console.log('--- 1. Testing Deploying State Inspector Cards (Shop Dock Clicks) ---');
 

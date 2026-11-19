@@ -1429,24 +1429,30 @@ const MEGASTRUCTURE_CONFIG = {
   ion_uplink: {
     id: 'ion_uplink',
     name: 'Ion Beam Orbital Uplink Array',
+    shortName: 'Ion Uplink',
     color: '#38bdf8',
     size: 2, // 2x2 grid
-    cost: 280,
+    cost: 800, // Rebalanced: 280 -> 450 -> 800
+    repairCost: 280,
+    maxDurability: 3, // Operates for 3 waves before core overload
     power: 25,
     role: 'Solar Laser Pillar',
-    desc: '2x2 Orbital relay that channels a continuous solar laser beam from the stratosphere (420 DPS).',
+    desc: '2x2 Orbital relay that channels a continuous solar laser beam (420 DPS). Operational lifespan: 3 waves before core breakdown.',
     beamRadius: 65,
     dps: 420
   },
   drone_carrier: {
     id: 'drone_carrier',
     name: 'Autonomous Drone Carrier Base',
+    shortName: 'Drone Carrier',
     color: '#10b981',
     size: 2, // 2x2 grid
-    cost: 260,
+    cost: 700, // Rebalanced: 260 -> 400 -> 700
+    repairCost: 240,
+    maxDurability: 4, // Operates for 4 waves before hangar overhaul
     power: 20,
     role: 'Airborne Carrier Hangar',
-    desc: '2x2 Armored hangar launching 4 Interceptor Drones (seek & shoot) and 2 Mobile Repair/Cooling Bots.',
+    desc: '2x2 Armored hangar launching 4 Interceptors and 2 Repair Bots. Operational lifespan: 4 waves before hangar overhaul.',
     interceptorCount: 4,
     repairBotCount: 2,
     droneDmg: 28,
@@ -1455,12 +1461,15 @@ const MEGASTRUCTURE_CONFIG = {
   tectonic_siphon: {
     id: 'tectonic_siphon',
     name: 'Tectonic Resonance Siphon',
+    shortName: 'Tectonic Siphon',
     color: '#f59e0b',
     size: 2, // 2x2 grid
-    cost: 300,
+    cost: 950, // Rebalanced: 300 -> 500 -> 950
+    repairCost: 330,
+    maxDurability: 3, // Operates for 3 waves before drill failure
     power: 30,
     role: 'Seismic Chasm Pulverizer',
-    desc: '2x2 Core mantle drill that pulses earthquakes every 3s, opening chasms that swallow non-bosses <25% HP.',
+    desc: '2x2 Core drill pulsing 250 dmg earthquakes and swallowing low-HP foes. Operational lifespan: 3 waves before drill failure.',
     pulseInterval: 3.0,
     quakeRadius: 180,
     quakeDmg: 250

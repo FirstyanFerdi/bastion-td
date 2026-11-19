@@ -1939,6 +1939,9 @@ function placeMegastructure(col, row, type) {
     kills: 0,
     dmg: 0,
     active: true,
+    maxDurability: conf.maxDurability || 3,
+    durability: conf.maxDurability || 3,
+    isBroken: false,
     drones: type === 'drone_carrier' ? [] : null
   };
 
@@ -1969,6 +1972,16 @@ function placeMegastructure(col, row, type) {
 function updateMegastructures(dt) {
   if (!G || !G.megastructures || G.megastructures.length === 0) return;
   for (const ms of G.megastructures) {
+    if (ms.isBroken || !ms.active || (ms.durability !== undefined && ms.durability <= 0)) {
+      ms.isBroken = true;
+      ms.active = false;
+      if (Math.random() < 0.04 && typeof burst === 'function') {
+        const sx = ms.x + (Math.random() - 0.5) * 44;
+        const sy = ms.y + (Math.random() - 0.5) * 44;
+        burst(sx, sy, 2, '#ef4444', 35, 0.25, 2, false);
+      }
+      continue;
+    }
     if (ms.overclockT > 0) {
       ms.overclockT = Math.max(0, ms.overclockT - dt);
     }

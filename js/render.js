@@ -1563,22 +1563,45 @@ function drawMegastructures(c, time) {
     if (!conf) continue;
     c.save();
 
+    const maxDur = ms.maxDurability || conf.maxDurability || 3;
+    const curDur = ms.durability !== undefined ? ms.durability : maxDur;
+    const isBroken = ms.isBroken || curDur <= 0;
+
     const pad = 4;
     const rx = ms.c * TILE + pad, ry = ms.r * TILE + pad;
     const rw = 2 * TILE - pad * 2, rh = 2 * TILE - pad * 2;
-    c.fillStyle = '#090e17';
+    c.fillStyle = isBroken ? '#1a0505' : '#090e17';
     c.fillRect(rx, ry, rw, rh);
-    c.strokeStyle = conf.color;
-    c.lineWidth = 2.5;
+
+    const borderCol = isBroken ? (Math.sin(time * 8) > 0 ? '#ef4444' : '#7f1d1d') : conf.color;
+    c.strokeStyle = borderCol;
+    c.lineWidth = isBroken ? 3 : 2.5;
     c.strokeRect(rx, ry, rw, rh);
 
-    c.fillStyle = conf.color;
+    // Hazard stripes if broken
+    if (isBroken) {
+      c.save();
+      c.beginPath();
+      c.rect(rx, ry, rw, rh);
+      c.clip();
+      c.strokeStyle = 'rgba(239, 68, 68, 0.2)';
+      c.lineWidth = 6;
+      for (let offset = -rh; offset < rw + rh; offset += 16) {
+        c.beginPath();
+        c.moveTo(rx + offset, ry);
+        c.lineTo(rx + offset + 20, ry + rh);
+        c.stroke();
+      }
+      c.restore();
+    }
+
+    c.fillStyle = isBroken ? '#ef4444' : conf.color;
     c.fillRect(rx, ry, 6, 6);
     c.fillRect(rx + rw - 6, ry, 6, 6);
     c.fillRect(rx, ry + rh - 6, 6, 6);
     c.fillRect(rx + rw - 6, ry + rh - 6, 6, 6);
 
-    if (ms.overclockT > 0) {
+    if (ms.overclockT > 0 && !isBroken) {
       c.strokeStyle = '#f59e0b';
       c.lineWidth = 2;
       c.setLineDash([4, 4]);
@@ -1588,8 +1611,8 @@ function drawMegastructures(c, time) {
 
     if (ms.type === 'ion_uplink') {
       c.translate(ms.x, ms.y);
-      c.rotate(time * 0.8);
-      c.strokeStyle = 'rgba(56,189,248,0.7)';
+      if (!isBroken) c.rotate(time * 0.8);
+      c.strokeStyle = isBroken ? 'rgba(239,68,68,0.5)' : 'rgba(56,189,248,0.7)';
       c.lineWidth = 2;
       c.beginPath();
       c.arc(0, 0, 24, 0, Math.PI * 2);
@@ -1598,15 +1621,15 @@ function drawMegastructures(c, time) {
         const a = (i * Math.PI) / 2;
         c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * 24, Math.sin(a) * 24); c.stroke();
       }
-      c.rotate(-time * 0.8);
+      if (!isBroken) c.rotate(-time * 0.8);
 
-      const orbPulse = 6 + Math.sin(time * 6) * 2;
-      glow(c, 0, 0, 16, '#38bdf8', 0.8);
-      c.fillStyle = '#bae6fd';
+      const orbPulse = isBroken ? 3 : (6 + Math.sin(time * 6) * 2);
+      if (!isBroken) glow(c, 0, 0, 16, '#38bdf8', 0.8);
+      c.fillStyle = isBroken ? '#f87171' : '#bae6fd';
       c.beginPath(); c.arc(0, 0, orbPulse, 0, Math.PI * 2); c.fill();
       c.translate(-ms.x, -ms.y);
 
-      if (ms.targetX !== null && ms.targetY !== null && ms.targetX !== undefined) {
+      if (!isBroken && ms.targetX !== null && ms.targetY !== null && ms.targetX !== undefined) {
         c.save();
         glow(c, ms.targetX, ms.targetY, conf.beamRadius, '#38bdf8', 0.6);
         c.strokeStyle = 'rgba(56,189,248,0.85)';
@@ -1625,15 +1648,15 @@ function drawMegastructures(c, time) {
         c.restore();
       }
     } else if (ms.type === 'drone_carrier') {
-      c.fillStyle = '#0f172a';
+      c.fillStyle = isBroken ? '#1e1111' : '#0f172a';
       c.fillRect(ms.x - 22, ms.y - 22, 44, 44);
-      c.strokeStyle = '#10b981';
+      c.strokeStyle = isBroken ? '#ef4444' : '#10b981';
       c.lineWidth = 2;
       c.strokeRect(ms.x - 22, ms.y - 22, 44, 44);
-      c.fillStyle = '#34d399';
+      c.fillStyle = isBroken ? '#7f1d1d' : '#34d399';
       c.fillRect(ms.x - 18, ms.y - 2, 36, 4);
 
-      if (ms.drones) {
+      if (ms.drones && !isBroken) {
         for (const d of ms.drones) {
           glow(c, d.x, d.y, 8, d.type === 'interceptor' ? '#10b981' : '#38bdf8', 0.7);
           c.fillStyle = d.type === 'interceptor' ? '#34d399' : '#38bdf8';
@@ -1643,18 +1666,18 @@ function drawMegastructures(c, time) {
         }
       }
     } else if (ms.type === 'tectonic_siphon') {
-      c.fillStyle = '#1c1917';
+      c.fillStyle = isBroken ? '#1c0d0d' : '#1c1917';
       c.beginPath(); c.arc(ms.x, ms.y, 26, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = '#f59e0b';
+      c.strokeStyle = isBroken ? '#ef4444' : '#f59e0b';
       c.lineWidth = 3;
       c.stroke();
 
       c.save();
       c.translate(ms.x, ms.y);
-      c.rotate(time * 4);
+      if (!isBroken) c.rotate(time * 4);
       for (let i = 0; i < 3; i++) {
         const a = (i * Math.PI * 2) / 3;
-        c.fillStyle = '#fbbf24';
+        c.fillStyle = isBroken ? '#78350f' : '#fbbf24';
         c.beginPath();
         c.moveTo(0, 0);
         c.lineTo(Math.cos(a - 0.2) * 24, Math.sin(a - 0.2) * 24);
@@ -1664,10 +1687,26 @@ function drawMegastructures(c, time) {
       c.restore();
     }
 
+    // Durability pips / segments above the facility
+    const pipW = 12, pipH = 3, pipGap = 3;
+    const totalW = maxDur * pipW + (maxDur - 1) * pipGap;
+    const startX = ms.x - totalW / 2;
+    const pipY = ms.y - 38;
+    for (let i = 0; i < maxDur; i++) {
+      const activePip = i < curDur;
+      c.fillStyle = isBroken ? '#ef4444' : activePip ? (curDur === 1 ? '#f97316' : '#10b981') : '#334155';
+      c.fillRect(startX + i * (pipW + pipGap), pipY, pipW, pipH);
+    }
+
     c.font = '800 9px ' + FONT;
-    c.fillStyle = conf.color;
     c.textAlign = 'center';
-    c.fillText(conf.name.toUpperCase(), ms.x, ms.y + 36);
+    if (isBroken) {
+      c.fillStyle = Math.sin(time * 8) > 0 ? '#ef4444' : '#fbbf24';
+      c.fillText('⚠ OFFLINE - REPAIR [U]', ms.x, ms.y + 36);
+    } else {
+      c.fillStyle = conf.color;
+      c.fillText(conf.name.toUpperCase(), ms.x, ms.y + 36);
+    }
 
     c.restore();
   }

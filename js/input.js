@@ -570,8 +570,13 @@ function onKey(e) {
           const repBtn = document.querySelector('button[data-act="repair_barricade"]');
           if (repBtn) repBtn.click();
         } else if (typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[G.sel.type]) {
-          const ocBtn = document.querySelector('button[data-act="overclock_mega"]');
-          if (ocBtn) ocBtn.click();
+          const repBtn = document.querySelector('button[data-act="repair_mega"]');
+          if (repBtn) {
+            repBtn.click();
+          } else {
+            const ocBtn = document.querySelector('button[data-act="overclock_mega"]');
+            if (ocBtn) ocBtn.click();
+          }
         } else {
           upgradeTower(G.sel);
         }
