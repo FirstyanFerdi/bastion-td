@@ -207,7 +207,23 @@ function newGame(keepSpeed) {
     syndicateDebt: { borrowed: 0, balance: 0, wavesLeft: 4, enforcersSpawned: false },
     harmonicLattices: [],
     tacticalProfile: { physDmg: 0, energyDmg: 0, cryoDmg: 0, chokepointKills: 0, longRangeKills: 0, totalKills: 0 },
-    activeHiveMutations: { volatileAcid: false, cryoAdrenaline: false, opticalChaff: false, burrowers: false }
+    activeHiveMutations: { volatileAcid: false, cryoAdrenaline: false, opticalChaff: false, burrowers: false },
+    // 13.0 Visceral Resonance & Kinetic Transcendence
+    debris: [],
+    moltenSlags: [],
+    killStreak: 0,
+    killStreakTimer: 0,
+    aegisLockdownT: 0,
+    aegisOverchargeT: 0,
+    aegisTriggeredThisMatch: false,
+    incomingMortars: [],
+    mechCompanionMode: 'bulwark',
+    mechRadioMessage: null,
+    recentElements: { phys: 0, plasma: 0, cryo: 0, energy: 0 },
+    harmonicCadenceT: 0,
+    chronosSpearAvailable: true,
+    chronosSpearActive: null,
+    hitStopT: 0
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -1322,6 +1338,32 @@ function dealDamage(e, amount, type, src, opts) {
     G.damageTrack[type] += amount;
   }
 
+  // 13.0 Visceral Resonance: Harmonic Cadence Element Tracker
+  if (G && G.recentElements) {
+    const el = (type === 'kinetic' || type === 'phys') ? 'phys' : (type === 'laser' || type === 'tesla' || type === 'energy') ? 'energy' : type;
+    if (G.recentElements[el] !== undefined) {
+      G.recentElements[el] = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.cadence) ? VISCERAL_CONFIG.cadence.windowSeconds : 3.0;
+      if (G.harmonicCadenceT <= 0 &&
+          G.recentElements.phys > 0 &&
+          G.recentElements.plasma > 0 &&
+          G.recentElements.cryo > 0 &&
+          G.recentElements.energy > 0) {
+        G.harmonicCadenceT = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.cadence) ? VISCERAL_CONFIG.cadence.overdriveDuration : 6.0;
+        if (typeof shake === 'function') shake(9.0);
+        if (typeof addRing === 'function') addRing(e.x, e.y, 20, 160, 0.6, '#ec4899', 5);
+        if (typeof burst === 'function') burst(e.x, e.y, 30, '#a855f7', 200, 0.7, 4, true);
+        if (typeof addText === 'function') addText(e.x, e.y - 40, '★ HARMONIC CADENCE OVERDRIVE! ★', '#ec4899', 18);
+        G.banner = {
+          text: '★ HARMONIC CADENCE OVERDRIVE! ★',
+          color: '#ec4899',
+          sub: '4-ELEMENT SYMPHONY · +60% ATK SPD · ZERO HEAT · ZERO AMMO BURN (6s)',
+          t: 3.2
+        };
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('nuke');
+      }
+    }
+  }
+
   // Cursed Protocol: Glass Singularity (Guaranteed Critical Strikes)
   if (G && G.cursedProtocols && G.cursedProtocols.includes('glass_singularity')) {
     opts.crit = true;
@@ -1831,6 +1873,7 @@ function dealDamage(e, amount, type, src, opts) {
     else { toHp = a - e.shield; e.shield = 0; e.shieldT = 0; burst(e.x, e.y, 8, '#67e8f9', 90, 0.4, 2.5, true); }
   }
   e.hp -= toHp;
+  e.lastDmgType = type;
   // Champion Affix: Phase-Shifter teleport on heavy impact
   if (e.affix === 'phase_shifter' && a >= 80 && (!e.phaseCd || e.phaseCd <= 0) && e.hp > 0) {
     e.phaseCd = 3.5;
@@ -1870,6 +1913,66 @@ function dealDamage(e, amount, type, src, opts) {
 function killEnemy(e, src) {
   if (e.dead) return;
   e.dead = true;
+
+  // 13.0 Visceral Resonance: Dynamic Multi-Kill Rampage Combos
+  if (G) {
+    G.killStreak = (G.killStreak || 0) + 1;
+    G.killStreakTimer = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.combos) ? VISCERAL_CONFIG.combos.streakWindow : 1.1;
+    const tiers = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.combos) ? VISCERAL_CONFIG.combos.tiers : [
+      { count: 5, label: 'DECIMATION!', color: '#fbbf24', shake: 3.5, bonusBounty: 0 },
+      { count: 10, label: 'ANNIHILATION!', color: '#f97316', shake: 6.0, bonusBounty: 0.10 },
+      { count: 20, label: 'APEX GODLIKE RAMPAGE!', color: '#c084fc', shake: 10.0, bonusBounty: 0.20 }
+    ];
+    for (const tier of tiers) {
+      if (G.killStreak === tier.count) {
+        if (typeof shake === 'function') shake(tier.shake);
+        const bonusGold = tier.count === 5 ? 25 : tier.count === 10 ? 60 : 150;
+        G.gold = (G.gold || 0) + bonusGold;
+        addText(e.x, e.y - 35, tier.label + ' +' + bonusGold + 'G', tier.color, 16);
+        G.banner = {
+          text: '★ ' + tier.label + ' (' + tier.count + 'x COMBO) ★',
+          color: tier.color,
+          sub: '+' + bonusGold + ' GOLD RAMPAGE BOUNTY AWARDED',
+          t: 2.2
+        };
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('levelup');
+        if (tier.count === 10 && typeof triggerMechVoiceLine === 'function') triggerMechVoiceLine('pacified');
+        break;
+      }
+    }
+  }
+
+  // 13.0 Visceral Resonance: Overkill Kinetic Shatter & Arc Discharge
+  const overkill = Math.max(0, -e.hp);
+  const dmgType = e.lastDmgType || 'phys';
+  if (dmgType === 'phys' || dmgType === 'kinetic') {
+    if (typeof spawnOverkillDebris === 'function') {
+      spawnOverkillDebris(e.x, e.y, e.color || '#94a3b8', overkill);
+    }
+    if (overkill > 15 && typeof shake === 'function') {
+      shake(Math.min(5.0, 1.2 + overkill * 0.02));
+    }
+  } else if (dmgType === 'energy' || dmgType === 'plasma' || dmgType === 'tesla' || dmgType === 'laser') {
+    const arcThresh = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.overkill) ? VISCERAL_CONFIG.overkill.arcDischargeThreshold : 25;
+    const arcRatio = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.overkill) ? VISCERAL_CONFIG.overkill.arcDischargeRatio : 0.70;
+    const arcRange = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.overkill) ? VISCERAL_CONFIG.overkill.arcRange : 130;
+    if (overkill >= arcThresh && G && G.enemies) {
+      let discharged = 0;
+      for (const target of G.enemies) {
+        if (!target.dead && target !== e && Math.hypot(target.x - e.x, target.y - e.y) <= arcRange) {
+          const arcDmg = Math.round(overkill * arcRatio);
+          dealDamage(target, arcDmg, 'energy', src, { isArc: true });
+          if (typeof addBolt === 'function') addBolt(e.x, e.y, target.x, target.y, '#06b6d4', 2.5);
+          discharged++;
+          if (discharged >= 2) break;
+        }
+      }
+      if (discharged > 0 && typeof addText === 'function') {
+        addText(e.x, e.y - 20, 'ARC DISCHARGE x' + discharged, '#06b6d4', 12);
+      }
+    }
+  }
+
   const streakMult = (G && G.callStreak && G.callStreak > 1) ? (1 + (G.callStreak - 1) * 0.4) : 1;
   const scoreStreakMult = (G && G.callStreak && G.callStreak > 1) ? (1 + (G.callStreak - 1) * 0.5) : 1;
   const isBloodPact = G && G.cursedProtocols && G.cursedProtocols.includes('blood_pact');
@@ -3381,6 +3484,464 @@ function updateInfiniteChronicles(dt) {
     G.chaosTimer -= dt;
     if (G.chaosTimer <= 0) {
       resolveChaosIncursion(false);
+    }
+  }
+}
+
+/* ============================================================
+   BASTION TD 13.0: VISCERAL RESONANCE & KINETIC TRANSCENDENCE
+   ============================================================ */
+
+function triggerCitadelAegis() {
+  if (!G || G.aegisTriggeredThisMatch) return;
+  G.aegisTriggeredThisMatch = true;
+  const cfg = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.aegis) ? VISCERAL_CONFIG.aegis : {
+    bulletTimeDuration: 3.0,
+    bulletTimeScale: 0.35,
+    overchargeDuration: 10.0,
+    repulsorPushTiles: 3
+  };
+  G.aegisLockdownT = cfg.bulletTimeDuration;
+  G.aegisOverchargeT = cfg.overchargeDuration;
+
+  // Repulsor Shockwave pushing all active hostiles 3 tiles back
+  const pushDist = (cfg.repulsorPushTiles || 3) * TILE;
+  for (const enemy of (G.enemies || [])) {
+    if (enemy && !enemy.dead && !enemy.isImmune) {
+      enemy.d = Math.max(0, enemy.d - pushDist);
+      if (typeof posAt === 'function') {
+        const p = posAt(enemy.d, enemy.seg, enemy.pathId);
+        enemy.x = p.x; enemy.y = p.y;
+      }
+    }
+  }
+
+  // Visual shockwave & sound
+  if (typeof shake === 'function') shake(18);
+  if (typeof addRing === 'function' && typeof BASE_PT !== 'undefined') {
+    addRing(BASE_PT.x, BASE_PT.y, 20, 320, 0.8, '#06b6d4', 6);
+    addRing(BASE_PT.x, BASE_PT.y, 40, 500, 1.2, '#38bdf8', 4);
+    burst(BASE_PT.x, BASE_PT.y, 35, '#38bdf8', 250, 0.9, 4, true);
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('nuke');
+  G.banner = {
+    text: '★ CITADEL AEGIS PROTOCOL: REPULSOR BURST! ★',
+    color: '#38bdf8',
+    sub: 'BULLET-TIME ACTIVE · OVERCHARGED WEAPONS GRID ONLINE (10s)',
+    t: 3.5
+  };
+  triggerMechVoiceLine('aegis');
+}
+
+function checkCitadelAegis() {
+  if (!G || G.aegisTriggeredThisMatch || G.lives <= 0) return;
+  const thresh = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.aegis && VISCERAL_CONFIG.aegis.triggerLifeThreshold) ? VISCERAL_CONFIG.aegis.triggerLifeThreshold : 2;
+  if (G.lives <= thresh) {
+    triggerCitadelAegis();
+  }
+}
+
+function triggerTitanParry() {
+  if (!G || !G.incomingMortars || G.incomingMortars.length === 0) return false;
+  const mx = (G.mech && G.mech.x) ? G.mech.x : (typeof BASE_PT !== 'undefined' ? BASE_PT.x : 850);
+  const my = (G.mech && G.mech.y) ? G.mech.y : (typeof BASE_PT !== 'undefined' ? BASE_PT.y : 300);
+  const parryDist = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.parry && VISCERAL_CONFIG.parry.distancePx) ? VISCERAL_CONFIG.parry.distancePx : 75;
+
+  let parried = false;
+  for (const m of G.incomingMortars) {
+    if (m.reflected) continue;
+    const dist = Math.hypot(m.x - mx, m.y - my);
+    if (dist <= parryDist) {
+      m.reflected = true;
+      m.progress = 0;
+      m.sx = m.x; m.sy = m.y;
+      m.tx = (m.src && !m.src.dead) ? m.src.x : (m.originX || (mx - 320));
+      m.ty = (m.src && !m.src.dead) ? m.src.y : (m.originY || my);
+      m.speed = 1.6;
+      m.damage *= ((typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.parry && VISCERAL_CONFIG.parry.reflectedDamageMultiplier) ? VISCERAL_CONFIG.parry.reflectedDamageMultiplier : 3.5);
+      parried = true;
+      break;
+    }
+  }
+
+  if (parried) {
+    G.hitStopT = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.parry && VISCERAL_CONFIG.parry.hitStopDuration) ? VISCERAL_CONFIG.parry.hitStopDuration : 0.12;
+    if (typeof shake === 'function') shake(8.0);
+    if (typeof addRing === 'function') addRing(mx, my, 15, 90, 0.35, '#38bdf8', 4);
+    if (typeof burst === 'function') burst(mx, my, 20, '#38bdf8', 180, 0.45, 3.5, true);
+    if (typeof addText === 'function') addText(mx, my - 25, '★ CRITICAL PARRY! 350% DAMAGE ★', '#38bdf8', 16);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('nuke');
+    triggerMechVoiceLine('parry');
+    return true;
+  }
+  return false;
+}
+
+function spawnHostileMortar(sx, sy, tx, ty, src) {
+  if (!G) return null;
+  G.incomingMortars = G.incomingMortars || [];
+  const m = {
+    id: ++eid,
+    sx: sx,
+    sy: sy,
+    tx: tx,
+    ty: ty,
+    originX: sx,
+    originY: sy,
+    x: sx,
+    y: sy,
+    progress: 0,
+    speed: 0.65,
+    radius: 45,
+    damage: 240,
+    reflected: false,
+    src: src
+  };
+  G.incomingMortars.push(m);
+  return m;
+}
+
+function detonateMortar(m) {
+  if (m.reflected) {
+    if (typeof shake === 'function') shake(10.0);
+    burst(m.tx, m.ty, 25, '#38bdf8', 160, 0.6, 4, true);
+    addRing(m.tx, m.ty, 20, 110, 0.4, '#38bdf8', 3);
+    addText(m.tx, m.ty - 20, 'PARRIED BLAST! ' + Math.round(m.damage), '#38bdf8', 18);
+    for (const e of (G.enemies || [])) {
+      if (!e.dead && Math.hypot(e.x - m.tx, e.y - m.ty) <= (m.radius || 50) * 1.5) {
+        dealDamage(e, m.damage, 'plasma', null);
+        e.staggerT = 2.5;
+      }
+    }
+  } else {
+    if (typeof shake === 'function') shake(8.0);
+    burst(m.tx, m.ty, 20, '#f97316', 130, 0.5, 3.5, true);
+    addRing(m.tx, m.ty, 15, 80, 0.4, '#ea580c', 3);
+    if (G.mech && G.mech.active && Math.hypot(G.mech.x - m.tx, G.mech.y - m.ty) <= (m.radius || 45)) {
+      G.mech.hp = Math.max(0, G.mech.hp - 120);
+      addText(G.mech.x, G.mech.y - 20, '-120 MECH HP', '#ef4444', 14);
+    }
+    if (G.moltenSlags) {
+      G.moltenSlags.push({
+        id: ++eid,
+        x: m.tx,
+        y: m.ty,
+        r: 38,
+        life: 8.0,
+        maxLife: 8.0
+      });
+    }
+  }
+}
+
+function spawnOverkillDebris(x, y, color, overkill) {
+  if (!G || !G.debris) return;
+  const count = Math.min(6, Math.max(3, Math.floor(overkill / 20) + 3));
+  for (let i = 0; i < count; i++) {
+    if (G.debris.length >= 32) {
+      G.debris.shift();
+    }
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 70 + Math.random() * 140;
+    G.debris.push({
+      x: x + (Math.random() - 0.5) * 10,
+      y: y + (Math.random() - 0.5) * 10,
+      baseY: y,
+      floorY: y + 20 + Math.random() * 25,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 60,
+      gy: 280,
+      restitution: 0.55,
+      angle: Math.random() * Math.PI * 2,
+      vrot: (Math.random() - 0.5) * 12,
+      size: 3 + Math.random() * 4,
+      color: color || '#94a3b8',
+      life: 1.8,
+      maxLife: 1.8
+    });
+  }
+}
+
+function triggerChronosSpear(tx, ty) {
+  if (!G) return false;
+  if (G.chronosSpearAvailable === false) {
+    if (typeof addText === 'function') addText(tx, ty - 20, 'ORBITAL SPEAR RECHARGING!', '#ef4444', 13);
+    return false;
+  }
+  G.chronosSpearAvailable = false;
+  G.chronosSpearActive = {
+    tx: tx,
+    ty: ty,
+    t: 0,
+    state: 'targeting',
+    maxT: (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.chronosSpear && VISCERAL_CONFIG.chronosSpear.laserWarmup) ? VISCERAL_CONFIG.chronosSpear.laserWarmup : 1.0
+  };
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('target');
+  if (typeof addText === 'function') addText(tx, ty - 30, '⚡ CHRONOS SPEAR TARGET LOCKED ⚡', '#38bdf8', 15);
+  G.banner = {
+    text: '⚡ CHRONOS TUNGSTEN SPEAR INCOMING ⚡',
+    color: '#38bdf8',
+    sub: 'HYPERSONIC KINETIC ORBITAL IMPACT DETECTED',
+    t: 2.5
+  };
+  return true;
+}
+
+function executeChronosSpearImpact(sp) {
+  const tx = sp.tx, ty = sp.ty;
+  const cfg = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.chronosSpear) ? VISCERAL_CONFIG.chronosSpear : { hpDamagePct: 0.70, shake: 22.0, chasmRadius: 110 };
+  if (typeof shake === 'function') shake(cfg.shake || 22.0);
+  if (typeof burst === 'function') {
+    burst(tx, ty, 45, '#38bdf8', 280, 0.8, 5, true);
+    burst(tx, ty, 30, '#f59e0b', 200, 0.7, 4, true);
+  }
+  if (typeof addRing === 'function') {
+    addRing(tx, ty, 20, 240, 0.7, '#38bdf8', 6);
+    addRing(tx, ty, 40, 360, 1.1, '#67e8f9', 4);
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('nuke');
+
+  let primaryTarget = null;
+  let highestHp = 0;
+  for (const e of (G.enemies || [])) {
+    if (e.dead) continue;
+    const d = Math.hypot(e.x - tx, e.y - ty);
+    if (d <= (cfg.chasmRadius || 110)) {
+      if (e.maxHp > highestHp) {
+        highestHp = e.maxHp;
+        primaryTarget = e;
+      }
+    }
+  }
+
+  if (primaryTarget) {
+    const bigDmg = Math.round(primaryTarget.maxHp * (cfg.hpDamagePct || 0.70));
+    dealDamage(primaryTarget, bigDmg, 'phys', null, { isSpear: true });
+    if (typeof addText === 'function') addText(primaryTarget.x, primaryTarget.y - 25, 'ORBITAL OBLITERATION: ' + bigDmg, '#38bdf8', 18);
+  }
+
+  for (const e of (G.enemies || [])) {
+    if (e.dead) continue;
+    if (Math.hypot(e.x - tx, e.y - ty) <= (cfg.chasmRadius || 110)) {
+      dealDamage(e, 800, 'plasma', null);
+      e.staggerT = 3.0;
+    }
+  }
+}
+
+function updateChronosChasm(sp, dt) {
+  const tx = sp.tx, ty = sp.ty;
+  const rad = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.chronosSpear && VISCERAL_CONFIG.chronosSpear.chasmRadius) ? VISCERAL_CONFIG.chronosSpear.chasmRadius : 110;
+  for (const e of (G.enemies || [])) {
+    if (e.dead) continue;
+    const dist = Math.hypot(e.x - tx, e.y - ty);
+    if (dist <= rad && dist > 10) {
+      const pullForce = (1 - dist / rad) * 120 * dt;
+      const angle = Math.atan2(ty - e.y, tx - e.x);
+      e.x += Math.cos(angle) * pullForce;
+      e.y += Math.sin(angle) * pullForce;
+      dealDamage(e, 90 * dt, 'energy', null, { isChasm: true });
+    }
+  }
+}
+
+function setMechCompanionMode(mode) {
+  if (!G) return 'bulwark';
+  const validModes = ['bulwark', 'hunter', 'sentry'];
+  if (!mode || !validModes.includes(mode)) {
+    const idx = validModes.indexOf(G.mechCompanionMode || 'bulwark');
+    mode = validModes[(idx + 1) % validModes.length];
+  }
+  G.mechCompanionMode = mode;
+  if (typeof addText === 'function' && G.mech) {
+    addText(G.mech.x, G.mech.y - 30, 'DOCTRINE: ' + mode.toUpperCase(), '#38bdf8', 14);
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+  triggerMechVoiceLine('engage');
+  G.uiDirty = true;
+  return mode;
+}
+
+function triggerMechVoiceLine(key) {
+  if (!G) return;
+  const lines = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.mechRadio && VISCERAL_CONFIG.mechRadio.voiceLines) ? VISCERAL_CONFIG.mechRadio.voiceLines : null;
+  if (!lines || !lines[key]) return;
+  G.mechRadioMessage = {
+    text: lines[key],
+    t: 3.5,
+    key: key,
+    color: key === 'critical' ? '#ef4444' : key === 'parry' ? '#38bdf8' : '#fbbf24'
+  };
+}
+
+function updateMechAutonomousBehavior(dt) {
+  const m = G.mech;
+  if (!m || m.active || m.isDocked) return;
+  const mode = G.mechCompanionMode || 'bulwark';
+
+  let target = null;
+  if (mode === 'hunter') {
+    let maxHp = 0;
+    for (const e of (G.enemies || [])) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - m.x, e.y - m.y);
+      if (d <= 320 && e.hp > maxHp) {
+        maxHp = e.hp;
+        target = e;
+      }
+    }
+  } else if (mode === 'sentry') {
+    let minDist = 260;
+    for (const e of (G.enemies || [])) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - m.x, e.y - m.y);
+      if (d < minDist && (e.type === 'runner' || e.type === 'swarmer' || e.type === 'splitter' || d < 180)) {
+        minDist = d;
+        target = e;
+      }
+    }
+  } else {
+    let minDist = 200;
+    for (const e of (G.enemies || [])) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - m.x, e.y - m.y);
+      if (d < minDist) {
+        minDist = d;
+        target = e;
+      }
+    }
+    for (const t of (G.towers || [])) {
+      if (Math.hypot(t.x - m.x, t.y - m.y) <= 140) {
+        t.mechBulwarkBuff = 0.5;
+      }
+    }
+  }
+
+  if (target) {
+    m.facing = Math.atan2(target.y - m.y, target.x - m.x);
+    const d = Math.hypot(target.x - m.x, target.y - m.y);
+    if (d > 70 && mode === 'hunter') {
+      m.x += Math.cos(m.facing) * 90 * dt;
+      m.y += Math.sin(m.facing) * 90 * dt;
+    }
+    if (d <= 80 && m.bladeCd <= 0) {
+      m.bladeCd = 1.4;
+      m.swingT = 1.0;
+      dealDamage(target, 360, 'phys', m);
+      burst(target.x, target.y, 8, '#38bdf8', 90, 0.3, 2.5, false);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('hit');
+    } else if (m.vulcanCd <= 0) {
+      m.vulcanCd = 0.14;
+      dealDamage(target, 28, 'phys', m);
+      addFx('tracer', m.x, m.y, target.x, target.y, 0.08, '#fbbf24', 2);
+    }
+  }
+}
+
+function updateVisceralSystems(dt) {
+  if (!G) return;
+
+  // 1. Kill streak timer decay
+  if (G.killStreakTimer > 0) {
+    G.killStreakTimer -= dt;
+    if (G.killStreakTimer <= 0) {
+      G.killStreak = 0;
+    }
+  }
+
+  // 2. Recent elements decay & Harmonic Cadence timer
+  if (G.recentElements) {
+    for (const k in G.recentElements) {
+      if (G.recentElements[k] > 0) {
+        G.recentElements[k] = Math.max(0, G.recentElements[k] - dt);
+      }
+    }
+  }
+  if (G.harmonicCadenceT > 0) {
+    G.harmonicCadenceT = Math.max(0, G.harmonicCadenceT - dt);
+  }
+
+  // 3. Citadel Aegis Protocol Overcharge timer
+  if (G.aegisOverchargeT > 0) {
+    G.aegisOverchargeT = Math.max(0, G.aegisOverchargeT - dt);
+  }
+
+  // 4. Debris physics
+  if (G.debris && G.debris.length > 0) {
+    for (let i = G.debris.length - 1; i >= 0; i--) {
+      const d = G.debris[i];
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.vy += (d.gy || 280) * dt;
+      d.angle = (d.angle || 0) + (d.vrot || 4) * dt;
+      d.life -= dt;
+      const floor = d.floorY || (d.baseY + 30);
+      if (d.y > floor) {
+        d.y = floor;
+        d.vy = -d.vy * (d.restitution || 0.55);
+        d.vx *= 0.8;
+      }
+      if (d.life <= 0) {
+        G.debris.splice(i, 1);
+      }
+    }
+  }
+
+  // 5. Molten Slags decay
+  if (G.moltenSlags && G.moltenSlags.length > 0) {
+    for (let i = G.moltenSlags.length - 1; i >= 0; i--) {
+      const s = G.moltenSlags[i];
+      s.life -= dt;
+      if (s.life <= 0) {
+        G.moltenSlags.splice(i, 1);
+      }
+    }
+  }
+
+  // 6. Incoming Mortars
+  if (G.incomingMortars && G.incomingMortars.length > 0) {
+    for (let i = G.incomingMortars.length - 1; i >= 0; i--) {
+      const m = G.incomingMortars[i];
+      m.progress += dt * m.speed;
+      m.x = lerp(m.sx, m.tx, m.progress);
+      const arcH = Math.sin(Math.min(1, m.progress) * Math.PI) * 70;
+      m.y = lerp(m.sy, m.ty, m.progress) - arcH;
+      if (m.progress >= 1.0) {
+        detonateMortar(m);
+        G.incomingMortars.splice(i, 1);
+      }
+    }
+  }
+
+  // 7. Chronos Spear update
+  if (G.chronosSpearActive) {
+    const sp = G.chronosSpearActive;
+    sp.t += dt;
+    if (sp.state === 'targeting') {
+      if (sp.t >= sp.maxT) {
+        executeChronosSpearImpact(sp);
+        sp.state = 'chasm';
+        sp.t = 0;
+        sp.maxT = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.chronosSpear && VISCERAL_CONFIG.chronosSpear.gravityChasmDuration) ? VISCERAL_CONFIG.chronosSpear.gravityChasmDuration : 8.0;
+      }
+    } else if (sp.state === 'chasm') {
+      updateChronosChasm(sp, dt);
+      if (sp.t >= sp.maxT) {
+        G.chronosSpearActive = null;
+      }
+    }
+  }
+
+  // 8. Autonomous Titan Mech AI Companion Behavior
+  if (G.mech && !G.mech.active && !G.mech.isDocked) {
+    updateMechAutonomousBehavior(dt);
+  }
+
+  // 9. Mech Radio Comms Message decay
+  if (G.mechRadioMessage) {
+    G.mechRadioMessage.t -= dt;
+    if (G.mechRadioMessage.t <= 0) {
+      G.mechRadioMessage = null;
     }
   }
 }

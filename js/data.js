@@ -2351,4 +2351,60 @@ const CORRUPTED_CHIPS = {
   }
 };
 
+/* ============================================================
+   13.0 VISCERAL RESONANCE & KINETIC TRANSCENDENCE CONFIGURATION
+   ============================================================ */
+
+const VISCERAL_CONFIG = {
+  overkill: {
+    debrisMin: 3,
+    debrisMax: 6,
+    arcDischargeThreshold: 25,
+    arcDischargeRatio: 0.70,
+    arcRange: 130
+  },
+  combos: {
+    streakWindow: 1.1,
+    tiers: [
+      { count: 5, label: 'DECIMATION!', color: '#fbbf24', shake: 3.5, bonusBounty: 0 },
+      { count: 10, label: 'ANNIHILATION!', color: '#f97316', shake: 6.0, bonusBounty: 0.10 },
+      { count: 20, label: 'APEX GODLIKE RAMPAGE!', color: '#c084fc', shake: 10.0, bonusBounty: 0.20 }
+    ]
+  },
+  aegis: {
+    triggerLifeThreshold: 2,
+    bulletTimeDuration: 3.0,
+    bulletTimeScale: 0.35,
+    overchargeDuration: 10.0,
+    repulsorPushTiles: 3
+  },
+  parry: {
+    distancePx: 75,
+    reflectedDamageMultiplier: 3.5,
+    staggerDuration: 2.5,
+    hitStopDuration: 0.12
+  },
+  cadence: {
+    windowSeconds: 3.0,
+    overdriveDuration: 6.0,
+    fireRateBoost: 0.60
+  },
+  chronosSpear: {
+    laserWarmup: 1.0,
+    hpDamagePct: 0.70,
+    gravityChasmDuration: 8.0,
+    chasmRadius: 110,
+    shake: 22.0
+  },
+  mechRadio: {
+    voiceLines: {
+      engage: 'Vanguard-01: Systems optimal. Engaging hostiles.',
+      pacified: 'Vanguard-01: Chokepoint pacified. Threats eliminated.',
+      critical: 'Warning: Hull at 25%! Diverting auxiliary flux.',
+      parry: 'Vanguard-01: Incoming heavy ordnance deflected!',
+      aegis: 'Citadel critical! Emergency Aegis capacitors fired!'
+    }
+  }
+};
+
 

@@ -116,6 +116,9 @@ const Sfx = {
       case 'alpha_roar': this.noise(1.1, 0.8, 220, 1, 'lowpass'); this.tone('sawtooth', 75, 32, 1.2, 0.5); this.tone('sine', 48, 20, 1.0, 0.6); break;
       case 'harpoon_tether': this.tone('sawtooth', 880, 240, 0.2, 0.25); this.noise(0.2, 0.3, 2400, 2, 'highpass'); break;
       case 'soil_burn': this.noise(0.3, 0.25, 1800, 1, 'highpass'); this.tone('triangle', 320, 120, 0.2, 0.12); break;
+      case 'nuke': this.noise(1.5, 0.9, 100, 1, 'lowpass'); this.tone('sawtooth', 80, 20, 1.2, 0.6); this.tone('sine', 45, 15, 1.4, 0.7); break;
+      case 'levelup': [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => this.tone('sine', f, f * 1.03, 0.28, 0.18, i * 0.05)); break;
+      case 'target': this.tone('sine', 1200, 1200, 0.08, 0.12); this.tone('sine', 1600, 1600, 0.12, 0.14, 0.08); break;
     }
   }
 };

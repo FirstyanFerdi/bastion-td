@@ -628,6 +628,20 @@ function onKey(e) {
     case 'h': case 'H': if (typeof triggerThermalPurge === 'function') triggerThermalPurge(); break;
     case 'v': case 'V': if (typeof triggerCoreOverload === 'function') triggerCoreOverload(); break;
     case 'z': case 'Z': if (typeof triggerChronoRewind === 'function') triggerChronoRewind(); break;
+    case 'x': case 'X': {
+      const tx = (G && G.mouse && G.mouse.in) ? G.mouse.x : (W / 2);
+      const ty = (G && G.mouse && G.mouse.in) ? G.mouse.y : (H / 2);
+      if (typeof triggerChronosSpear === 'function') triggerChronosSpear(tx, ty);
+      break;
+    }
+    case 'j': case 'J': {
+      if (typeof setMechCompanionMode === 'function') setMechCompanionMode();
+      break;
+    }
+    case 'k': case 'K': {
+      if (typeof triggerTitanParry === 'function') triggerTitanParry();
+      break;
+    }
     case 'n': case 'N': {
       if (G.sel) {
         G.synapseSource = G.synapseSource === G.sel ? null : G.sel;

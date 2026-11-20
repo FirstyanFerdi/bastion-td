@@ -1160,6 +1160,22 @@ function refreshUI() {
       btnDread.disabled = true;
     }
   }
+
+  // 13.0 Visceral Resonance: Chronos Spear & Companion AI Badges
+  const btnSpear = $('btnChronosSpear');
+  if (btnSpear && G) {
+    const isRdy = G.chronosSpearAvailable !== false;
+    btnSpear.innerHTML = 'SPEAR [X] <span id="vSpearBadge" class="cbtn-badge ' + (isRdy ? 'ready' : '') + '">' + (isRdy ? 'RDY' : 'USED') + '</span>';
+    btnSpear.style.borderColor = isRdy ? '#38bdf8' : 'rgba(148,163,184,0.3)';
+    btnSpear.style.color = isRdy ? '#38bdf8' : '#94a3b8';
+  }
+  const btnComp = $('btnCompanionMode');
+  if (btnComp && G) {
+    const mMode = (G.mechCompanionMode || 'bulwark').toUpperCase();
+    btnComp.innerHTML = 'DOCTRINE: <span id="vCompanionBadge">' + mMode + '</span>';
+    btnComp.style.borderColor = mMode === 'HUNTER' ? '#f43f5e' : (mMode === 'SENTRY' ? '#f59e0b' : '#38bdf8');
+  }
+
   renderWaveCard();
   renderSkillsAndPerks();
 }

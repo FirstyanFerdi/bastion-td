@@ -626,6 +626,55 @@ function updateEnemy(e, dt) {
     sp *= 1.25;
   }
 
+  // 13.0 Visceral Resonance: Molten Slag Slow & Thermal Burn
+  if (G && G.moltenSlags && G.moltenSlags.length > 0) {
+    for (const slag of G.moltenSlags) {
+      if (Math.hypot(e.x - slag.x, e.y - slag.y) <= (slag.r || 38)) {
+        sp *= 0.80;
+        dealDamage(e, 35 * dt, 'plasma', null, { isSlag: true, noReaction: true });
+        if (Math.random() < 0.08) burst(e.x, e.y, 2, '#f97316', 30, 0.2, 1.5, false);
+        break;
+      }
+    }
+  }
+
+  // 13.0 Swarm Phalanx Formations
+  if (e.type === 'brute' && G && G.enemies) {
+    for (const ally of G.enemies) {
+      if (ally !== e && !ally.dead && (ally.type === 'runner' || ally.type === 'swarmer') && Math.hypot(ally.x - e.x, ally.y - e.y) <= 80) {
+        ally.phalanxShield = 0.5;
+      }
+    }
+  }
+  if (e.phalanxShield > 0) {
+    e.phalanxShield = Math.max(0, e.phalanxShield - dt);
+    e.armor = Math.min(0.75, (e.armor || 0) + 0.20);
+  }
+
+  // 13.0 Scatter Evasion vs Incoming Heavy Mortars
+  if ((e.type === 'runner' || e.type === 'stalker') && G && G.incomingMortars && G.incomingMortars.length > 0) {
+    for (const m of G.incomingMortars) {
+      if (!m.reflected && m.progress > 0.4 && Math.hypot(m.tx - e.x, m.ty - e.y) <= 80) {
+        e.off = (e.off || 0) + (Math.sign(e.off || 1) || 1) * 35 * dt;
+        e.off = clamp(e.off, -18, 18);
+        break;
+      }
+    }
+  }
+
+  // 13.0 Boss/Elite Tactical Heavy Mortar Launch
+  if ((e.type === 'boss' || e.isElite) && !e.dead && e.d > 50) {
+    e.mortarCd = (e.mortarCd !== undefined ? e.mortarCd : 8.0) - dt;
+    if (e.mortarCd <= 0) {
+      e.mortarCd = (e.type === 'boss' ? 7.0 : 10.0);
+      const targetX = (G.mech && G.mech.active) ? G.mech.x : (typeof BASE_PT !== 'undefined' ? BASE_PT.x - 100 : 750);
+      const targetY = (G.mech && G.mech.active) ? G.mech.y : (typeof BASE_PT !== 'undefined' ? BASE_PT.y : 300);
+      if (typeof spawnHostileMortar === 'function') {
+        spawnHostileMortar(e.x, e.y, targetX + rand(-35, 35), targetY + rand(-35, 35), e);
+      }
+    }
+  }
+
   // Cyber-Hijacked minion AI
   if (e.hijackedT > 0) {
     e.hijackedT -= dt;
@@ -754,6 +803,8 @@ function updateEnemy(e, dt) {
     }
     G.lives -= e.leak; G.baseFlash = 1; G.dmgFlash = 1; shake(e.type === 'boss' ? 16 : 7 + e.leak);
     Sfx.play('leak');
+    // 13.0 Citadel Aegis Protocol Last Stand Check
+    if (typeof checkCitadelAegis === 'function') checkCitadelAegis();
     // 9.0 Persistent Nemesis Retribution on Boss/Elite Leak
     if (e.type === 'boss' || e.isElite || e.isNemesis) {
       if (typeof recordNemesisEscape === 'function') recordNemesisEscape(e);

@@ -216,6 +216,10 @@ function swapTowers(t1, t2) {
 
 function addTowerHeat(t, baseHeat) {
   if (!t || t.type === 'relay') return;
+  if (G && (G.aegisOverchargeT > 0 || G.harmonicCadenceT > 0)) {
+    t.heat = 0;
+    return;
+  }
   let mult = 1.0;
   if (typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('conduit_supercharge')) {
     if (G && G.resonanceLines && G.resonanceLines.some(l => l.target === t || l.relay === t)) {
@@ -235,6 +239,7 @@ function getTowerAmmoType(type) {
 
 function consumeTowerAmmo(t) {
   if (!G || !G.logistics) return;
+  if (G.aegisOverchargeT > 0 || G.harmonicCadenceT > 0) return;
   t.shotsFired = (t.shotsFired || 0) + 1;
   const aType = getTowerAmmoType(t.type);
   if (aType && G.logistics[aType] !== undefined) {
@@ -446,6 +451,10 @@ function updateTower(t, dt) {
   if (typeof hasEdict === 'function') {
     if (hasEdict('edict_steel') && (t.type === 'gatling' || t.type === 'rail')) rateMult *= 1.15;
   }
+
+  // 13.0 Visceral Resonance Overdrives: Citadel Aegis Overcharge & Harmonic Cadence
+  if (G && G.aegisOverchargeT > 0) rateMult *= 1.50;
+  if (G && G.harmonicCadenceT > 0) rateMult *= 1.60;
 
   if (G && G.harmonicLattices && G.harmonicLattices.some(l => l.id === 'kinetic_grid' && pointInTriangle(t.x, t.y, l.p1.x, l.p1.y, l.p2.x, l.p2.y, l.p3.x, l.p3.y))) {
     rateMult *= 1.20;

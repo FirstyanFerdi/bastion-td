@@ -495,6 +495,11 @@ function render() {
   // 12.0 Sovereign Depth Systems
   drawTerraScars(c, time);
   drawHarmonicLattices(c, time);
+  // 13.0 Visceral Resonance Battlefield Systems
+  drawDebris(c, time);
+  drawMoltenSlags(c, time);
+  drawIncomingMortars(c, time);
+  drawChronosSpear(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -664,6 +669,11 @@ function render() {
   drawBulletTimeMatrix(c, time);
   drawCrucibleGambitBadge(c, time);
   drawChaosIncursionHUD(c, time);
+  // 13.0 Visceral Resonance Overlays & HUDs
+  drawHarmonicCadenceVfx(c, time);
+  drawCitadelAegisVfx(c, time);
+  drawMechRadioHUD(c, time);
+  drawKillStreakHUD(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -2504,5 +2514,265 @@ function drawHarmonicLattices(c, time) {
     c.textAlign = 'center';
     c.fillText(lat.name ? lat.name.toUpperCase() : 'HARMONIC', cx, cy - 8);
   }
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 13.0: VISCERAL RESONANCE & KINETIC TRANSCENDENCE RENDERERS
+   ============================================================ */
+
+function drawDebris(c, time) {
+  if (!G || !G.debris || G.debris.length === 0) return;
+  c.save();
+  for (const d of G.debris) {
+    const alpha = clamp(d.life / 0.5, 0, 1);
+    c.globalAlpha = alpha;
+    c.save();
+    c.translate(d.x, d.y);
+    c.rotate(d.angle || 0);
+    const sz = d.size || 4;
+    c.fillStyle = d.color || '#94a3b8';
+    c.strokeStyle = '#0f172a';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(-sz, -sz * 0.7);
+    c.lineTo(sz, -sz * 0.4);
+    c.lineTo(sz * 0.6, sz);
+    c.lineTo(-sz * 0.8, sz * 0.8);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.restore();
+  }
+  c.restore();
+}
+
+function drawMoltenSlags(c, time) {
+  if (!G || !G.moltenSlags || G.moltenSlags.length === 0) return;
+  c.save();
+  for (const s of G.moltenSlags) {
+    const alpha = clamp(s.life / 1.0, 0, 0.85);
+    const pulse = 0.5 + 0.5 * Math.sin(time * 6 + s.id);
+    const r = (s.r || 38);
+    const grad = c.createRadialGradient(s.x, s.y, 2, s.x, s.y, r);
+    grad.addColorStop(0, 'rgba(249,115,22,' + alpha + ')');
+    grad.addColorStop(0.5, 'rgba(234,88,12,' + (alpha * 0.7) + ')');
+    grad.addColorStop(1, 'rgba(127,29,29,0)');
+    c.fillStyle = grad;
+    c.beginPath();
+    c.arc(s.x, s.y, r, 0, Math.PI * 2);
+    c.fill();
+
+    // Fiery crack lines
+    c.strokeStyle = 'rgba(254,240,138,' + (alpha * (0.6 + 0.4 * pulse)) + ')';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(s.x - r * 0.5, s.y - r * 0.2);
+    c.lineTo(s.x, s.y);
+    c.lineTo(s.x + r * 0.4, s.y + r * 0.3);
+    c.moveTo(s.x - r * 0.2, s.y + r * 0.4);
+    c.lineTo(s.x, s.y);
+    c.lineTo(s.x + r * 0.3, s.y - r * 0.4);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function drawIncomingMortars(c, time) {
+  if (!G || !G.incomingMortars || G.incomingMortars.length === 0) return;
+  c.save();
+  for (const m of G.incomingMortars) {
+    const isRefl = m.reflected;
+    const col = isRefl ? '#38bdf8' : '#f97316';
+
+    // Target crosshair
+    const targetPulse = 0.6 + 0.4 * Math.sin(time * 12);
+    c.strokeStyle = isRefl ? 'rgba(56,189,248,' + targetPulse + ')' : 'rgba(239,68,68,' + targetPulse + ')';
+    c.lineWidth = 1.8;
+    c.beginPath();
+    c.arc(m.tx, m.ty, 18, 0, Math.PI * 2);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(m.tx - 24, m.ty); c.lineTo(m.tx + 24, m.ty);
+    c.moveTo(m.tx, m.ty - 24); c.lineTo(m.tx, m.ty + 24);
+    c.stroke();
+
+    // Shadow on ground
+    const groundX = lerp(m.sx, m.tx, m.progress);
+    const groundY = lerp(m.sy, m.ty, m.progress);
+    c.fillStyle = 'rgba(15,23,42,0.45)';
+    c.beginPath();
+    c.ellipse(groundX, groundY, 12, 6, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // Flying projectile
+    c.fillStyle = isRefl ? '#67e8f9' : '#fed7aa';
+    c.strokeStyle = col;
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(m.x, m.y, isRefl ? 7 : 6, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+
+    // Glow aura
+    c.fillStyle = isRefl ? 'rgba(56,189,248,0.35)' : 'rgba(249,115,22,0.35)';
+    c.beginPath();
+    c.arc(m.x, m.y, 14, 0, Math.PI * 2);
+    c.fill();
+  }
+  c.restore();
+}
+
+function drawChronosSpear(c, time) {
+  if (!G || !G.chronosSpearActive) return;
+  const sp = G.chronosSpearActive;
+  c.save();
+  if (sp.state === 'targeting') {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 15);
+    c.strokeStyle = 'rgba(239,68,68,' + (0.6 + 0.4 * pulse) + ')';
+    c.lineWidth = 3;
+    c.setLineDash([12, 6]);
+    c.beginPath();
+    c.moveTo(sp.tx, -50);
+    c.lineTo(sp.tx, sp.ty);
+    c.stroke();
+    c.setLineDash([]);
+
+    c.strokeStyle = '#ef4444';
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.arc(sp.tx, sp.ty, 32 + (1 - sp.t / sp.maxT) * 40, 0, Math.PI * 2);
+    c.stroke();
+    c.font = '800 11px ' + FONT;
+    c.fillStyle = '#ef4444';
+    c.textAlign = 'center';
+    c.fillText('ORBITAL LOCK: ' + (Math.ceil((sp.maxT - sp.t) * 10) / 10).toFixed(1) + 's', sp.tx, sp.ty + 46);
+  } else if (sp.state === 'chasm') {
+    const alpha = clamp(sp.maxT - sp.t, 0, 1);
+    const rad = (typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.chronosSpear && VISCERAL_CONFIG.chronosSpear.chasmRadius) ? VISCERAL_CONFIG.chronosSpear.chasmRadius : 110;
+    const spin = time * 4;
+
+    const g = c.createRadialGradient(sp.tx, sp.ty, 5, sp.tx, sp.ty, rad);
+    g.addColorStop(0, 'rgba(15,23,42,' + (0.95 * alpha) + ')');
+    g.addColorStop(0.3, 'rgba(56,189,248,' + (0.45 * alpha) + ')');
+    g.addColorStop(0.7, 'rgba(147,51,234,' + (0.35 * alpha) + ')');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.beginPath();
+    c.arc(sp.tx, sp.ty, rad, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = '#020617';
+    c.beginPath();
+    c.arc(sp.tx, sp.ty, 22, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = '#38bdf8';
+    c.lineWidth = 2.5;
+    c.stroke();
+
+    for (let i = 0; i < 3; i++) {
+      const armAngle = spin + (i * Math.PI * 2) / 3;
+      c.strokeStyle = i % 2 === 0 ? 'rgba(56,189,248,0.7)' : 'rgba(192,132,252,0.7)';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(sp.tx, sp.ty, 40 + i * 18, armAngle, armAngle + Math.PI * 0.7);
+      c.stroke();
+    }
+  }
+  c.restore();
+}
+
+function drawHarmonicCadenceVfx(c, time) {
+  if (!G || G.harmonicCadenceT <= 0) return;
+  c.save();
+  const pulse = 0.5 + 0.5 * Math.sin(time * 10);
+  const hue = Math.floor((time * 120) % 360);
+  const col = 'hsl(' + hue + ', 90%, 60%)';
+  c.strokeStyle = col;
+  c.lineWidth = 6 + pulse * 4;
+  c.strokeRect(3, 3, W - 6, H - 6);
+
+  c.fillStyle = 'rgba(15,23,42,0.85)';
+  c.strokeStyle = col;
+  c.lineWidth = 2;
+  rr(c, W / 2 - 130, 8, 260, 26, 6);
+  c.fill();
+  c.stroke();
+
+  c.font = '800 11px ' + FONT;
+  c.fillStyle = col;
+  c.textAlign = 'center';
+  c.fillText('★ HARMONIC CADENCE OVERDRIVE (' + Math.ceil(G.harmonicCadenceT) + 's) ★', W / 2, 25);
+  c.restore();
+}
+
+function drawCitadelAegisVfx(c, time) {
+  if (!G) return;
+  if (G.aegisLockdownT > 0) {
+    c.save();
+    const pulse = 0.5 + 0.5 * Math.sin(time * 16);
+    c.strokeStyle = 'rgba(6,182,212,' + (0.5 + 0.3 * pulse) + ')';
+    c.lineWidth = 8;
+    c.strokeRect(4, 4, W - 8, H - 8);
+
+    c.fillStyle = 'rgba(6,182,212,0.06)';
+    c.fillRect(0, 0, W, H);
+    c.restore();
+  }
+}
+
+function drawMechRadioHUD(c, time) {
+  if (!G || !G.mechRadioMessage) return;
+  const msg = G.mechRadioMessage;
+  c.save();
+  const alpha = clamp(msg.t / 0.5, 0, 1);
+  c.globalAlpha = alpha;
+
+  const rx = W - 320, ry = 48, rw = 305, rh = 40;
+  c.fillStyle = 'rgba(11,15,23,0.92)';
+  c.strokeStyle = msg.color || '#38bdf8';
+  c.lineWidth = 1.5;
+  rr(c, rx, ry, rw, rh, 5);
+  c.fill();
+  c.stroke();
+
+  c.strokeStyle = msg.color || '#38bdf8';
+  c.lineWidth = 2;
+  for (let i = 0; i < 4; i++) {
+    const waveH = Math.abs(Math.sin(time * 8 + i)) * 14 + 4;
+    c.beginPath();
+    c.moveTo(rx + 14 + i * 5, ry + 20 - waveH / 2);
+    c.lineTo(rx + 14 + i * 5, ry + 20 + waveH / 2);
+    c.stroke();
+  }
+
+  c.font = '800 9.5px ' + FONT;
+  c.fillStyle = '#f8fafc';
+  c.textAlign = 'left';
+  c.fillText(msg.text, rx + 40, ry + 24);
+  c.restore();
+}
+
+function drawKillStreakHUD(c, time) {
+  if (!G || !G.killStreak || G.killStreak < 3 || G.killStreakTimer <= 0) return;
+  c.save();
+  const kx = W / 2, ky = 72;
+  const timerPct = clamp(G.killStreakTimer / ((typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.combos) ? VISCERAL_CONFIG.combos.streakWindow : 1.1), 0, 1);
+  const col = G.killStreak >= 20 ? '#c084fc' : G.killStreak >= 10 ? '#f97316' : '#fbbf24';
+
+  c.fillStyle = 'rgba(11,15,23,0.85)';
+  c.strokeStyle = col;
+  c.lineWidth = 1.5;
+  rr(c, kx - 70, ky - 18, 140, 28, 4);
+  c.fill();
+  c.stroke();
+
+  c.fillStyle = col;
+  c.fillRect(kx - 65, ky + 6, 130 * timerPct, 3);
+
+  c.font = '800 11.5px ' + FONT;
+  c.fillStyle = col;
+  c.textAlign = 'center';
+  c.fillText('COMBO ' + G.killStreak + 'x RAMPAGE', kx, ky);
   c.restore();
 }

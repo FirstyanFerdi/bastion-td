@@ -333,6 +333,26 @@ function init() {
       if (typeof triggerDreadnoughtStrike === 'function') triggerDreadnoughtStrike();
     });
   }
+  if ($('btnChronosSpear')) {
+    $('btnChronosSpear').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume();
+      const tx = (G && G.mouse && G.mouse.in) ? G.mouse.x : (W / 2);
+      const ty = (G && G.mouse && G.mouse.in) ? G.mouse.y : (H / 2);
+      if (typeof triggerChronosSpear === 'function') triggerChronosSpear(tx, ty);
+    });
+  }
+  if ($('btnCompanionMode')) {
+    $('btnCompanionMode').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume();
+      if (typeof setMechCompanionMode === 'function') setMechCompanionMode();
+    });
+  }
+  if ($('btnTitanParry')) {
+    $('btnTitanParry').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume();
+      if (typeof triggerTitanParry === 'function') triggerTitanParry();
+    });
+  }
   if ($('btnExpedition')) {
     $('btnExpedition').addEventListener('click', () => {
       Sfx.init(); Sfx.resume(); Sfx.play('click');
@@ -541,5 +561,7 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   EXPEDITION_NODE_TYPES, generateExpeditionTree, CHIMERA_PREFIXES, CHIMERA_SUFFIXES, RULE_BENDING_RELICS, NEMESIS_GENOME_TRAITS, QUANTUM_HEAT_MODIFIERS, CHAOS_INCURSIONS, DYNAMIC_ENTROPY_CONFIG, generateChimeraDraft, applyChimeraAffix, applyRuleBendingRelic, evolveNemesisGenome, triggerDynamicPathMorph, triggerChaosIncursion, resolveChaosIncursion, toggleQuantumHeatModifier, startExpeditionNode, completeExpeditionNode, updateInfiniteChronicles,
   // 12.0 Sovereign Depth & Strategic Logistics Exports
   MUNITIONS_LOGISTICS_CONFIG, SOVEREIGN_EDICTS, HARMONIC_LATTICE_CONFIG, CORRUPTED_CHIPS, setLogisticsPolicy, takeSyndicateLoan, hasEdict, consumeTowerAmmo, getTowerAmmoType, updateHarmonicLattices, pointInTriangle,
+  // 13.0 Visceral Resonance Exports
+  VISCERAL_CONFIG, triggerCitadelAegis, checkCitadelAegis, triggerTitanParry, spawnHostileMortar, detonateMortar, spawnOverkillDebris, triggerChronosSpear, executeChronosSpearImpact, updateChronosChasm, setMechCompanionMode, triggerMechVoiceLine, updateMechAutonomousBehavior, updateVisceralSystems,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
 };

@@ -2252,3 +2252,63 @@ Sesuai dengan blueprint `bastion_td_strategic_depth_blueprint.md` yang telah dis
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih).**
 - `tests/smoke.js`: **LULUS (Simulasi 10 Gelombang berjalan mulus tanpa error).**
 - **Seluruh 23 Unit Test Suites di repositori: 100% LULUS.**
+
+---
+
+## 32. FASE 32: BASTION TD 13.0 — VISCERAL RESONANCE & KINETIC TRANSCENDENCE
+
+### 32.1 Ringkasan & Latar Belakang Desain
+Melanjutkan persetujuan blueprint [bastion_td_visceral_resonance_blueprint.md](file:///C:/Users/User/.gemini/antigravity/brain/3483d84c-61da-4d36-985d-fb72d3571a51/bastion_td_visceral_resonance_blueprint.md), Fase 13.0 ini berfokus pada **Sensory Overdrive & Visceral Feedback (Game Juice)**, **Heart-Pounding Clutch Systems**, **Living Reactive World & Autonomous Companion**, serta **Signature Iconic Super-Features**. Sistem ini mentransformasikan permainan dari simulasi strategi taktis murni menjadi pengalaman audio-visual kinetik intens yang memacu dopamin, memberikan respon instan yang memuaskan, momen *comeback* dramatis di ambang kekalahan, serta dinamika medan perang yang bernyawa.
+
+### 32.2 Arsitektur Sistem 13.0 yang Diterapkan
+1. **Sensory Overdrive & Visceral Feedback (Game Juice):**
+   - **Overkill Kinetic Shatter & Bouncing Physics Debris (`G.debris`):** Ketika musuh tereliminasi dengan kerusakan kinetik/balistik berlebih (`-e.hp > 0`), sistem memuntahkan 3–6 partikel pecahan logam/kitin bersegi yang memantul dengan koefisien restitusi `0.55`, gravitasi `gy = 280`, dan rotasi angular dinamis. Partikel dibatasi ketat maksimum 32 objek aktif pada satu waktu agar menjamin performa rendering kanvas 60 FPS stabil. Layar bergetar mikro (*micro-shake* kanvas) proporsional terhadap besar kerusakan overkill.
+   - **Superconductive Energy Arc Overkill (Arc Discharge):** Eliminasi musuh menggunakan elemen energi, plasma, atau tesla dengan overkill >= 25 memicu loncatan listrik bertegangan tinggi (`addBolt`) ke hingga 2 musuh hidup di sekitarnya dalam radius 130px, menghantarkan 70% sisa energi overkill.
+   - **Dynamic Multi-Kill Rampage Combos:** Penghancuran musuh beruntun dalam jendela waktu 1.1 detik mengakumulasikan rantai kombo (`G.killStreak`):
+     - Tier 1: **DECIMATION!** (5 Kills) -> +25 Bonus Gold & Shake 3.5.
+     - Tier 2: **ANNIHILATION!** (10 Kills) -> +60 Bonus Gold, Shake 6.0 & Panggilan Radio Mech *"Chokepoint pacified"*.
+     - Tier 3: **APEX GODLIKE RAMPAGE!** (20 Kills) -> +150 Bonus Gold, Overload Power & Shake 10.0.
+     - Indikator HUD mengapung di kanvas dengan meter peluruhan waktu dinamis.
+
+2. **Heart-Pounding Clutch Systems:**
+   - **Citadel Aegis Protocol (Last Stand Time-Dilation Shockwave):**
+     - Terpicu secara otomatis saat sisa nyawa markas menyentuh 1 atau 2 (`G.lives <= 2`) untuk pertama kali dalam pertandingan.
+     - Mengaktifkan efek perlambatan waktu *Bullet-Time* selama 3.0 detik (skala `dt` diperlambat menjadi `0.35x`).
+     - Melepaskan gelombang kejut *360° Repulsor Shockwave* dari benteng yang mementalkan seluruh musuh aktif mundur sejauh 3 petak (`3 * TILE`).
+     - Mengaktifkan *Overcharged Weapons Grid* selama 10.0 detik (+50% Fire Rate ke seluruh menara dan konsumsi amunisi gratis 0 burn).
+     - Menampilkan visual gelombang kejut ganda, strobo batas layar cyan, dan banner taktis darurat.
+   - **Titan Mech Aegis Parry (Refleksi Kinetik Presisi):**
+     - Musuh Boss dan Elite menembakkan mortir berat busur lengkung (*Heavy Mortars*).
+     - Pemain dapat menekan tombol `[K]` atau klik tombol `PARRY [K]` saat proyektil mortir berada dalam radius 75px dari Titan Mech.
+     - Mortir yang ditangkis memantul kembali ke arah penyerang dengan kecepatan tinggi, menghasilkan **350% reflected damage**, melumpuhkan musuh (*stagger* 2.5s), dan memicu *Hit-Stop Micro Pause* (`G.hitStopT = 0.12s`) untuk kepuasan impak visual instan.
+     - Mortir yang tidak tertangkis meledak di tanah dan meninggalkan kolam lahar panas (*Molten Slag*) selama 8 detik.
+
+3. **Living Reactive World & Autonomous Companion:**
+   - **Autonomous Titan Mech AI Companion (3 Doktrin Taktis):**
+     - Ketika pemain tidak sedang mengemudikan Mech secara manual (`!m.active`), Titan Mech beroperasi secara mandiri dengan 3 doktrin yang dapat diganti (`[J]` atau tombol `DOCTRINE`):
+       - `bulwark`: Berpatroli di dekat markas/chokepoint, memprovokasi musuh, dan memberikan aura +25% armor ke menara kawan di sekitarnya.
+       - `hunter`: Bergerak aktif memburu target dengan HP tertinggi atau musuh Elite, menebas dengan pedang termal dan memberondongkan vulcan.
+       - `sentry`: Mengunci posisi di jalur tembak utama dengan peningkatan kecepatan serang +35% memprioritaskan gerombolan swarm dan unit udara.
+     - **Military Tactical Radio Comms HUD:** Banner komunikasi radio militer dengan visual gelombang frekuensi audio animasi dan panggilan suara situasional (*engage, pacified, critical, parry, aegis*).
+   - **Swarm Phalanx Formations & Scatter Evasion:**
+     - Armored Brute melangkah maju memimpin formasi dan memberikan perlindungan perisai +20% armor kepada kawanan unit lemah (Runner/Swarmer) di belakangnya.
+     - Unit lincah (Runner/Stalker) mendeteksi bayangan proyektil mortir berat yang mendekat dan melakukan manuver menghindar secara lateral menjauhi episentrum ledakan.
+   - **Battlefield Molten Slag Hazards:** Kolam lahar membara menghasilkan 35 DPS thermal burn dan memperlambat pergerakan musuh sebesar -20%.
+
+4. **Signature Iconic Super-Features:**
+   - **The Harmonic Cadence (4-Element Symphony Overdrive):**
+     - Melacak reaksi kerusakan 4 elemen inti (Physical, Plasma, Cryo, Energy) dalam jendela waktu 3 detik.
+     - Ketika keempat elemen berhasil mengenai musuh secara simultan: Memicu **HARMONIC CADENCE OVERDRIVE** selama 6 detik!
+     - Seluruh menara pertahanan memperoleh +60% Attack Speed, panas senjata nol (*Zero Heat*), dan konsumsi amunisi gratis (*Zero Munitions Burn*).
+     - Efek visual berupa bingkai spektrum kromatik pelangi berdenyut di batas layar kanvas.
+   - **Chronos Tungsten Orbital Spear:**
+     - Kemampuan super-serangan orbital global yang dipicu melalui tombol `SPEAR [X]` atau tombol `[X]`.
+     - Laser penanda orbital mengunci target selama 1.0 detik, disusul jatuhnya batang tungsten kinetik hipersonik dari orbit yang menghantam tanah dengan getaran layar masif (`shake 22`).
+     - Mengakibatkan kerusakan penetrasi 70% Max HP pada musuh terkuat dan ledakan AoE 800 flat damage ke semua musuh dalam radius 110px.
+     - Meninggalkan retakan gravitasi *Singularity Gravity Chasm* selama 8 detik yang terus menyedot dan meremukkan musuh ke pusat gravitasi.
+
+### 32.3 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_visceral_resonance.js`: **LULUS 100%** (Overkill Debris, Arc Discharge, Combos, Citadel Aegis, Titan Parry, Molten Slag, Harmonic Cadence, Chronos Spear, Autonomous Mech Companion).
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih).**
+- `tests/smoke.js`: **LULUS (Simulasi 9 Gelombang dan 13.575 langkah rendering kanvas mulus tanpa error).**
+- **Seluruh 24 Unit Test Suites di repositori: 100% LULUS.**

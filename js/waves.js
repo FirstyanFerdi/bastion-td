@@ -159,6 +159,7 @@ function callWave() {
 function onWaveClear() {
   G.callStreak = 0;
   G.adrenalineT = 0;
+  G.chronosSpearAvailable = true;
   const n = G.wave, bonus = 25 + n * 4;
   const isVC = hasPerk('venture_capital');
   const intRate = isVC ? 0.14 : 0.08, intCap = isVC ? 260 : 150;
@@ -395,6 +396,16 @@ function endGame(won) {
    ============================================================ */
 function update(dt) {
   if (G.drafting) return;
+  // 13.0 Visceral Resonance: Hit-Stop Micro Freeze
+  if (G.hitStopT > 0) {
+    G.hitStopT = Math.max(0, G.hitStopT - dt);
+    return;
+  }
+  // 13.0 Citadel Aegis Protocol Bullet-Time Dilation
+  if (G.aegisLockdownT > 0) {
+    G.aegisLockdownT = Math.max(0, G.aegisLockdownT - dt);
+    dt *= ((typeof VISCERAL_CONFIG !== 'undefined' && VISCERAL_CONFIG.aegis && VISCERAL_CONFIG.aegis.bulletTimeScale) ? VISCERAL_CONFIG.aegis.bulletTimeScale : 0.35);
+  }
   G.time += dt; G.anim += dt;
 
   // Commander skills cooldown
@@ -1007,6 +1018,9 @@ function update(dt) {
 
   // 12.0 Sovereign Depth Harmonic Lattices Update
   if (typeof updateHarmonicLattices === 'function') updateHarmonicLattices();
+
+  // 13.0 Visceral Resonance & Kinetic Transcendence Updates
+  if (typeof updateVisceralSystems === 'function') updateVisceralSystems(dt);
 }
 
 /* ============================================================
