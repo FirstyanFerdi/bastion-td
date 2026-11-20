@@ -2312,3 +2312,126 @@ Melanjutkan persetujuan blueprint [bastion_td_visceral_resonance_blueprint.md](f
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih).**
 - `tests/smoke.js`: **LULUS (Simulasi 9 Gelombang dan 13.575 langkah rendering kanvas mulus tanpa error).**
 - **Seluruh 24 Unit Test Suites di repositori: 100% LULUS.**
+
+---
+
+## 33. Implementasi Arsitektur Bastion TD 14.0: The Omni-Resonance Matrix & Hyper-Evolution
+
+Berdasarkan master blueprint `bastion_td_hyper_evolution_blueprint.md` yang telah disetujui pengguna, telah diimplementasikan penuh 5 pilar sistem hiper-revolusioner yang mengubah dinamika permainan:
+
+### 33.1 Lima Pilar Sistem Hiper-Evolusi
+1. **Pilar 1: The Modular Chassis Architect (Frankenstein Foundry):**
+   - Sistem perakitan kustom 3 komponen modular:
+     - **Chassis Archetype:** `pneumatic_biped` (langkah bipedal dinamis), `highground_bastion` (platform kokoh jangkauan tinggi), `hex_hover_drone` (drone heksagonal melayang yang mengorbit di sekitar fondasi).
+     - **Payload Dispersal Core:** `tachyon_rail` (penetrasi 4 musuh), `cluster_mortar` (ledakan klaster bertubi-tubi), `tesla_arc` (lompatan listrik 3 cabang), `cryo_chemical` (pembekuan dan dispersi aerosol).
+     - **Logic CPU Core:** `apex_sniper` (+35% Crit DMG), `overkill_dynamo` (refund amunisi kinetik 50% dari overkill damage), `recoil_accelerator` (fire rate meningkat seiring rentetan tembakan berkelanjutan), `martyr_capacitor` (ledakan reaktor darurat saat hancur).
+   - Fungsi perakitan: `craftCustomTower(chassisId, payloadId, cpuId, col, row)`.
+   - Menara kustom beroperasi independen melalui `updateCustomTower` dan `fireCustomTower` tanpa mengotori definisi standar.
+2. **Pilar 2: Emergent Chemical & Kinetic Alchemy Matrix:**
+   - **Sublimation Steam Cloud:** Dihasilkan ketika proyektil Cryo mengenai genangan lahar *Molten Slag*. Membentuk awan uap tebal yang mengaburkan pandangan musuh (-40% akurasi/deteksi dan pembiasan laser ramah).
+   - **Thermobaric Bio-Gas Cloud & Detonation:** Serangan plasma pada mayat asam memicu kantong gas bio yang sangat mudah meledak. Ketika tersambar muatan energi/Tesla, memicu *Thermobaric Bio-Detonation* raksasa (AoE 450 damage dan efek stagger 2.0s).
+   - Detonasi dan siklus hidup dikelola secara real-time melalui `spawnSteamCloud`, `spawnBioGasCloud`, dan `detonateThermobaricBioGas`.
+3. **Pilar 3: Sentient Hivemind Evolution & Real-Time Bio-Metamorphosis:**
+   - **Real-Time Necro-Cannibalism:** Unit kawanan (Swarm/Runner) secara otonom memakan mayat musuh yang gugur di dekatnya (`corpse.consumed = true`).
+   - **Abyssal Apex Juggernaut Metamorphosis:** Setelah memakan 3 mayat, unit kawanan bertransformasi secara real-time menjadi monster kolosal berarmor tebal (`hp x4.5`, `armor 0.65`, raungan alfa mengguncang layar).
+4. **Pilar 4: Quantum Syndicate Bourse & Void Bargains:**
+   - **Munitions Futures Market:** Pemain dapat berspekulasi memperdagangkan komoditas amunisi (Kinetic, Plasma, Cryo) dengan fluktuasi harga penawaran/permintaan dinamis setiap akhir gelombang.
+   - **Forbidden Void Bargains:** Perjanjian berkekuatan tinggi berisiko ekstrem:
+     - `blood_conduit`: +150% Crit Damage konstan, namun menguras 1 Life markas setiap 45 detik.
+     - `chronos_bankruptcy`: +2000 Gold instan seketika, namun menara mengalami penalti -50% Fire Rate selama 3 gelombang berikutnya.
+     - `quantum_singularity_bond`: +100 MW daya bersih konstan, namun 25% musuh memperoleh perisai kuantum.
+   - Antarmuka terminal modal Bourse terintegrasi penuh dalam `showOverlay('bourse')`.
+5. **Pilar 5: Titan Mech Exosuit Ascendant & Kinetic Battlefield Manipulation:**
+   - **Structural Lift & Relocation (Pikul & Pindahkan Menara):** Titan Mech dapat mendekati menara apapun, menekan tombol `[E]` untuk mengangkat menara ke atas bahunya, bergerak lincah di medan perang sembari menara di bahunya tetap menembak aktif, lalu menaruhnya kembali di petak kosong manapun dengan tombol `[E]`.
+   - **Overcharge Hyper-Flux Tether:** Titan Mech mengorbankan 25% daya baterai untuk menambatkan sinar flux overcharge ke menara pertahanan, melipatgandakan kecepatan tembak (+150% Fire Rate) dan memberikan +40% bonus damage selama 8 detik.
+   - **3 Exosuit Chassis Archetypes:** Pemain dapat mengganti arsitektur exosuit Mech secara instan (`vanguard`, `phantom`, `archon`).
+
+---
+
+## 34. Perbaikan Komprehensif Tata Letak UI & Resolusi Tangkapan Layar Pengguna
+
+Menindaklanjuti secara tuntas tangkapan layar panel inspektur Megastruktur yang dilampirkan pengguna:
+
+### 34.1 Analisis Akar Masalah Tangkapan Layar
+1. **Kemunculan Scrollbar Putih Native Windows (16px):**
+   * Browser Chromium (Chrome/Edge) pada Windows merender scrollbar putih sistem yang tebal dengan tombol panah `▲` dan `▼`.
+   * **Penyebab:** Aturan standar `scrollbar-width: thin; scrollbar-color: ...` sebelumnya dibungkus di dalam `@supports (-moz-appearance: none)` yang hanya berlaku untuk Firefox. Karena Chrome/Edge tidak cocok dengan kondisi tersebut, Chromium jatuh kembali (*fallback*) ke scrollbar default sistem Windows berwarna putih.
+   * **Dampak:** Memotong lebar kerja kartu inspektur sebesar 16px, merusak estetika gelap sci-fi, dan memicu pemotongan isi tombol.
+2. **Pemotongan Teks & Koin pada Tombol "Overhaul":**
+   * Tombol `Overhaul` menampilkan ikon kunci inggris, teks, dan ikon koin emas yang terpotong setengah di tepi kanan tanpa menampilkan angka biaya perbaikan.
+   * **Penyebab:** Kelas dasar `.primary` memiliki aturan `clip-path: polygon(...)` dengan sudut terpotong 8px serta padding horizontal besar (18px) dan letter-spacing lebar. Pada grid 2-kolom selebar ~150px, teks `OVERHAUL` beserta ikon dan koin meluap melebihi batas poligon sehingga terpotong.
+3. **Overhang Vertikal yang Memicu Overflow yang Tidak Perlu:**
+   * Tumpukan vertikal inspektur melebihi wadah flex sekitar 15-20px pada resolusi standar, sehingga memicu scrollbar yang tidak diinginkan.
+
+---
+
+### 34.2 Solusi Desain & Implementasi Kode
+1. **Pemberantasan Scrollbar Putih & Cyber Dark Universal (`css/style.css`):**
+   * Mengeluarkan deklarasi scrollbar dari kurungan `@supports` sehingga berlaku secara universal ke semua browser modern:
+     ```css
+     * {
+       scrollbar-width: thin;
+       scrollbar-color: #334155 rgba(11, 15, 23, 0.7);
+     }
+     ::-webkit-scrollbar { width: 5px; height: 5px; }
+     ::-webkit-scrollbar-track { background: rgba(11, 15, 23, 0.7); }
+     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+     ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+     ```
+   * Menjamin bahwa pada Chrome, Edge, Firefox, dan Safari, antarmuka selalu menampilkan scrollbar ultra-ramping bernuansa gelap militer taktis tanpa bilah putih native Windows.
+2. **Anti-Truncation Tombol Aksi Inspektur (`css/style.css`, `js/ui.js`):**
+   * Menegaskan `clip-path: none !important; border-radius: 4px !important;` pada semua tombol aksi `.tower-actions button`.
+   * Mengatur `padding: 5px 6px !important; font-size: 9.5px !important; letter-spacing: .02em !important; min-height: 28px;` sehingga seluruh teks, ikon svg, dan lencana koin emas termuat dengan ruang lega tanpa terpotong.
+   * Mempertahankan tombol `Dismantle Facility` membentang simetris 100% pada baris kedua (`sell span-2`).
+3. **Kompaksi Vertikal Presisi:**
+   * Merampingkan padding `#inspector` menjadi `6px 8px;`.
+   * Menyesuaikan margin dan padding `.telemetry-card`, `.stats-grid`, dan `.note` dengan penghematan vertikal sebesar ~35px.
+   * Mengubah grid prioritas bidikan `.prio` menjadi `repeat(4, 1fr)` sehingga keempat opsi (*First, Last, Strongest, Weakest*) berjejer rapi dalam 1 baris tunggal, meniadakan baris kedua yang canggung.
+   * Hasilnya: Seluruh konten inspektur Megastruktur pas sempurna di dalam kartu tanpa memicu overflow/scrollbar pada layar standar!
+
+---
+
+### 34.3 Verifikasi Kualitas & Integritas Pengujian
+- `tests/test_hyper_evolution.js`: **100% LULUS** (Pengujian lengkap Frankenstein Foundry, Lift & Shoulder Carry, Tether Overcharge, Alchemy Reactions, Hivemind Metamorphosis, Quantum Bourse, Exosuit).
+- `tests/test_ui_layout_overhaul.js`: **100% LULUS** (Validasi topbar semantic grouping, CSS anti-collision, dock icon generation, dan deconfliction).
+- `tests/test_new_defense_inspector.js`: **100% LULUS** (Validasi kesesuaian visual kartu inspektur Megastruktur dan Barikade).
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih).**
+- `tests/smoke.js`: **LULUS (14.510 langkah simulasi, 8 gelombang penuh tanpa runtime error).**
+- **Seluruh 25 Unit Test Suites di repositori: 100% LULUS.**
+
+---
+
+## 35. Implementasi Bastion TD 15.0: Apex Ascendant (The Chrono-Singularity Nexus & Sentient Warfare Matrix)
+
+Berdasarkan master blueprint `bastion_td_apex_ascendant_blueprint.md` yang telah disetujui pengguna, telah diimplementasikan penuh 5 pilar sistem permainan tingkat lanjut berskala ganda:
+
+### 35.1 Lima Pilar Inti Sistem Apex Ascendant
+1. **Pilar 1: Chrono-Singularity Nexus & Temporal Echo Loop:**
+   - Pemain dapat menekan tombol `ANCHOR [C]` atau pintasan keyboard `[C]` saat gelombang aktif untuk menaruh *Chrono-Anchor* di medan perang.
+   - Mengaktifkan rekaman waktu (*Temporal Ring Buffer*) selama 12.0 detik yang mencatat seluruh lintasan serangan, proyektil, dan target kerusakan.
+   - Memicu *Chrono-Reverberation*: Memanggil sepasukan bayangan hantu kuantum (*Quantum Ghost Echoes*) berwarna biru holografis yang memutar ulang dan melipatgandakan seluruh rentetan serangan secara simultan ke musuh yang ada.
+2. **Pilar 2: Sentient Adversary AI (DNTM - Dynamic Neural Threat Matrix):**
+   - Profiling taktis cerdas yang memindai jejak pertahanan pemain secara adaptif:
+     - **Killbox Density >= 6 Menara:** Menara yang bergerombol padat memicu kemunculan *Subterranean Seismic Sapper* yang menggali di bawah tanah dan meledak ke permukaan, menimbulkan gempa dan EMP overload pada klaster menara terdekat.
+     - **Dominant Element Monopoly >= 60%:** AI mendeteksi ketergantungan elemen tunggal (misal Physical, Cryo, atau Plasma) dan mengerahkan *Chameleon Carapaces* yang memantulkan 40% kerusakan elemen dominan tersebut kembali ke markas.
+     - **Mech Reliance >= 50%:** Menghadirkan *Harpoon Colossi* yang mengunci Titan Mech dengan kabel penambat serat karbon dan menyeretnya ke tengah gerombolan musuh sembari menguras daya baterai.
+     - **Gold Hoarding >= 2000G:** Mengerahkan *Gold-Devourer* yang menyedot cadangan emas pemain jika tidak segera dieliminasi.
+3. **Pilar 3: Geomorphic Map Reshaping & Zero-Gravity Containment:**
+   - **Tectonic Magma Fissures:** Pemain dapat membelah tanah secara geologis, menciptakan jurang lahar mendidih yang membakar musuh yang melintas dengan kerusakan plasma kontinu dan efek slow.
+   - **Zero-Gravity Containment Fields:** Memancarkan medan anti-gravitasi berbentuk cincin distorsi sian/ungu yang memperlambat musuh sebesar 85% (*floating state*) dan memberikan bonus **+200% Juggle Damage (3.0x multiplier)** pada setiap serangan yang mengenai musuh yang sedang melayang.
+4. **Pilar 4: Hyper-Core Chimera Synthesis Engine (ARPG Depth & Mythic Engrams):**
+   - Setiap kali Boss atau musuh Nemesis dikalahkan, mereka menjatuhkan *Mythic Ancient Cyber-Engram* dengan kombinasi ganda:
+     - **Awakened Prefix:** `Singularity-` (tarikan gravitasi konvergen ke titik tengah), `Superconductive-` (sambaran listrik berantai 3 cabang), `Chronos-` (efek perlambatan waktu 50%), `Vampiric-` (refund amunisi pada setiap tembakan).
+     - **Cataclysmic Suffix:** `...of the Supernova` (ledakan overkill 500 flat damage), `...of the Dreadnought` (peningkatan damage permanen per eliminasi musuh), `...of Void Collapse` (penghancuran instan perisai pelindung musuh dan +30% damage).
+   - Engram dapat dipasang pada menara pertahanan melalui modal interaktif *Ancient Cyber-Engram Forge* (`showOverlay('engrams')` atau tombol `ENGRAMS`).
+5. **Pilar 5: Hyper-Adrenaline Overdrive & Cinematic Titan Execution Finishers:**
+   - **Cinematic Hit-Stop Finisher:** Ketika HP Boss tersisa <= 15%, sistem mengunci target dengan retikel berlian berkedip dan lencana `[F] EXECUTE`. Menekan tombol `[F]` memicu animasi *cinematic hit-stop* (waktu melambat 0.25s) di mana Titan Mech mengeksekusi boss secara brutal, memberikan hadiah +350 Gold, +3 Nanite Cores, dan jaminan Engram Mythic.
+   - **Adrenaline Heat Gamble Streak:** Memanggil gelombang berikutnya secara beruntun (*back-to-back early calls*) saat musuh masih ada di medan perang menaikkan *Adrenaline Heat* hingga 5x, memberikan **+500% Gold Bounties**, batas layar merah membara (*crimson vignette border*), dan kecepatan musuh meningkat sebagai taruhan risiko tinggi dengan hadiah masif.
+
+---
+
+### 35.2 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_apex_ascendant.js`: **100% LULUS (Semua 5 Pilar Bastion TD 15.0 Terverifikasi)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih, 25 data-act & 37 data-ov tervalidasi)**
+- `tests/smoke.js`: **LULUS (11.947 langkah simulasi tanpa runtime error)**
+- **Seluruh 26 Unit Test Suites di repositori: 100% LULUS.**

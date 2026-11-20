@@ -580,6 +580,10 @@ function onKey(e) {
         mechGrappleStrike(G.grapplePrompt.boss);
         break;
       }
+      if (G.mech && G.mech.active && typeof titanToggleLift === 'function') {
+        const didLift = titanToggleLift();
+        if (didLift) break;
+      }
       if (dSkills[2]) triggerSkill(dSkills[2]);
       break;
     }
@@ -613,7 +617,20 @@ function onKey(e) {
       showOverlay(isOpen ? (G && G.state === 'menu' ? 'menu' : null) : 'workshop');
       break;
     }
+    case 'f': case 'F': {
+      if (G.finisherPrompt && G.finisherPrompt.boss && typeof triggerTitanFinisher === 'function') {
+        triggerTitanFinisher(G.finisherPrompt.boss);
+        break;
+      }
+      break;
+    }
     case 'c': case 'C': {
+      if (G.state === 'active' && typeof dropChronoAnchor === 'function') {
+        const mx = (G.mouse && G.mouse.in) ? G.mouse.x : (W / 2);
+        const my = (G.mouse && G.mouse.in) ? G.mouse.y : (H / 2);
+        dropChronoAnchor(mx, my);
+        break;
+      }
       const ov = $('overlay');
       const isOpen = ov && ov.classList.contains('show') && ov.innerHTML.includes('CODEX');
       showOverlay(isOpen ? (G && G.state === 'menu' ? 'menu' : null) : 'codex');

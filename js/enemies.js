@@ -117,6 +117,17 @@ function updateEnemy(e, dt) {
   if (e.brittleT > 0) { e.brittleT -= dt; if (e.brittleT <= 0) e.brittle = 0; }
   if (e.stunT > 0) e.stunT -= dt;
   if (e.dmgT > 0) e.dmgT -= dt;
+
+  // 14.0 Sublimation Steam Cloud Debuff: In-cloud detection
+  e.inSteamCloud = false;
+  if (G && G.steamClouds && G.steamClouds.length > 0) {
+    for (const sc of G.steamClouds) {
+      if (Math.hypot(e.x - sc.x, e.y - sc.y) <= (sc.r || 60)) {
+        e.inSteamCloud = true;
+        break;
+      }
+    }
+  }
   if (e.dmgAcc > 0 && e.dmgT <= 0) {
     addText(e.x, e.y - e.r - 12, String(Math.max(1, Math.round(e.dmgAcc))), '#e2e8f0', 12);
     e.dmgAcc = 0; e.dmgT = 0.35;
@@ -552,6 +563,65 @@ function updateEnemy(e, dt) {
       }
     }
     if (e.burrowCd > 0) e.burrowCd -= dt;
+  }
+
+  // 15.0 DNTM Counter Hostile: Seismic Sapper Subterranean Eruption
+  if (e.type === 'seismic_sapper' && !e.dead) {
+    if (e.subterranean) {
+      e.eruptTimer = (e.eruptTimer !== undefined ? e.eruptTimer : 6.0) - dt;
+      if (Math.random() < 0.3) burst(e.x, e.y, 2, '#b45309', 25, 0.2, 1.5, false);
+      if (e.eruptTimer <= 0) {
+        e.subterranean = false;
+        shake(14);
+        burst(e.x, e.y, 25, '#b45309', 150, 0.6, 4, true);
+        addRing(e.x, e.y, 10, 110, 0.6, '#b45309', 4);
+        addText(e.x, e.y - 25, '💥 SEISMIC ERUPTION!', '#f59e0b', 16);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+        if (G && G.towers) {
+          for (const t of G.towers) {
+            if (Math.hypot(t.x - e.x, t.y - e.y) <= 130) {
+              t.empT = Math.max(t.empT || 0, 4.0);
+              burst(t.x, t.y, 8, '#f59e0b', 80, 0.35, 2.5, false);
+              addText(t.x, t.y - 18, 'SEISMIC OVERLOAD', '#f59e0b', 12);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 15.0 DNTM Counter Hostile: Harpoon Colossus Mech Tether
+  if ((e.type === 'harpoon_walker' || e.type === 'harpoon_colossus') && !e.dead && !(e.stunT > 0)) {
+    if (G && G.mech && G.mech.active && !G.mech.isDocked) {
+      const dMech = Math.hypot(G.mech.x - e.x, G.mech.y - e.y);
+      if (dMech <= 220) {
+        e.isTetheringMech = true;
+        G.mech.rootedT = 0.5;
+        const pullFactor = 35 * dt;
+        G.mech.x += ((e.x - G.mech.x) / dMech) * pullFactor;
+        G.mech.y += ((e.y - G.mech.y) / dMech) * pullFactor;
+        if (Math.random() < 0.1 && typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('harpoon_tether');
+      } else {
+        e.isTetheringMech = false;
+      }
+    } else {
+      e.isTetheringMech = false;
+    }
+  }
+
+  // 15.0 DNTM Counter Hostile: Gold-Devourer Siphon
+  if (e.type === 'gold_devourer' && !e.dead && !(e.stunT > 0)) {
+    e.siphonTimer = (e.siphonTimer || 0) + dt;
+    if (e.siphonTimer >= 1.0) {
+      e.siphonTimer = 0;
+      if (G && G.gold > 0) {
+        const stolen = Math.min(G.gold, 15);
+        G.gold -= stolen;
+        e.stolenGold = (e.stolenGold || 0) + stolen;
+        addText(e.x, e.y - 18, '-' + stolen + 'G SIPHONED', '#eab308', 12);
+        burst(e.x, e.y, 4, '#eab308', 40, 0.3, 2, false);
+      }
+    }
   }
 
   // 9.0 Chaff Cloud Skimmer aerosol mist deployment

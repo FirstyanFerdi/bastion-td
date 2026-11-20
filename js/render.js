@@ -500,6 +500,16 @@ function render() {
   drawMoltenSlags(c, time);
   drawIncomingMortars(c, time);
   drawChronosSpear(c, time);
+  // 14.0 The Omni-Resonance Matrix Battlefield Systems
+  drawSteamClouds(c, time);
+  drawBioGasClouds(c, time);
+  drawCustomTowers(c, time);
+  drawTetherBeam(c, time);
+  drawCarriedTower(c, time);
+  // 15.0 Apex Ascendant Battlefield Ground Systems
+  drawChronoEchoes(c, time);
+  drawGeomorphicFissures(c, time);
+  drawZeroGravityFields(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -606,6 +616,7 @@ function render() {
   drawTitanMech(c, time);
   drawDreadnoughtStrike(c, time);
   drawNemesisBosses(c, time);
+  drawFinisherPrompt(c, time);
   // plasma shells
   for (const p of G.proj) {
     glow(c, p.x, p.y, 13, '#fb923c', 0.9);
@@ -674,6 +685,8 @@ function render() {
   drawCitadelAegisVfx(c, time);
   drawMechRadioHUD(c, time);
   drawKillStreakHUD(c, time);
+  // 15.0 Apex Adrenaline Overdrive HUD
+  drawAdrenalineHeatBorder(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -2774,5 +2787,304 @@ function drawKillStreakHUD(c, time) {
   c.fillStyle = col;
   c.textAlign = 'center';
   c.fillText('COMBO ' + G.killStreak + 'x RAMPAGE', kx, ky);
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 14.0: THE OMNI-RESONANCE MATRIX RENDERING
+   ============================================================ */
+
+function drawSteamClouds(c, time) {
+  if (!G || !G.steamClouds || G.steamClouds.length === 0) return;
+  c.save();
+  for (const s of G.steamClouds) {
+    const alpha = Math.min(0.65, s.life / 3.0);
+    c.fillStyle = 'rgba(224, 242, 254, ' + (alpha * 0.45) + ')';
+    c.strokeStyle = 'rgba(255, 255, 255, ' + (alpha * 0.75) + ')';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.arc(s.x, s.y, s.r || 60, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    for (let i = 0; i < 3; i++) {
+      const a = (time * 1.5) + (i * Math.PI * 2 / 3);
+      const px = s.x + Math.cos(a) * 18, py = s.y + Math.sin(a) * 18;
+      c.beginPath();
+      c.arc(px, py, (s.r || 60) * 0.45, 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+  c.restore();
+}
+
+function drawBioGasClouds(c, time) {
+  if (!G || !G.bioGasClouds || G.bioGasClouds.length === 0) return;
+  c.save();
+  for (const g of G.bioGasClouds) {
+    const alpha = Math.min(0.70, g.life / 4.0);
+    c.fillStyle = 'rgba(34, 197, 94, ' + (alpha * 0.35) + ')';
+    c.strokeStyle = 'rgba(74, 222, 128, ' + (alpha * 0.8) + ')';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.arc(g.x, g.y, g.r || 70, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    for (let i = 0; i < 4; i++) {
+      const a = (time * 2.0) + (i * Math.PI / 2);
+      const px = g.x + Math.cos(a) * 22, py = g.y + Math.sin(a) * 22;
+      c.fillStyle = 'rgba(234, 179, 8, ' + (alpha * 0.5) + ')';
+      c.beginPath();
+      c.arc(px, py, 6 + Math.sin(time * 5 + i) * 3, 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+  c.restore();
+}
+
+function drawTetherBeam(c, time) {
+  if (!G || !G.tetherActive || !G.mech || !G.tetherActive.tower) return;
+  const t = G.tetherActive.tower, m = G.mech;
+  c.save();
+  c.strokeStyle = '#38bdf8';
+  c.lineWidth = 3.5 + Math.sin(time * 15) * 1.5;
+  c.beginPath();
+  c.moveTo(m.x, m.y);
+  const midX = (m.x + t.x) / 2 + (Math.random() - 0.5) * 10;
+  const midY = (m.y + t.y) / 2 + (Math.random() - 0.5) * 10;
+  c.quadraticCurveTo(midX, midY, t.x, t.y);
+  c.stroke();
+  c.strokeStyle = '#ffffff';
+  c.lineWidth = 1.5;
+  c.stroke();
+  glow(c, t.x, t.y, 20, '#38bdf8', 0.8);
+  c.restore();
+}
+
+function drawCarriedTower(c, time) {
+  if (!G || !G.carriedTower || !G.mech) return;
+  const t = G.carriedTower, m = G.mech;
+  c.save();
+  c.translate(m.x, m.y - 18);
+  c.strokeStyle = '#f59e0b';
+  c.lineWidth = 2;
+  c.setLineDash([3, 3]);
+  c.strokeRect(-12, -12, 24, 24);
+  c.setLineDash([]);
+  c.fillStyle = 'rgba(245, 158, 11, 0.4)';
+  c.fillRect(-10, -10, 20, 20);
+  c.fillStyle = '#fff';
+  c.font = '800 8px ' + FONT;
+  c.textAlign = 'center';
+  c.fillText('CARRIED', 0, -14);
+  c.restore();
+}
+
+function drawCustomTowers(c, time) {
+  if (!G || !G.customChassis || G.customChassis.length === 0) return;
+  c.save();
+  for (const t of G.customChassis) {
+    if (t.isCarried) continue;
+    c.save();
+    c.translate(t.x, t.y);
+    if (t.chassis === 'hex_hover_drone') {
+      c.strokeStyle = '#06b6d4';
+      c.lineWidth = 2;
+      c.fillStyle = 'rgba(6, 182, 212, 0.2)';
+      c.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3;
+        const px = Math.cos(a) * 16, py = Math.sin(a) * 16;
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+      c.closePath();
+      c.fill(); c.stroke();
+    } else if (t.chassis === 'pneumatic_biped') {
+      c.fillStyle = '#475569';
+      c.fillRect(-12, -12, 24, 24);
+      c.strokeStyle = '#f59e0b';
+      c.lineWidth = 1.5;
+      c.strokeRect(-12, -12, 24, 24);
+    } else {
+      c.fillStyle = '#1e293b';
+      c.fillRect(-14, -14, 28, 28);
+      c.strokeStyle = '#e2e8f0';
+      c.lineWidth = 2;
+      c.strokeRect(-14, -14, 28, 28);
+    }
+
+    c.rotate(t.angle || 0);
+    c.fillStyle = t.payload === 'tesla_arc' ? '#38bdf8' : (t.payload === 'tachyon_rail' ? '#f43f5e' : '#f59e0b');
+    c.fillRect(0, -4, 16, 8);
+    c.restore();
+  }
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 15.0: APEX ASCENDANT RENDERING ROUTINES
+   ============================================================ */
+
+function drawChronoEchoes(c, time) {
+  if (!G) return;
+  if (G.chronoAnchor && G.chronoAnchor.active) {
+    const a = G.chronoAnchor;
+    c.save();
+    const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+    c.strokeStyle = 'rgba(56, 189, 248, ' + (0.4 + 0.4 * pulse) + ')';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(a.x, a.y, 22 + pulse * 8, 0, TAU);
+    c.stroke();
+
+    c.fillStyle = 'rgba(56, 189, 248, 0.2)';
+    c.beginPath();
+    c.arc(a.x, a.y, 16, 0, TAU);
+    c.fill();
+
+    c.strokeStyle = '#38bdf8';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(a.x, a.y);
+    c.lineTo(a.x + Math.cos(time * 3) * 12, a.y + Math.sin(time * 3) * 12);
+    c.stroke();
+
+    c.font = '800 10px ' + FONT;
+    c.fillStyle = '#38bdf8';
+    c.textAlign = 'center';
+    c.fillText('ANCHOR [' + Math.max(0, a.t).toFixed(1) + 's]', a.x, a.y - 28);
+    c.restore();
+  }
+
+  if (G.temporalEchoes && G.temporalEchoes.length > 0) {
+    c.save();
+    for (const echo of G.temporalEchoes) {
+      const alpha = clamp(echo.life / (echo.maxLife || 4.0), 0, 1);
+      c.globalAlpha = alpha * 0.75;
+      c.strokeStyle = '#38bdf8';
+      c.lineWidth = 1.5;
+      c.setLineDash([4, 3]);
+      c.beginPath();
+      c.arc(echo.x, echo.y, 18, 0, TAU);
+      c.stroke();
+
+      if (echo.targetX !== undefined && echo.targetY !== undefined) {
+        c.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+        c.lineWidth = 1.2;
+        c.beginPath();
+        c.moveTo(echo.x, echo.y);
+        c.lineTo(echo.targetX, echo.targetY);
+        c.stroke();
+      }
+    }
+    c.setLineDash([]);
+    c.restore();
+  }
+}
+
+function drawGeomorphicFissures(c, time) {
+  if (!G || !G.geomorphicFissures || G.geomorphicFissures.length === 0) return;
+  c.save();
+  for (const fis of G.geomorphicFissures) {
+    const alpha = clamp(fis.life / (fis.maxLife || 14.0), 0, 1);
+    c.globalAlpha = alpha;
+    c.strokeStyle = 'rgba(239, 68, 68, 0.35)';
+    c.lineWidth = 14;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(fis.x1, fis.y1);
+    c.lineTo(fis.x2, fis.y2);
+    c.stroke();
+
+    c.strokeStyle = '#f97316';
+    c.lineWidth = 6;
+    c.beginPath();
+    c.moveTo(fis.x1, fis.y1);
+    c.lineTo(fis.x2, fis.y2);
+    c.stroke();
+
+    c.strokeStyle = '#fef08a';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(fis.x1, fis.y1);
+    c.lineTo(fis.x2, fis.y2);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function drawZeroGravityFields(c, time) {
+  if (!G || !G.zeroGravityFields || G.zeroGravityFields.length === 0) return;
+  c.save();
+  for (const zg of G.zeroGravityFields) {
+    const alpha = clamp(zg.life / (zg.maxLife || 10.0), 0, 1);
+    c.globalAlpha = alpha;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 4);
+    
+    c.fillStyle = 'rgba(6, 182, 212, 0.12)';
+    c.beginPath();
+    c.arc(zg.x, zg.y, zg.r, 0, TAU);
+    c.fill();
+
+    c.strokeStyle = 'rgba(192, 132, 252, ' + (0.4 + 0.3 * pulse) + ')';
+    c.lineWidth = 2.5;
+    c.setLineDash([8, 6]);
+    c.beginPath();
+    c.arc(zg.x, zg.y, zg.r, 0, TAU);
+    c.stroke();
+
+    c.font = '800 9px ' + FONT;
+    c.fillStyle = '#67e8f9';
+    c.textAlign = 'center';
+    c.fillText('ZERO-G FIELD', zg.x, zg.y - zg.r - 4);
+  }
+  c.setLineDash([]);
+  c.restore();
+}
+
+function drawFinisherPrompt(c, time) {
+  if (!G || !G.finisherPrompt || !G.finisherPrompt.boss || G.finisherPrompt.boss.dead) return;
+  const b = G.finisherPrompt.boss;
+  c.save();
+  const pulse = 0.5 + 0.5 * Math.sin(time * 12);
+  const px = b.x, py = b.y - (b.r || 30) - 38;
+
+  c.strokeStyle = '#f43f5e';
+  c.lineWidth = 2.5;
+  const sz = 24 + pulse * 6;
+  c.strokeRect(b.x - sz / 2, b.y - sz / 2, sz, sz);
+
+  c.fillStyle = 'rgba(244, 63, 94, 0.9)';
+  c.fillRect(px - 58, py - 12, 116, 24);
+  c.strokeStyle = '#fff';
+  c.lineWidth = 1.5;
+  c.strokeRect(px - 58, py - 12, 116, 24);
+
+  c.font = '900 12px ' + FONT;
+  c.fillStyle = '#fff';
+  c.textAlign = 'center';
+  c.fillText('⚡ [F] EXECUTE ⚡', px, py + 4);
+  c.restore();
+}
+
+function drawAdrenalineHeatBorder(c, time) {
+  if (!G || !G.adrenalineHeat || G.adrenalineHeat < 2) return;
+  c.save();
+  const heat = G.adrenalineHeat;
+  const pulse = 0.5 + 0.5 * Math.sin(time * (4 + heat * 2));
+  const intensity = (heat - 1) / 4;
+  c.strokeStyle = 'rgba(244, 63, 94, ' + (0.25 + 0.35 * intensity * pulse) + ')';
+  c.lineWidth = 6 + heat * 2;
+  c.strokeRect(4, 4, W - 8, H - 8);
+
+  c.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  c.fillRect(W / 2 - 120, 4, 240, 22);
+  c.strokeStyle = '#f43f5e';
+  c.lineWidth = 1.5;
+  c.strokeRect(W / 2 - 120, 4, 240, 22);
+
+  c.font = '800 11px ' + FONT;
+  c.fillStyle = '#f43f5e';
+  c.textAlign = 'center';
+  c.fillText('🔥 HEAT STREAK ' + heat + 'x (' + ((heat - 1) * 100) + '% BOUNTY) 🔥', W / 2, 19);
   c.restore();
 }

@@ -383,6 +383,35 @@ function init() {
       showOverlay('logistics');
     });
   }
+  if ($('btnBourse')) {
+    $('btnBourse').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('bourse');
+    });
+  }
+  if ($('btnEngrams')) {
+    $('btnEngrams').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('engrams');
+    });
+  }
+  if ($('btnAnchor')) {
+    $('btnAnchor').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume();
+      if (typeof dropChronoAnchor === 'function') dropChronoAnchor();
+    });
+  }
+  if ($('btnExosuit')) {
+    $('btnExosuit').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      if (G) {
+        const order = ['vanguard', 'phantom', 'archon'];
+        const cur = G.exosuitType || 'vanguard';
+        const nxt = order[(order.indexOf(cur) + 1) % order.length];
+        if (typeof setTitanExosuit === 'function') setTitanExosuit(nxt);
+      }
+    });
+  }
   if ($('chipSector')) {
     $('chipSector').addEventListener('click', () => {
       Sfx.init(); Sfx.resume(); Sfx.play('click');
@@ -526,6 +555,21 @@ function init() {
         showOverlay('logistics');
       }
     }
+    else if (a === 'bourse_trade') {
+      const comm = b.dataset.comm;
+      const act = b.dataset.trade;
+      if (typeof tradeBourse === 'function') {
+        tradeBourse(comm, act, 10);
+        showOverlay('bourse');
+      }
+    }
+    else if (a === 'void_bargain') {
+      const vid = b.dataset.bargain;
+      if (typeof acceptVoidBargain === 'function') {
+        acceptVoidBargain(vid);
+        showOverlay('bourse');
+      }
+    }
     else if (a === 'sign_edict') {
       const cardEl = b.closest('[data-edict]');
       const eId = (cardEl && cardEl.dataset.edict) || b.dataset.edict;
@@ -536,6 +580,14 @@ function init() {
         showOverlay(null);
         if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
         if (typeof addText === 'function') addText(W / 2, 140, 'EDICT RATIFIED: ' + (typeof SOVEREIGN_EDICTS !== 'undefined' && SOVEREIGN_EDICTS[eId] ? SOVEREIGN_EDICTS[eId].name : eId), '#38bdf8', 18);
+        G.uiDirty = true;
+      }
+    }
+    else if (a === 'socket_engram') {
+      const egId = b.dataset.engramId;
+      if (G && G.sel && egId && typeof socketCyberEngram === 'function') {
+        socketCyberEngram(G.sel, egId);
+        showOverlay('engrams');
         G.uiDirty = true;
       }
     }
@@ -563,5 +615,11 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   MUNITIONS_LOGISTICS_CONFIG, SOVEREIGN_EDICTS, HARMONIC_LATTICE_CONFIG, CORRUPTED_CHIPS, setLogisticsPolicy, takeSyndicateLoan, hasEdict, consumeTowerAmmo, getTowerAmmoType, updateHarmonicLattices, pointInTriangle,
   // 13.0 Visceral Resonance Exports
   VISCERAL_CONFIG, triggerCitadelAegis, checkCitadelAegis, triggerTitanParry, spawnHostileMortar, detonateMortar, spawnOverkillDebris, triggerChronosSpear, executeChronosSpearImpact, updateChronosChasm, setMechCompanionMode, triggerMechVoiceLine, updateMechAutonomousBehavior, updateVisceralSystems,
+  // 14.0 The Omni-Resonance Matrix & Hyper-Evolution Exports
+  FRANKENSTEIN_FOUNDRY_CONFIG, ALCHEMY_MATRIX_CONFIG, SENTIENT_HIVEMIND_CONFIG, QUANTUM_BOURSE_CONFIG, TITAN_EXOSUIT_CONFIG,
+  craftCustomTower, titanLiftTower, titanDeployTower, titanToggleLift, tetherTowerOvercharge, setTitanExosuit, spawnSteamCloud, spawnBioGasCloud, detonateThermobaricBioGas, tradeBourse, acceptVoidBargain, updateHyperEvolutionSystems,
+  // 15.0 Apex Ascendant Exports
+  CHRONO_NEXUS_CONFIG, DNTM_CONFIG, GEOMORPHIC_CONFIG, CYBER_ENGRAMS_DATABASE, ADRENALINE_GAMBLE_CONFIG,
+  dropChronoAnchor, triggerChronoReverberation, recordChronoEvent, createGeomorphicFissure, deployZeroGravityField, socketCyberEngram, triggerTitanFinisher, updateDNTMProfiler, updateApexAscendantSystems,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
 };

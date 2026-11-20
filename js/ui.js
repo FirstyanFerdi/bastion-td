@@ -1058,6 +1058,12 @@ function refreshUI() {
   if ($('vBondsBadge') && G && G.syndicateDebt) {
     $('vBondsBadge').textContent = G.syndicateDebt.balance > 0 ? (G.syndicateDebt.balance + 'G') : '0G';
   }
+  if ($('vExosuitBadge') && G) {
+    $('vExosuitBadge').textContent = (G.exosuitType || 'vanguard').toUpperCase();
+  }
+  if ($('vEngramsBadge') && G) {
+    $('vEngramsBadge').textContent = String((G.cyberEngramsInventory || []).length);
+  }
   const curSecId = (G && G.sector) || (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
   const curSecObj = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : null;
   if ($('vSector') && curSecObj) {
@@ -1853,6 +1859,74 @@ function showOverlay(kind) {
     h = '<div class="ov-box" style="max-width:720px"><div class="ov-head"><h3>SOVEREIGN EDICTS RATIFICATION CHAMBER</h3></div>' +
       '<div style="font-size:11px;color:#cbd5e1;margin-bottom:10px">The High Command demands a binding military doctrine. Ratifying an edict permanently modifies your defense grid for the remainder of the campaign. Choose wisely.</div>' +
       '<div class="draft-grid">' + cards + '</div></div>';
+  } else if (kind === 'bourse') {
+    const comms = (G && G.bourseCommodities) || { kinetic: 1.0, plasma: 2.5, cryo: 4.0 };
+    const holds = (G && G.bourseHoldings) || { kinetic: 0, plasma: 0, cryo: 0 };
+    const commKeys = ['kinetic', 'plasma', 'cryo'];
+    const commRows = commKeys.map(k => {
+      const price = comms[k] || 1.0;
+      const hold = holds[k] || 0;
+      const col = k === 'kinetic' ? '#f59e0b' : (k === 'plasma' ? '#38bdf8' : '#06b6d4');
+      const buyCost = Math.round(price * 10);
+      const sellRev = Math.round(price * 10 * 0.90);
+      return '<div class="srow" style="padding:6px 4px;border-bottom:1px solid rgba(255,255,255,0.05);align-items:center">' +
+        '<div><b style="color:' + col + ';text-transform:uppercase">' + k + '</b><div style="font-size:9px;color:#94a3b8">PRICE: ' + price.toFixed(2) + 'G | HELD: ' + hold + '</div></div>' +
+        '<div style="display:flex;gap:4px">' +
+        '<button class="primary" data-ov="bourse_trade" data-comm="' + k + '" data-trade="buy" style="padding:3px 7px;font-size:9px">BUY 10 (' + buyCost + 'G)</button>' +
+        '<button class="sell" data-ov="bourse_trade" data-comm="' + k + '" data-trade="sell" ' + (hold < 10 ? 'disabled style="opacity:0.4"' : '') + ' style="padding:3px 7px;font-size:9px">SELL 10 (+' + sellRev + 'G)</button>' +
+        '</div></div>';
+    }).join('');
+
+    const bargains = (typeof QUANTUM_BOURSE_CONFIG !== 'undefined' ? QUANTUM_BOURSE_CONFIG.voidBargains : null) || {};
+    const bargainCards = Object.keys(bargains).map(bid => {
+      const b = bargains[bid];
+      const isSigned = G && G.voidBargainsActive && G.voidBargainsActive.includes(bid);
+      return '<div style="margin:4px 0;padding:6px;background:rgba(15,23,42,0.8);border-left:3px solid ' + (isSigned ? '#c084fc' : '#475569') + ';border-radius:3px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<b style="color:' + (isSigned ? '#c084fc' : '#e2e8f0') + ';font-size:11px">' + b.name.toUpperCase() + '</b>' +
+        (isSigned ? '<span style="font-size:9px;color:#c084fc;font-weight:800">★ ACTIVE PACT</span>' :
+          '<button class="primary" data-ov="void_bargain" data-bargain="' + bid + '" style="font-size:9px;padding:3px 8px;background:#c084fc;color:#0f172a;font-weight:800">SEAL PACT</button>') +
+        '</div>' +
+        '<div style="font-size:9.5px;color:#cbd5e1;margin-top:2px">' + b.desc + '</div>' +
+        '</div>';
+    }).join('');
+
+    h = '<div class="ov-box" style="max-width:680px;border-top-color:#c084fc"><div class="ov-head"><h3 style="color:#c084fc">QUANTUM SYNDICATE BOURSE & VOID FUTURES</h3></div>' +
+      '<div style="font-size:10.5px;color:#cbd5e1;margin-bottom:8px">Speculate on dynamic munitions commodity price fluctuations or seal forbidden Void Bargains for immense immediate leverage.</div>' +
+      '<div style="background:rgba(15,23,42,0.7);border:1px solid var(--line2);border-radius:4px;padding:6px 10px;margin-bottom:10px">' + commRows + '</div>' +
+      '<div style="font-size:10px;font-weight:800;color:#c084fc;letter-spacing:1px;margin-bottom:4px">FORBIDDEN VOID BARGAINS:</div>' +
+      bargainCards +
+      '<div class="ov-btns" style="margin-top:10px"><button class="ghost" data-ov="close">Return to Battle</button></div></div>';
+  } else if (kind === 'engrams') {
+    const engrams = (G && G.cyberEngramsInventory) || [];
+    let cardsHtml = '';
+    if (engrams.length === 0) {
+      cardsHtml = '<div style="color:#94a3b8;font-size:12px;padding:20px;text-align:center">No Ancient Cyber-Engrams currently in storage.<br><span style="font-size:10px;color:#64748b">Defeat Bosses or Nemesis hostiles to claim Mythic Awakened Engrams.</span></div>';
+    } else {
+      cardsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:8px;max-height:360px;overflow-y:auto;padding-right:4px">' +
+        engrams.map(eg => {
+          const pref = eg.prefixDef || {};
+          const suff = eg.suffixDef || {};
+          return '<div style="background:rgba(15,23,42,0.85);border:1px solid #c084fc;border-radius:5px;padding:8px;position:relative">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(192,132,252,0.3);padding-bottom:4px">' +
+              '<b style="color:#e879f9;font-size:11px">' + eg.name + '</b>' +
+              '<span style="font-size:9px;color:#fbbf24;font-weight:800;border:1px solid #fbbf24;padding:1px 4px;border-radius:3px">MYTHIC</span>' +
+            '</div>' +
+            '<div style="font-size:9.5px;color:#38bdf8;margin-top:4px"><b>PREFIX:</b> ' + (pref.name || '') + ' - ' + (pref.desc || '') + '</div>' +
+            '<div style="font-size:9.5px;color:#f43f5e;margin-top:2px"><b>SUFFIX:</b> ' + (suff.name || '') + ' - ' + (suff.desc || '') + '</div>' +
+            '<div style="margin-top:8px;display:flex;gap:6px">' +
+              (G.sel ? '<button class="primary" data-ov="socket_engram" data-engram-id="' + eg.id + '" style="font-size:9.5px;padding:3px 8px;background:#c084fc;color:#0f172a;font-weight:800">SOCKET IN SELECTED TOWER</button>' : '<span style="font-size:9px;color:#94a3b8">Select a tower on grid to socket</span>') +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }
+
+    h = '<div class="ov-box" style="max-width:700px;border-top-color:#e879f9">' +
+      '<div class="ov-head"><h3 style="color:#e879f9">ANCIENT CYBER-ENGRAM FORGE</h3></div>' +
+      '<div style="font-size:10.5px;color:#cbd5e1;margin-bottom:8px">Mythic cybernetic matrices forged from conquered Bosses. Socket these dual-affix engrams into defenses for apocalyptic power amplification.</div>' +
+      cardsHtml +
+      '<div class="ov-btns" style="margin-top:10px"><button class="ghost" data-ov="close">Return to Battle</button></div></div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
     const secLabel = sec ? ('SECTOR ' + sec.num + ': ' + sec.name) : 'BASTION';

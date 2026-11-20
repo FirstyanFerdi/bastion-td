@@ -2407,4 +2407,334 @@ const VISCERAL_CONFIG = {
   }
 };
 
+/* ============================================================
+   BASTION TD 14.0: THE OMNI-RESONANCE MATRIX CONFIGURATIONS
+   ============================================================ */
+
+const FRANKENSTEIN_FOUNDRY_CONFIG = {
+  chassis: {
+    pneumatic_biped: {
+      name: 'Pneumatic Biped',
+      desc: 'Mobile walker. Slowly traverses adjacent empty tiles to adjust line of fire.',
+      speed: 25,
+      cost: 75,
+      hp: 350,
+      color: '#38bdf8'
+    },
+    highground_bastion: {
+      name: 'High-Ground Bastion',
+      desc: 'Reinforced stationary chassis. Grants +40% Range and immunity to stun/EMP.',
+      rangeMult: 1.40,
+      cost: 60,
+      hp: 550,
+      color: '#fbbf24'
+    },
+    hex_hover_drone: {
+      name: 'Hex-Hover Drone',
+      desc: 'Floating aerial platform. Orbits its deployment anchor tile in a 40px radius circle.',
+      orbitRadius: 40,
+      orbitSpeed: 1.2,
+      cost: 90,
+      hp: 280,
+      color: '#c084fc'
+    }
+  },
+  payloads: {
+    tachyon_rail: {
+      name: 'Tachyon Hyper-Rail',
+      type: 'phys',
+      damage: 180,
+      rate: 0.8,
+      pierce: 5,
+      range: 4.5,
+      color: '#38bdf8'
+    },
+    cluster_mortar: {
+      name: 'Cluster Swarm Mortar',
+      type: 'plasma',
+      damage: 120,
+      rate: 0.6,
+      shrapnelCount: 4,
+      range: 3.5,
+      splashRad: 55,
+      color: '#f97316'
+    },
+    tesla_arc: {
+      name: 'Tesla Arc Caster',
+      type: 'energy',
+      damage: 85,
+      rate: 1.6,
+      chainTargets: 4,
+      range: 3.0,
+      color: '#a855f7'
+    },
+    cryo_chemical: {
+      name: 'Cryo-Chemical Sprayer',
+      type: 'cryo',
+      damage: 45,
+      rate: 4.0,
+      slow: 0.60,
+      range: 2.8,
+      color: '#67e8f9'
+    }
+  },
+  cpus: {
+    apex_sniper: {
+      name: 'Apex Sniper Core',
+      desc: 'Always targets the highest current HP hostile in range with +35% Crit Chance.',
+      critChance: 0.35,
+      prio: 'boss'
+    },
+    overkill_dynamo: {
+      name: 'Overkill Dynamo Core',
+      desc: '50% of overkill damage generated is refunded directly as munitions supply.',
+      ammoRefundRatio: 0.50
+    },
+    recoil_accelerator: {
+      name: 'Recoil Accelerator Core',
+      desc: 'Continuous firing ramps up attack speed by +10% per second up to +80%.',
+      maxRamp: 0.80,
+      rampRate: 0.10
+    },
+    martyr_capacitor: {
+      name: 'Martyr Capacitor Core',
+      desc: 'When HP reaches 0, detonates in a cataclysmic 600 flat damage nuclear explosion.',
+      deathDmg: 600,
+      deathRadius: 100
+    }
+  }
+};
+
+const ALCHEMY_MATRIX_CONFIG = {
+  steamCloud: {
+    duration: 6.0,
+    radius: 65,
+    enemyAccuracyPenalty: 0.40,
+    laserRefractionAoE: 1.8
+  },
+  bioGas: {
+    duration: 8.0,
+    radius: 70,
+    thermobaricDmg: 450,
+    thermobaricRadius: 110
+  },
+  gravitationalSlingshot: {
+    velocityMult: 5.0,
+    damageMult: 2.5,
+    infinitePierce: true
+  }
+};
+
+const SENTIENT_HIVEMIND_CONFIG = {
+  cannibalism: {
+    feedRadius: 85,
+    corpseFeedTime: 2.5,
+    feedsToMetamorphosis: 3
+  },
+  apexJuggernaut: {
+    name: 'Abyssal Apex Juggernaut',
+    hpMult: 4.5,
+    armor: 0.65,
+    speed: 40,
+    color: '#831843'
+  },
+  sapperBreach: {
+    killboxTowerThreshold: 6,
+    breachDistanceTiles: 4
+  }
+};
+
+const QUANTUM_BOURSE_CONFIG = {
+  initialPrices: {
+    kinetic: 1.0,
+    plasma: 2.5,
+    cryo: 4.0
+  },
+  voidBargains: {
+    blood_conduit: {
+      name: 'The Blood Conduit',
+      desc: 'Zero munition burn for all towers, but markas loses 1 life every 45s. +150% Global Crit Damage.',
+      critBonus: 1.50,
+      lifeDrainInterval: 45
+    },
+    chronos_bankruptcy: {
+      name: 'Chronos Bankruptcy',
+      desc: 'Gain 2,000 Gold immediately, but all tower reload rates are halved (-50% SPD) for 3 waves.',
+      instantGold: 2000,
+      waveDuration: 3,
+      speedPenalty: 0.50
+    },
+    quantum_singularity_bond: {
+      name: 'Quantum Singularity Bond',
+      desc: 'Grid power capacity tripled (+200%), but any electrical failure instantly causes catastrophic Meltdown.',
+      powerMult: 3.0
+    }
+  }
+};
+
+const TITAN_EXOSUIT_CONFIG = {
+  liftRange: 60,
+  overchargeTetherCost: 25,
+  overchargeTetherDuration: 8.0,
+  overchargeTetherSpeedMult: 2.5,
+  archetypes: {
+    vanguard: {
+      name: 'Vanguard Juggernaut',
+      desc: 'Balanced brawler equipped with Hydraulic Thermal Blade, Vulcan cannon, and Aegis Parry.',
+      hp: 1200,
+      speed: 155,
+      bladeDmg: 360,
+      vulcanDmg: 32
+    },
+    phantom: {
+      name: 'Phantom Stalker',
+      desc: 'High-speed assassin. Phase-Blink dash through enemies and deploy monofilament wire nets.',
+      hp: 800,
+      speed: 220,
+      bladeDmg: 520,
+      vulcanDmg: 24,
+      blinkCd: 4.0
+    },
+    archon: {
+      name: 'Archon Siege Battery',
+      desc: 'Colossal mobile artillery. Deploys into a stationary Heavy Ion Cannon turret.',
+      hp: 1800,
+      speed: 100,
+      bladeDmg: 200,
+      vulcanDmg: 65,
+      siegeDmg: 850
+    }
+  }
+};
+
+/* ============================================================
+   BASTION TD 15.0: APEX ASCENDANT CONFIGURATIONS
+   ============================================================ */
+
+const CHRONO_NEXUS_CONFIG = {
+  anchorDuration: 12.0,
+  echoDmgRatio: 0.75,
+  paradoxThreshold: 0.35,
+  paradoxBacklashDmg: 30,
+  maxEchoEvents: 80
+};
+
+const DNTM_CONFIG = {
+  evalInterval: 4.0,
+  thresholds: {
+    killboxDensity: 6, // >= 6 towers within 3.2 tiles
+    elementMonopoly: 0.60, // >= 60% damage of same type
+    mechReliance: 0.50, // >= 50% mech active time
+    goldHoarding: 2000 // >= 2000 unspent gold
+  },
+  counters: {
+    seismic_sapper: {
+      name: 'Seismic Sapper',
+      hp: 650,
+      speed: 48,
+      subterranean: true,
+      eruptDuration: 2.5,
+      disableRadius: 2.5 * 40
+    },
+    chameleon_carapace: {
+      reflectPct: 0.40,
+      armorBonus: 0.30
+    },
+    harpoon_walker: {
+      name: 'Harpoon Colossus',
+      hp: 1400,
+      speed: 35,
+      tetherRange: 180,
+      tetherPullSpeed: 45
+    },
+    gold_eater: {
+      name: 'Corrosive Gold-Devourer',
+      hp: 420,
+      speed: 85,
+      goldDrainPct: 0.08
+    }
+  }
+};
+
+const GEOMORPHIC_CONFIG = {
+  fissureLength: 8,
+  fissureDps: 140,
+  fissureSlow: 0.40,
+  fissureDuration: 25.0,
+  zeroGravityDuration: 8.0,
+  zeroGravityRadius: 75,
+  zeroGravitySlow: 0.85,
+  zeroGravityJuggleMult: 3.0,
+  ionSiphonMwBonus: 50
+};
+
+const CYBER_ENGRAMS_DATABASE = {
+  prefixes: {
+    singularity: {
+      id: 'singularity',
+      name: 'Singularity-',
+      color: '#818cf8',
+      desc: 'Proyekil menciptakan tarikan gravitasi 65px di titik impak.',
+      pullRadius: 65,
+      pullStrength: 80
+    },
+    superconductive: {
+      id: 'superconductive',
+      name: 'Superconductive-',
+      color: '#38bdf8',
+      desc: 'Melompatkan 85% kerusakan ke 4 target tambahan melalui busur petir.',
+      chainTargets: 4,
+      chainRatio: 0.85
+    },
+    chronos: {
+      id: 'chronos',
+      name: 'Chronos-',
+      color: '#06b6d4',
+      desc: 'Memperlambat aliran waktu target sebesar -50% selama 3 detik.',
+      timeSlow: 0.50,
+      slowDuration: 3.0
+    },
+    vampiric: {
+      id: 'vampiric',
+      name: 'Vampiric-',
+      color: '#f43f5e',
+      desc: 'Setiap multi-kill mengembalikan +15 amunisi kinetik dan +10 MW cadangan daya.',
+      ammoRefund: 15,
+      powerRecharge: 10
+    }
+  },
+  suffixes: {
+    supernova: {
+      id: 'supernova',
+      name: '...of the Supernova',
+      color: '#f97316',
+      desc: 'Kematian target memicu ledakan kosmik setara 350% dari sisa overkill damage.',
+      overkillExplosionMult: 3.50,
+      radius: 90
+    },
+    dreadnought: {
+      id: 'dreadnought',
+      name: '...of the Dreadnought',
+      color: '#fbbf24',
+      desc: 'Kerusakan menara meningkat permanen +8% setiap gelombang bertahan (hingga +160%).',
+      scalingPerWave: 0.08,
+      maxScaling: 1.60
+    },
+    void_collapse: {
+      id: 'void_collapse',
+      name: '...of Void Collapse',
+      color: '#c084fc',
+      desc: 'Mengubah 100% kerusakan menjadi True Void Damage (menembus perisai dan armor).',
+      trueDamage: true
+    }
+  }
+};
+
+const ADRENALINE_GAMBLE_CONFIG = {
+  maxStreak: 5,
+  bountyMults: [1.0, 1.5, 2.2, 3.5, 5.0],
+  hostileSpeedBuffs: [0, 0.12, 0.25, 0.40, 0.60]
+};
+
+
 

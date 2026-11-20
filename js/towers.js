@@ -390,6 +390,11 @@ function sellTower(t) {
 
 function updateTower(t, dt) {
   if (t.empT > 0) { t.empT -= dt; return; }
+  // 14.0 Frankenstein Custom Tower
+  if (t.isCustom) {
+    updateCustomTower(t, dt);
+    return;
+  }
   const def = TD[t.type], st = getTierData(t);
   t.cd -= dt; t.recoil = Math.max(0, t.recoil - dt * 6); t.flash = Math.max(0, t.flash - dt * 8); t.pop = Math.max(0, t.pop - dt * 4);
   if (t.overchargeT > 0) t.overchargeT -= dt;
@@ -455,6 +460,9 @@ function updateTower(t, dt) {
   // 13.0 Visceral Resonance Overdrives: Citadel Aegis Overcharge & Harmonic Cadence
   if (G && G.aegisOverchargeT > 0) rateMult *= 1.50;
   if (G && G.harmonicCadenceT > 0) rateMult *= 1.60;
+  // 14.0 Overcharge Tether & Chronos Bankruptcy
+  if (t.tetherOverchargeT > 0) rateMult *= 2.50;
+  if (G && G.chronosBankruptcyWaves > 0) rateMult *= 0.50;
 
   if (G && G.harmonicLattices && G.harmonicLattices.some(l => l.id === 'kinetic_grid' && pointInTriangle(t.x, t.y, l.p1.x, l.p1.y, l.p2.x, l.p2.y, l.p3.x, l.p3.y))) {
     rateMult *= 1.20;
@@ -1076,4 +1084,89 @@ function fireAntimatter(t, st, e) {
   });
   burst(mx, my, 12, '#818cf8', 130, 0.4, 3.5, true);
   Sfx.play('plasma');
+}
+
+/* ============================================================
+   BASTION TD 14.0: FRANKENSTEIN CUSTOM TOWER BEHAVIORS
+   ============================================================ */
+
+function updateCustomTower(t, dt) {
+  t.cd -= dt;
+  t.recoil = Math.max(0, (t.recoil || 0) - dt * 6);
+  t.flash = Math.max(0, (t.flash || 0) - dt * 8);
+  t.pop = Math.max(0, (t.pop || 0) - dt * 4);
+  if (t.overchargeT > 0) t.overchargeT -= dt;
+  if (t.tetherOverchargeT > 0) t.tetherOverchargeT -= dt;
+
+  let rateMult = 1, rangeMult = 1;
+  if (t.tetherOverchargeT > 0) rateMult *= 2.50;
+  if (G && G.chronosBankruptcyWaves > 0) rateMult *= 0.50;
+  if (t.cpu === 'recoil_accelerator') {
+    rateMult *= (1 + (t.recoilRamp || 0));
+  }
+  if (G && G.aegisOverchargeT > 0) rateMult *= 1.50;
+  if (G && G.harmonicCadenceT > 0) rateMult *= 1.60;
+
+  const rangePx = t.range * TILE * rangeMult;
+  const inRange = [];
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    const d2 = (e.x - t.x) ** 2 + (e.y - t.y) ** 2;
+    if (d2 <= (rangePx + e.r) ** 2) inRange.push(e);
+  }
+
+  if (inRange.length === 0) {
+    t.firing = false;
+    return;
+  }
+  t.firing = true;
+  const target = pickTarget(inRange, t.prio || 'first');
+  if (target) {
+    t.angle = Math.atan2(target.y - t.y, target.x - t.x);
+    if (t.cd <= 0) {
+      fireCustomTower(t, target);
+      t.cd = (1 / t.rate) / rateMult;
+    }
+  }
+}
+
+function fireCustomTower(t, target) {
+  const mx = t.x + Math.cos(t.angle) * 16, my = t.y + Math.sin(t.angle) * 16;
+  t.recoil = 1; t.flash = 1;
+  const sfxType = t.payload === 'tesla_arc' ? 'tesla' : (t.payload === 'tachyon_rail' ? 'rail' : (t.payload === 'cryo_chemical' ? 'cryo' : 'gatling'));
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play(sfxType);
+
+  if (t.payload === 'cluster_mortar') {
+    G.proj.push({
+      type: 'mortar_cluster',
+      x: mx, y: my, tx: target.x, ty: target.y,
+      dmg: t.dmg, splash: 55, src: t
+    });
+    burst(mx, my, 8, '#f59e0b', 80, 0.35, 2.5, true);
+  } else if (t.payload === 'tesla_arc') {
+    burst(mx, my, 6, '#38bdf8', 60, 0.3, 2, true);
+    dealDamage(target, t.dmg, 'tesla', t);
+    let chained = 0;
+    for (const other of G.enemies) {
+      if (other !== target && !other.dead && chained < 3) {
+        if (Math.hypot(other.x - target.x, other.y - target.y) <= 85) {
+          dealDamage(other, t.dmg * 0.7, 'tesla', t);
+          chained++;
+        }
+      }
+    }
+  } else if (t.payload === 'cryo_chemical') {
+    target.slowAmt = Math.max(target.slowAmt || 0, 0.50);
+    target.slowT = 2.5;
+    dealDamage(target, t.dmg, 'cryo', t);
+    burst(target.x, target.y, 8, '#06b6d4', 70, 0.35, 2, true);
+  } else {
+    // Tachyon rail / kinetic
+    G.proj.push({
+      type: 'rail',
+      x: mx, y: my, tx: target.x, ty: target.y,
+      dmg: t.dmg, src: t, pierce: 4
+    });
+    burst(mx, my, 8, '#f43f5e', 120, 0.35, 3, true);
+  }
 }

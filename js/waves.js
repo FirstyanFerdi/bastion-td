@@ -144,6 +144,7 @@ function callWave() {
   const isMultiWave = G.state === 'active' && G.enemies.length > 0;
   if (isMultiWave) {
     G.callStreak = Math.min(4, (G.callStreak || 1) + 1);
+    G.adrenalineHeat = Math.min(5, (G.adrenalineHeat || 1) + 1);
     G.adrenalineT = 15.0; // 15s adrenaline rush
     shake(8);
     if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('streak');
@@ -151,6 +152,7 @@ function callWave() {
     if (typeof recordCodexDiscovery === 'function') recordCodexDiscovery('adrenaline_rush', 'anomaly');
   } else {
     G.callStreak = 1;
+    G.adrenalineHeat = 1;
   }
   const b = earlyBonus() * (G.callStreak || 1);
   if (b > 0) { G.gold += b; addText(W / 2, 108, '+' + b + ' early bonus', '#fbbf24', 18); Sfx.play('coin'); }
@@ -159,6 +161,7 @@ function callWave() {
 function onWaveClear() {
   G.callStreak = 0;
   G.adrenalineT = 0;
+  G.adrenalineHeat = 1;
   G.chronosSpearAvailable = true;
   const n = G.wave, bonus = 25 + n * 4;
   const isVC = hasPerk('venture_capital');
@@ -264,6 +267,20 @@ function onWaveClear() {
   // 11.0 Adaptive Nemesis Hive Evolution on Wave Clear
   if (typeof evolveNemesisGenome === 'function') {
     evolveNemesisGenome();
+  }
+
+  // 14.0 Quantum Bourse Commodity Price Drift & Void Bankruptcy Countdown
+  if (G && G.bourseCommodities) {
+    for (const k in G.bourseCommodities) {
+      const delta = (Math.random() - 0.48) * 0.40;
+      G.bourseCommodities[k] = Math.max(0.4, Math.min(30.0, +(G.bourseCommodities[k] + delta).toFixed(2)));
+    }
+  }
+  if (G && G.chronosBankruptcyWaves > 0) {
+    G.chronosBankruptcyWaves--;
+    if (G.chronosBankruptcyWaves <= 0) {
+      addText(W / 2, 210, 'CHRONOS BANKRUPTCY PENALTY LIFTED', '#34d399', 14);
+    }
   }
 
   // 11.0 Expedition Node Cleared & Chimera Draft

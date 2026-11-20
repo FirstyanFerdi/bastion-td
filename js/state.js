@@ -223,7 +223,35 @@ function newGame(keepSpeed) {
     harmonicCadenceT: 0,
     chronosSpearAvailable: true,
     chronosSpearActive: null,
-    hitStopT: 0
+    hitStopT: 0,
+    // 14.0 The Omni-Resonance Matrix & Hyper-Evolution
+    customChassis: [],
+    carriedTower: null,
+    steamClouds: [],
+    bioGasClouds: [],
+    bourseCommodities: {
+      kinetic: (typeof QUANTUM_BOURSE_CONFIG !== 'undefined' ? QUANTUM_BOURSE_CONFIG.initialPrices.kinetic : 1.0),
+      plasma: (typeof QUANTUM_BOURSE_CONFIG !== 'undefined' ? QUANTUM_BOURSE_CONFIG.initialPrices.plasma : 2.5),
+      cryo: (typeof QUANTUM_BOURSE_CONFIG !== 'undefined' ? QUANTUM_BOURSE_CONFIG.initialPrices.cryo : 4.0)
+    },
+    bourseHoldings: { kinetic: 0, plasma: 0, cryo: 0 },
+    voidBargainsActive: [],
+    exosuitType: 'vanguard',
+    tetherActive: null,
+    biomassFeeders: {},
+    subterraneanBreach: null,
+    cyberCoresLoot: [],
+    bloodConduitTimer: 0,
+    chronosBankruptcyWaves: 0,
+    // 15.0 Apex Ascendant Systems
+    chronoAnchor: null,
+    temporalEchoes: [],
+    dntm: { timer: 0, killboxScore: 0, dominantElement: 'phys', elementBias: { phys: 0, plasma: 0, cryo: 0, energy: 0 }, mechActiveTime: 0, totalWaveTime: 0, activeCounters: [] },
+    geomorphicFissures: [],
+    zeroGravityFields: [],
+    cyberEngramsInventory: [],
+    adrenalineHeat: 1,
+    finisherPrompt: null
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -1405,6 +1433,95 @@ function dealDamage(e, amount, type, src, opts) {
     }
   }
 
+  // 14.0 The Omni-Resonance Matrix Modifiers & Chemical Alchemy
+  if (src && src.cpu === 'apex_sniper') {
+    opts.crit = true;
+    a *= 1.35;
+  }
+  if (src && src.tetherOverchargeT > 0) {
+    a *= 1.40;
+  }
+  if (G && G.voidBargainsActive && G.voidBargainsActive.includes('blood_conduit')) {
+    opts.crit = true;
+    a *= 2.50;
+  }
+  if (type === 'cryo' && G && G.moltenSlags && G.moltenSlags.some(s => Math.hypot(e.x - s.x, e.y - s.y) <= (s.r || 38))) {
+    if (typeof spawnSteamCloud === 'function') spawnSteamCloud(e.x, e.y);
+  }
+  if ((type === 'energy' || type === 'tesla') && G && G.bioGasClouds && G.bioGasClouds.length > 0) {
+    for (let i = G.bioGasClouds.length - 1; i >= 0; i--) {
+      const g = G.bioGasClouds[i];
+      if (Math.hypot(e.x - g.x, e.y - g.y) <= (g.r || 70)) {
+        if (typeof detonateThermobaricBioGas === 'function') detonateThermobaricBioGas(g);
+        G.bioGasClouds.splice(i, 1);
+        break;
+      }
+    }
+  }
+
+  // 15.0 Chrono-Anchor Event Recording
+  if (G && G.chronoAnchor && G.chronoAnchor.active && src) {
+    if (typeof recordChronoEvent === 'function') {
+      recordChronoEvent(src.x || e.x, src.y || e.y, e.x, e.y, a);
+    }
+  }
+
+  // 15.0 DNTM Tactical Profiling Element Tracking
+  if (G && G.dntm && G.dntm.elementBias) {
+    if (type === 'phys') G.dntm.elementBias.phys = (G.dntm.elementBias.phys || 0) + a;
+    else if (type === 'plasma') G.dntm.elementBias.plasma = (G.dntm.elementBias.plasma || 0) + a;
+    else if (type === 'cryo') G.dntm.elementBias.cryo = (G.dntm.elementBias.cryo || 0) + a;
+    else if (type === 'energy' || type === 'tesla') G.dntm.elementBias.energy = (G.dntm.elementBias.energy || 0) + a;
+  }
+
+  // 15.0 Zero-Gravity Aerial Juggle Field (+200% DMG)
+  if (G && G.zeroGravityFields && G.zeroGravityFields.length > 0) {
+    for (const zg of G.zeroGravityFields) {
+      if (Math.hypot(e.x - zg.x, e.y - zg.y) <= (zg.r || 75)) {
+        a *= (typeof GEOMORPHIC_CONFIG !== 'undefined' ? GEOMORPHIC_CONFIG.zeroGravityJuggleMult : 3.0);
+        opts.crit = true;
+        break;
+      }
+    }
+  }
+
+  // 15.0 Ancient Cyber-Engram Weapon Affixes
+  if (src && src.engramSuffix === 'void_collapse') {
+    if (e.shield > 0) e.shield = 0;
+    a *= 1.30;
+  }
+  if (src && src.engramPrefix === 'chronos') {
+    e.slowAmt = Math.max(e.slowAmt || 0, 0.50);
+    e.slowT = 3.0;
+  }
+  if (src && src.engramPrefix === 'singularity') {
+    for (const other of (G.enemies || [])) {
+      if (other !== e && !other.dead && Math.hypot(other.x - e.x, other.y - e.y) <= 65) {
+        const ang = Math.atan2(e.y - other.y, e.x - other.x);
+        other.x += Math.cos(ang) * 12;
+        other.y += Math.sin(ang) * 12;
+      }
+    }
+  }
+  if (src && src.engramPrefix === 'superconductive' && !opts.isChained) {
+    let chainedCount = 0;
+    for (const other of (G.enemies || [])) {
+      if (other !== e && !other.dead && chainedCount < 4 && Math.hypot(other.x - e.x, other.y - e.y) <= 85) {
+        dealDamage(other, a * 0.85, 'tesla', src, { isChained: true });
+        chainedCount++;
+      }
+    }
+  }
+
+  // 15.0 DNTM Chameleon Carapace Reflection
+  if (e.chameleonReflect && G && G.dntm && G.dntm.dominantElement === type) {
+    a *= 0.60;
+    if (Math.random() < 0.40) {
+      burst(e.x, e.y, 8, '#f43f5e', 90, 0.35, 2.5, true);
+      addText(e.x, e.y - 18, 'REFLECTED!', '#f43f5e', 11);
+    }
+  }
+
   // 12.0 Harmonic Lattice Singularity Stasis
   if (G && G.harmonicLattices && G.harmonicLattices.length > 0 && typeof pointInTriangle === 'function') {
     for (const lat of G.harmonicLattices) {
@@ -1874,6 +1991,15 @@ function dealDamage(e, amount, type, src, opts) {
   }
   e.hp -= toHp;
   e.lastDmgType = type;
+
+  // 15.0 Cinematic Titan Finisher Detection (HP <= 15% on Boss or Nemesis)
+  if (!e.dead && e.hp > 0 && (e.type === 'boss' || e.isNemesis || e.name === 'Abyssal Apex Juggernaut') && (e.hp / e.maxHp) <= 0.15) {
+    if (!G.finisherPrompt || G.finisherPrompt.boss !== e) {
+      G.finisherPrompt = { boss: e, x: e.x, y: e.y, t: 3.5 };
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('target');
+      if (typeof addText === 'function') addText(e.x, e.y - 30, '★ EXECUTE READY [F]! ★', '#f43f5e', 16);
+    }
+  }
   // Champion Affix: Phase-Shifter teleport on heavy impact
   if (e.affix === 'phase_shifter' && a >= 80 && (!e.phaseCd || e.phaseCd <= 0) && e.hp > 0) {
     e.phaseCd = 3.5;
@@ -1973,8 +2099,9 @@ function killEnemy(e, src) {
     }
   }
 
-  const streakMult = (G && G.callStreak && G.callStreak > 1) ? (1 + (G.callStreak - 1) * 0.4) : 1;
-  const scoreStreakMult = (G && G.callStreak && G.callStreak > 1) ? (1 + (G.callStreak - 1) * 0.5) : 1;
+  const adrenalineMult = (G && G.adrenalineHeat && typeof ADRENALINE_GAMBLE_CONFIG !== 'undefined' && ADRENALINE_GAMBLE_CONFIG.bountyMults[G.adrenalineHeat - 1]) || 1.0;
+  const streakMult = ((G && G.callStreak && G.callStreak > 1) ? (1 + (G.callStreak - 1) * 0.4) : 1) * adrenalineMult;
+  const scoreStreakMult = ((G && G.callStreak && G.callStreak > 1) ? (1 + (G.callStreak - 1) * 0.5) : 1) * adrenalineMult;
   const isBloodPact = G && G.cursedProtocols && G.cursedProtocols.includes('blood_pact');
   const bloodMult = isBloodPact ? 3.0 : 1.0;
   const isBlind = G && G.activeGambit === 'blind_perimeter';
@@ -2022,6 +2149,62 @@ function killEnemy(e, src) {
   }
   G.score += finalScore; G.kills++;
   if (src) src.kills++;
+
+  // 15.0 Ancient Cyber-Engram On-Kill Affixes
+  if (src && src.engramSuffix === 'supernova') {
+    const overkill = Math.max(15, -e.hp);
+    const boomDmg = Math.round(overkill * 3.5);
+    burst(e.x, e.y, 25, '#f97316', 160, 0.5, 3.5, true);
+    addText(e.x, e.y - 20, 'SUPERNOVA: ' + boomDmg, '#f97316', 15);
+    for (const other of (G.enemies || [])) {
+      if (other !== e && !other.dead && Math.hypot(other.x - e.x, other.y - e.y) <= 90) {
+        dealDamage(other, boomDmg, 'plasma', src);
+      }
+    }
+  }
+  if (src && src.engramPrefix === 'vampiric') {
+    if (G.logistics) G.logistics.kinetic = Math.min(G.logistics.maxKinetic || 1000, (G.logistics.kinetic || 0) + 15);
+    addText(e.x, e.y - 15, '+15 AMMO (VAMPIRIC)', '#f43f5e', 11);
+  }
+  if (src && src.engramSuffix === 'dreadnought') {
+    src.dreadnoughtKills = (src.dreadnoughtKills || 0) + 1;
+  }
+
+  // 15.0 Boss & Nemesis Ancient Cyber-Engram Drops
+  if ((e.type === 'boss' || e.isNemesis || e.name === 'Abyssal Apex Juggernaut') && typeof CYBER_ENGRAMS_DATABASE !== 'undefined') {
+    const pKeys = Object.keys(CYBER_ENGRAMS_DATABASE.prefixes);
+    const sKeys = Object.keys(CYBER_ENGRAMS_DATABASE.suffixes);
+    const pId = pKeys[Math.floor(Math.random() * pKeys.length)];
+    const sId = sKeys[Math.floor(Math.random() * sKeys.length)];
+    const eng = {
+      id: 'engram_' + (++eid),
+      prefix: pId,
+      suffix: sId,
+      name: CYBER_ENGRAMS_DATABASE.prefixes[pId].name + ' ' + CYBER_ENGRAMS_DATABASE.suffixes[sId].name.replace('...of the ', '').replace('...of ', ''),
+      color: CYBER_ENGRAMS_DATABASE.prefixes[pId].color,
+      tier: 'Mythic'
+    };
+    if (!G.cyberEngramsInventory) G.cyberEngramsInventory = [];
+    G.cyberEngramsInventory.push(eng);
+    addText(e.x, e.y - 35, '★ MYTHIC CYBER-ENGRAM DROPPED! ★', '#c084fc', 16);
+    burst(e.x, e.y, 30, '#c084fc', 160, 0.6, 4, true);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('vault_open');
+  }
+
+  // 14.0 Frankenstein Foundry: Overkill Dynamo Munitions Refund
+  if (src && src.cpu === 'overkill_dynamo') {
+    const overkill = Math.max(0, -e.hp);
+    const refund = Math.round(overkill * 0.50);
+    if (refund > 0 && G && G.logistics) {
+      G.logistics.kinetic = Math.min(G.logistics.maxKinetic || 1000, (G.logistics.kinetic || 0) + refund);
+      if (Math.random() < 0.35) addText(e.x, e.y - 20, '+' + refund + ' AMMO REFUND', '#38bdf8', 11);
+    }
+  }
+
+  // 14.0 Chemical Alchemy: Bio Gas Pod Chance on Heavy/Acid deaths
+  if ((e.type === 'brute' || e.type === 'carrier' || e.acidT > 0) && Math.random() < 0.35) {
+    if (typeof spawnBioGasCloud === 'function') spawnBioGasCloud(e.x, e.y);
+  }
 
   // 11.0 Chimera Suffix: of_fission
   if (src && src.chimeraSuffix === 'of_fission' && G.enemies) {
@@ -3944,4 +4127,748 @@ function updateVisceralSystems(dt) {
       G.mechRadioMessage = null;
     }
   }
+
+  // 10. 14.0 The Omni-Resonance Matrix Updates
+  if (typeof updateHyperEvolutionSystems === 'function') {
+    updateHyperEvolutionSystems(dt);
+  }
+}
+
+/* ============================================================
+   BASTION TD 14.0: THE OMNI-RESONANCE MATRIX STATE ENGINE
+   ============================================================ */
+
+function craftCustomTower(chassisId, payloadId, cpuId, col, row) {
+  if (!G) return null;
+  const cfg = typeof FRANKENSTEIN_FOUNDRY_CONFIG !== 'undefined' ? FRANKENSTEIN_FOUNDRY_CONFIG : null;
+  if (!cfg || !cfg.chassis[chassisId] || !cfg.payloads[payloadId] || !cfg.cpus[cpuId]) return null;
+  if (col < 0 || row < 0 || col >= COLS || row >= ROWS) return null;
+  if (pathTile[row][col] || G.grid[row][col]) return null;
+
+  const ch = cfg.chassis[chassisId];
+  const pl = cfg.payloads[payloadId];
+  const cpu = cfg.cpus[cpuId];
+  const totalCost = ch.cost + 75;
+
+  if (G.gold < totalCost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return null;
+  }
+
+  G.gold -= totalCost;
+  const tower = {
+    id: ++eid,
+    type: 'custom',
+    isCustom: true,
+    chassis: chassisId,
+    payload: payloadId,
+    cpu: cpuId,
+    c: col,
+    r: row,
+    row: row,
+    x: col * TILE + TILE / 2,
+    y: row * TILE + TILE / 2,
+    anchorX: col * TILE + TILE / 2,
+    anchorY: row * TILE + TILE / 2,
+    orbitAngle: 0,
+    hp: ch.hp,
+    maxHp: ch.hp,
+    range: pl.range * (ch.rangeMult || 1.0),
+    rate: pl.rate,
+    shotsFired: 0,
+    kills: 0,
+    dmg: 0,
+    heat: 0,
+    tier: 1,
+    recoilRamp: 0,
+    overchargeT: 0,
+    empT: 0,
+    color: pl.color || ch.color
+  };
+
+  G.towers.push(tower);
+  G.grid[row][col] = tower;
+  G.customChassis.push(tower);
+
+  if (typeof burst === 'function') burst(tower.x, tower.y, 20, tower.color, 140, 0.5, 3.5, true);
+  if (typeof addRing === 'function') addRing(tower.x, tower.y, 10, 80, 0.4, tower.color, 3);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('fusion');
+  if (typeof addText === 'function') addText(tower.x, tower.y - 25, 'FRANKENSTEIN WEAPON CRAFTED!', tower.color, 14);
+
+  G.banner = {
+    text: '★ CUSTOM FRANKENSTEIN WEAPON ASSEMBLED ★',
+    color: tower.color,
+    sub: ch.name + ' · ' + pl.name + ' · ' + cpu.name,
+    t: 2.8
+  };
+  G.uiDirty = true;
+  return tower;
+}
+
+function titanLiftTower() {
+  if (!G || !G.mech) return false;
+  if (G.carriedTower) return false;
+  const mx = G.mech.x, my = G.mech.y;
+  const liftRange = (typeof TITAN_EXOSUIT_CONFIG !== 'undefined' && TITAN_EXOSUIT_CONFIG.liftRange) ? TITAN_EXOSUIT_CONFIG.liftRange : 60;
+
+  let nearest = null, minDist = liftRange;
+  for (const t of (G.towers || [])) {
+    if (t.isCarried) continue;
+    const d = Math.hypot(t.x - mx, t.y - my);
+    if (d <= minDist) {
+      minDist = d;
+      nearest = t;
+    }
+  }
+
+  if (nearest) {
+    if (nearest.row !== undefined && nearest.c !== undefined && G.grid[nearest.row] && G.grid[nearest.row][nearest.c] === nearest) {
+      G.grid[nearest.row][nearest.c] = null;
+    }
+    nearest.isCarried = true;
+    G.carriedTower = nearest;
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('mech_grapple');
+    if (typeof addText === 'function') addText(mx, my - 35, '★ TOWER LIFTED! [E] TO DEPLOY ★', '#38bdf8', 15);
+    if (typeof burst === 'function') burst(mx, my, 12, '#38bdf8', 80, 0.35, 2.5, true);
+    G.uiDirty = true;
+    return true;
+  }
+  return false;
+}
+
+function titanDeployTower(col, row) {
+  if (!G || !G.carriedTower) return false;
+  if (col < 0 || row < 0 || col >= COLS || row >= ROWS) return false;
+  if (pathTile[row][col] || G.grid[row][col]) {
+    if (typeof addText === 'function' && G.mech) addText(G.mech.x, G.mech.y - 25, 'CANNOT DEPLOY HERE!', '#ef4444', 13);
+    return false;
+  }
+
+  const t = G.carriedTower;
+  t.c = col;
+  t.r = row;
+  t.row = row;
+  t.x = col * TILE + TILE / 2;
+  t.y = row * TILE + TILE / 2;
+  if (t.isCustom) {
+    t.anchorX = t.x;
+    t.anchorY = t.y;
+  }
+  t.isCarried = false;
+  G.grid[row][col] = t;
+  G.carriedTower = null;
+
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('place');
+  if (typeof burst === 'function') burst(t.x, t.y, 16, '#38bdf8', 90, 0.4, 3, true);
+  if (typeof addText === 'function') addText(t.x, t.y - 25, 'TOWER DEPLOYED!', '#38bdf8', 14);
+  G.uiDirty = true;
+  return true;
+}
+
+function titanToggleLift() {
+  if (!G || !G.mech) return false;
+  if (G.carriedTower) {
+    const col = Math.floor(G.mech.x / TILE);
+    const row = Math.floor(G.mech.y / TILE);
+    if (row >= 0 && row < ROWS && col >= 0 && col < COLS && !pathTile[row][col] && !G.grid[row][col]) {
+      return titanDeployTower(col, row);
+    }
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const nr = row + dr, nc = col + dc;
+        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !pathTile[nr][nc] && !G.grid[nr][nc]) {
+          return titanDeployTower(nc, nr);
+        }
+      }
+    }
+    return false;
+  } else {
+    return titanLiftTower();
+  }
+}
+
+function tetherTowerOvercharge(targetTower) {
+  if (!G || !G.mech || !targetTower) return false;
+  const cfg = typeof TITAN_EXOSUIT_CONFIG !== 'undefined' ? TITAN_EXOSUIT_CONFIG : { overchargeTetherCost: 25, overchargeTetherDuration: 8.0 };
+  if (G.mech.battery < (cfg.overchargeTetherCost || 25)) {
+    if (typeof addText === 'function') addText(G.mech.x, G.mech.y - 25, 'NEED 25% BATTERY!', '#ef4444', 13);
+    return false;
+  }
+  G.mech.battery -= (cfg.overchargeTetherCost || 25);
+  targetTower.tetherOverchargeT = cfg.overchargeTetherDuration || 8.0;
+  G.tetherActive = {
+    tower: targetTower,
+    t: cfg.overchargeTetherDuration || 8.0
+  };
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overload');
+  if (typeof addText === 'function') addText(targetTower.x, targetTower.y - 30, '★ HYPER-FLUX TETHER (2.5x SPD) ★', '#38bdf8', 15);
+  if (typeof burst === 'function') burst(targetTower.x, targetTower.y, 20, '#38bdf8', 120, 0.45, 3.5, true);
+  return true;
+}
+
+function setTitanExosuit(type) {
+  if (!G || !G.mech) return 'vanguard';
+  const cfg = (typeof TITAN_EXOSUIT_CONFIG !== 'undefined' && TITAN_EXOSUIT_CONFIG.archetypes) ? TITAN_EXOSUIT_CONFIG.archetypes : null;
+  const valid = ['vanguard', 'phantom', 'archon'];
+  if (!type || !valid.includes(type)) {
+    const curIdx = valid.indexOf(G.exosuitType || 'vanguard');
+    type = valid[(curIdx + 1) % valid.length];
+  }
+  G.exosuitType = type;
+  if (cfg && cfg[type]) {
+    const arch = cfg[type];
+    G.mech.maxHp = arch.hp;
+    G.mech.hp = Math.min(G.mech.hp, arch.hp);
+    G.mech.speed = arch.speed;
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
+  if (typeof addText === 'function') addText(G.mech.x, G.mech.y - 30, 'EXOSUIT: ' + type.toUpperCase(), '#c084fc', 15);
+  G.uiDirty = true;
+  return type;
+}
+
+function spawnSteamCloud(x, y) {
+  if (!G) return;
+  G.steamClouds = G.steamClouds || [];
+  if (G.steamClouds.length >= 12) G.steamClouds.shift();
+  G.steamClouds.push({
+    id: ++eid,
+    x: x,
+    y: y,
+    r: 65,
+    life: 6.0,
+    maxLife: 6.0
+  });
+  if (typeof burst === 'function') burst(x, y, 16, '#93c5fd', 90, 0.4, 2.5, false);
+}
+
+function spawnBioGasCloud(x, y) {
+  if (!G) return;
+  G.bioGasClouds = G.bioGasClouds || [];
+  if (G.bioGasClouds.length >= 12) G.bioGasClouds.shift();
+  G.bioGasClouds.push({
+    id: ++eid,
+    x: x,
+    y: y,
+    r: 70,
+    life: 8.0,
+    maxLife: 8.0
+  });
+  if (typeof burst === 'function') burst(x, y, 16, '#84cc16', 90, 0.4, 2.5, false);
+}
+
+function detonateThermobaricBioGas(gas) {
+  if (!G) return;
+  const tx = gas.x, ty = gas.y;
+  const cfg = typeof ALCHEMY_MATRIX_CONFIG !== 'undefined' ? ALCHEMY_MATRIX_CONFIG.bioGas : { thermobaricDmg: 450, thermobaricRadius: 110 };
+  if (typeof shake === 'function') shake(12.0);
+  if (typeof burst === 'function') {
+    burst(tx, ty, 35, '#84cc16', 220, 0.7, 4.5, true);
+    burst(tx, ty, 25, '#f97316', 170, 0.6, 3.5, true);
+  }
+  if (typeof addRing === 'function') addRing(tx, ty, 15, 140, 0.5, '#a3e635', 5);
+  if (typeof addText === 'function') addText(tx, ty - 25, 'THERMOBARIC BIO-DETONATION: ' + cfg.thermobaricDmg, '#84cc16', 16);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+
+  for (const e of (G.enemies || [])) {
+    if (!e.dead && Math.hypot(e.x - tx, e.y - ty) <= cfg.thermobaricRadius) {
+      dealDamage(e, cfg.thermobaricDmg, 'plasma', null);
+      e.staggerT = 2.0;
+    }
+  }
+
+  if (G.bioGasClouds) {
+    const idx = G.bioGasClouds.indexOf(gas);
+    if (idx !== -1) G.bioGasClouds.splice(idx, 1);
+  }
+}
+
+function tradeBourse(commodity, action, amount) {
+  if (!G || !G.bourseCommodities || !G.bourseHoldings) return false;
+  amount = Math.max(1, Math.floor(amount || 10));
+  const price = G.bourseCommodities[commodity] || 1.0;
+
+  if (action === 'buy') {
+    const cost = Math.round(price * amount);
+    if (G.gold < cost) {
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+      return false;
+    }
+    G.gold -= cost;
+    G.bourseHoldings[commodity] = (G.bourseHoldings[commodity] || 0) + amount;
+    G.bourseCommodities[commodity] = Math.min(25.0, price * 1.05);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('coin');
+  } else if (action === 'sell') {
+    const current = G.bourseHoldings[commodity] || 0;
+    if (current < amount) return false;
+    const revenue = Math.round(price * amount);
+    G.bourseHoldings[commodity] -= amount;
+    G.gold += revenue;
+    G.bourseCommodities[commodity] = Math.max(0.4, price * 0.95);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('coin');
+  }
+  G.uiDirty = true;
+  return true;
+}
+
+function acceptVoidBargain(bargainId) {
+  if (!G || !G.voidBargainsActive) return false;
+  if (G.voidBargainsActive.includes(bargainId)) return false;
+  const cfg = typeof QUANTUM_BOURSE_CONFIG !== 'undefined' ? QUANTUM_BOURSE_CONFIG.voidBargains[bargainId] : null;
+  if (!cfg) return false;
+
+  G.voidBargainsActive.push(bargainId);
+  if (bargainId === 'chronos_bankruptcy') {
+    G.gold += cfg.instantGold || 2000;
+    G.chronosBankruptcyWaves = cfg.waveDuration || 3;
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('vault_open');
+  if (typeof shake === 'function') shake(10);
+  G.banner = {
+    text: '☠ VOID BARGAIN SEALED: ' + cfg.name.toUpperCase() + ' ☠',
+    color: '#c084fc',
+    sub: cfg.desc,
+    t: 3.5
+  };
+  G.uiDirty = true;
+  return true;
+}
+
+function updateHyperEvolutionSystems(dt) {
+  if (!G) return;
+
+  // 1. Carried tower position sync with Mech
+  if (G.carriedTower && G.mech) {
+    G.carriedTower.x = G.mech.x;
+    G.carriedTower.y = G.mech.y - 14;
+    if (typeof updateTower === 'function') {
+      updateTower(G.carriedTower, dt);
+    }
+  }
+
+  // 2. Custom Chassis Movement & Orbits
+  if (G.customChassis && G.customChassis.length > 0) {
+    for (const t of G.customChassis) {
+      if (t.isCarried) continue;
+      if (t.chassis === 'hex_hover_drone') {
+        t.orbitAngle = (t.orbitAngle || 0) + dt * 1.5;
+        t.x = (t.anchorX || t.x) + Math.cos(t.orbitAngle) * 35;
+        t.y = (t.anchorY || t.y) + Math.sin(t.orbitAngle) * 35;
+      } else if (t.chassis === 'pneumatic_biped') {
+        t.stepTimer = (t.stepTimer || 0) + dt;
+        if (t.stepTimer >= 3.0) {
+          t.stepTimer = 0;
+          t.x += (Math.random() - 0.5) * 8;
+          t.y += (Math.random() - 0.5) * 8;
+        }
+      }
+      if (t.cpu === 'recoil_accelerator') {
+        if (t.firing) {
+          t.recoilRamp = Math.min(0.80, (t.recoilRamp || 0) + dt * 0.10);
+        } else {
+          t.recoilRamp = Math.max(0, (t.recoilRamp || 0) - dt * 0.25);
+        }
+      }
+    }
+  }
+
+  // 3. Overcharge Tether decay
+  if (G.tetherActive) {
+    G.tetherActive.t -= dt;
+    if (G.tetherActive.t <= 0) {
+      if (G.tetherActive.tower) G.tetherActive.tower.tetherOverchargeT = 0;
+      G.tetherActive = null;
+    }
+  }
+
+  // 4. Steam Clouds decay
+  if (G.steamClouds && G.steamClouds.length > 0) {
+    for (let i = G.steamClouds.length - 1; i >= 0; i--) {
+      const s = G.steamClouds[i];
+      s.life -= dt;
+      if (s.life <= 0) G.steamClouds.splice(i, 1);
+    }
+  }
+
+  // 5. Bio Gas Clouds decay
+  if (G.bioGasClouds && G.bioGasClouds.length > 0) {
+    for (let i = G.bioGasClouds.length - 1; i >= 0; i--) {
+      const g = G.bioGasClouds[i];
+      g.life -= dt;
+      if (g.life <= 0) G.bioGasClouds.splice(i, 1);
+    }
+  }
+
+  // 6. Void Bargains (The Blood Conduit life drain timer)
+  if (G.voidBargainsActive && G.voidBargainsActive.includes('blood_conduit') && G.state === 'active') {
+    G.bloodConduitTimer = (G.bloodConduitTimer || 0) + dt;
+    if (G.bloodConduitTimer >= 45.0) {
+      G.bloodConduitTimer = 0;
+      if (G.lives > 1) {
+        G.lives -= 1;
+        if (typeof addText === 'function') addText(BASE_PT ? BASE_PT.x : 850, (BASE_PT ? BASE_PT.y : 300) - 30, '-1 LIFE (BLOOD CONDUIT)', '#ef4444', 14);
+        if (typeof burst === 'function') burst(BASE_PT ? BASE_PT.x : 850, BASE_PT ? BASE_PT.y : 300, 15, '#ef4444', 100, 0.4, 3, false);
+      }
+    }
+  }
+
+  // 7. Real-time Hivemind Cannibalism Feeding
+  if (G.corpses && G.corpses.length > 0 && G.enemies && G.enemies.length > 0) {
+    for (const c of G.corpses) {
+      if (c.consumed) continue;
+      for (const e of G.enemies) {
+        if (!e.dead && (e.type === 'swarm' || e.type === 'runner')) {
+          if (Math.hypot(e.x - c.x, e.y - c.y) <= 45) {
+            e.biomassFeeds = (e.biomassFeeds || 0) + 1;
+            c.consumed = true;
+            if (typeof burst === 'function') burst(e.x, e.y, 8, '#ec4899', 60, 0.3, 2, false);
+            if (typeof addText === 'function') addText(e.x, e.y - 15, 'BIO-CONSUMED!', '#ec4899', 11);
+            if (e.biomassFeeds >= 3) {
+              e.type = 'juggernaut';
+              e.name = 'Abyssal Apex Juggernaut';
+              e.color = '#831843';
+              e.r = 24;
+              e.hp = Math.round(e.maxHp * 4.5);
+              e.maxHp = e.hp;
+              e.armor = 0.65;
+              e.speed = 38;
+              if (typeof shake === 'function') shake(8.0);
+              if (typeof burst === 'function') burst(e.x, e.y, 25, '#831843', 150, 0.6, 4, true);
+              if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('alpha_roar');
+              if (typeof addText === 'function') addText(e.x, e.y - 30, '★ APEX METAMORPHOSIS! ★', '#f43f5e', 16);
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // 8. 15.0 Apex Ascendant Core Systems
+  if (typeof updateApexAscendantSystems === 'function') {
+    updateApexAscendantSystems(dt);
+  }
+}
+
+/* ============================================================
+   BASTION TD 15.0: APEX ASCENDANT STATE ENGINE
+   ============================================================ */
+
+function dropChronoAnchor(x, y) {
+  if (!G) return false;
+  const cfg = typeof CHRONO_NEXUS_CONFIG !== 'undefined' ? CHRONO_NEXUS_CONFIG : { anchorDuration: 12.0 };
+  const ax = x !== undefined ? x : ((G.mouse && G.mouse.in) ? G.mouse.x : W / 2);
+  const ay = y !== undefined ? y : ((G.mouse && G.mouse.in) ? G.mouse.y : H / 2);
+  G.chronoAnchor = {
+    x: ax,
+    y: ay,
+    t: cfg.anchorDuration,
+    maxT: cfg.anchorDuration,
+    events: [],
+    startGold: G.gold,
+    startLives: G.lives,
+    active: true
+  };
+  if (typeof shake === 'function') shake(8.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('time_rewind');
+  if (typeof addRing === 'function') addRing(W / 2, H / 2, 20, Math.max(W, H), 0.7, '#06b6d4', 4);
+  if (typeof addText === 'function') addText(W / 2, 75, '★ CHRONO-ANCHOR RECORDING (12s) ★', '#06b6d4', 18);
+  G.banner = {
+    text: '⌛ CHRONO-ANCHOR DEPLOYED ⌛',
+    color: '#06b6d4',
+    sub: 'All attacks & movements recorded into Temporal Ring Buffer. Trigger again to Reverberate!',
+    t: 2.8
+  };
+  G.uiDirty = true;
+  return true;
+}
+
+function triggerChronoReverberation() {
+  if (!G || !G.chronoAnchor) return false;
+  const cfg = typeof CHRONO_NEXUS_CONFIG !== 'undefined' ? CHRONO_NEXUS_CONFIG : { echoDmgRatio: 0.75 };
+  const events = G.chronoAnchor.events || [];
+  G.chronoAnchor = null;
+
+  if (typeof shake === 'function') shake(16.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('reaction');
+  if (typeof addRing === 'function') addRing(W / 2, H / 2, 30, Math.max(W, H), 0.8, '#38bdf8', 6);
+  if (typeof addText === 'function') addText(W / 2, 75, '★ CHRONO-REVERBERATION ECHO WAVE! ★', '#38bdf8', 22);
+
+  if (!G.temporalEchoes) G.temporalEchoes = [];
+  let replayedCount = 0;
+  for (const ev of events) {
+    G.temporalEchoes.push({
+      x: ev.x,
+      y: ev.y,
+      tx: ev.tx,
+      ty: ev.ty,
+      life: 0.8,
+      dmg: Math.round(ev.dmg * (cfg.echoDmgRatio || 0.75)),
+      color: '#38bdf8'
+    });
+    replayedCount++;
+    if (replayedCount >= 25) break;
+  }
+
+  for (const echo of G.temporalEchoes) {
+    if (typeof burst === 'function') burst(echo.tx, echo.ty, 8, '#38bdf8', 90, 0.35, 2.5, true);
+    for (const e of (G.enemies || [])) {
+      if (!e.dead && Math.hypot(e.x - echo.tx, e.y - echo.ty) <= 45) {
+        dealDamage(e, echo.dmg, 'energy', null, { isEcho: true });
+      }
+    }
+  }
+
+  G.banner = {
+    text: '⚡ TIMELINE SPLINTERED: PARALLEL ECHOES RE-ENACTED! ⚡',
+    color: '#38bdf8',
+    sub: 'Ghost echoes deal 75% parallel burst damage across recorded killzones!',
+    t: 3.0
+  };
+  G.uiDirty = true;
+  return true;
+}
+
+function recordChronoEvent(x, y, tx, ty, dmg) {
+  if (!G || !G.chronoAnchor || !G.chronoAnchor.active) return;
+  if (!G.chronoAnchor.events) G.chronoAnchor.events = [];
+  if (G.chronoAnchor.events.length < 80) {
+    G.chronoAnchor.events.push({ x, y, tx, ty, dmg });
+  }
+}
+
+function createGeomorphicFissure(x1, y1, x2, y2) {
+  if (!G) return false;
+  const cfg = typeof GEOMORPHIC_CONFIG !== 'undefined' ? GEOMORPHIC_CONFIG : { fissureDuration: 25.0, fissureDps: 140 };
+  if (!G.geomorphicFissures) G.geomorphicFissures = [];
+  const fissure = {
+    x1, y1, x2, y2,
+    life: cfg.fissureDuration,
+    maxLife: cfg.fissureDuration,
+    dps: cfg.fissureDps
+  };
+  G.geomorphicFissures.push(fissure);
+  if (typeof shake === 'function') shake(10.0);
+  if (typeof burst === 'function') {
+    burst((x1 + x2) / 2, (y1 + y2) / 2, 25, '#f97316', 140, 0.5, 3.5, true);
+    burst((x1 + x2) / 2, (y1 + y2) / 2, 18, '#ef4444', 110, 0.45, 3, true);
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('soil_burn');
+  if (typeof addText === 'function') addText((x1 + x2) / 2, (y1 + y2) / 2 - 20, 'TECTONIC MAGMA FISSURE!', '#f97316', 15);
+  G.uiDirty = true;
+  return fissure;
+}
+
+function deployZeroGravityField(x, y) {
+  if (!G) return false;
+  const cfg = typeof GEOMORPHIC_CONFIG !== 'undefined' ? GEOMORPHIC_CONFIG : { zeroGravityDuration: 8.0, zeroGravityRadius: 75 };
+  if (!G.zeroGravityFields) G.zeroGravityFields = [];
+  const zg = {
+    x, y,
+    r: cfg.zeroGravityRadius,
+    life: cfg.zeroGravityDuration,
+    maxLife: cfg.zeroGravityDuration
+  };
+  G.zeroGravityFields.push(zg);
+  if (typeof addRing === 'function') addRing(x, y, 10, cfg.zeroGravityRadius, 0.5, '#38bdf8', 4);
+  if (typeof burst === 'function') burst(x, y, 15, '#38bdf8', 90, 0.4, 2.5, true);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('freeze');
+  if (typeof addText === 'function') addText(x, y - 25, 'ZERO-GRAVITY CONTAINMENT FIELD!', '#38bdf8', 14);
+  G.uiDirty = true;
+  return zg;
+}
+
+function socketCyberEngram(tower, engramId) {
+  if (!G || !tower) return false;
+  if (!G.cyberEngramsInventory || G.cyberEngramsInventory.length === 0) return false;
+  const idx = G.cyberEngramsInventory.findIndex(e => e.id === engramId);
+  if (idx === -1) return false;
+  const eng = G.cyberEngramsInventory[idx];
+  tower.cyberEngram = eng;
+  tower.engramPrefix = eng.prefix;
+  tower.engramSuffix = eng.suffix;
+  tower.engramName = eng.name;
+  tower.engramColor = eng.color;
+  G.cyberEngramsInventory.splice(idx, 1);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
+  if (typeof burst === 'function') burst(tower.x, tower.y, 18, eng.color, 110, 0.45, 3, true);
+  if (typeof addText === 'function') addText(tower.x, tower.y - 25, 'ENGRAM SYNTHESIZED: ' + eng.name, eng.color, 13);
+  G.uiDirty = true;
+  return true;
+}
+
+function triggerTitanFinisher(boss) {
+  if (!G || !boss || boss.dead) return false;
+  if ((boss.hp / boss.maxHp) > 0.15) return false;
+
+  G.hitStopT = 0.25;
+  if (typeof shake === 'function') shake(24.0);
+  if (typeof burst === 'function') {
+    burst(boss.x, boss.y, 40, '#f43f5e', 200, 0.7, 5, true);
+    burst(boss.x, boss.y, 30, '#fbbf24', 160, 0.6, 4, true);
+  }
+  if (typeof addRing === 'function') addRing(boss.x, boss.y, 20, 150, 0.6, '#f43f5e', 5);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('mech_blade');
+    Sfx.play('alpha_roar');
+  }
+
+  dealDamage(boss, boss.hp + 9999, 'phys', G.mech || null);
+  G.finisherPrompt = null;
+  G.gold += 350;
+  if (typeof addCores === 'function') addCores(3);
+  if (typeof addText === 'function') addText(W / 2, 90, '★ TITAN MECH BRUTAL EXECUTION! (+350G, +3 CORES) ★', '#f43f5e', 20);
+
+  G.banner = {
+    text: '☠ TITAN APEX EXECUTION COMPLETED ☠',
+    color: '#f43f5e',
+    sub: 'Power matrix obliterated! +350 Gold, +3 Nanite Cores & guaranteed Mythic Engram awarded.',
+    t: 3.5
+  };
+  G.uiDirty = true;
+  return true;
+}
+
+function updateDNTMProfiler(dt) {
+  if (!G || G.state !== 'active') return;
+  if (!G.dntm) {
+    G.dntm = { timer: 0, killboxScore: 0, dominantElement: 'phys', elementBias: { phys: 0, plasma: 0, cryo: 0, energy: 0 }, mechActiveTime: 0, totalWaveTime: 0, activeCounters: [] };
+  }
+
+  G.dntm.timer = (G.dntm.timer || 0) + dt;
+  G.dntm.totalWaveTime = (G.dntm.totalWaveTime || 0) + dt;
+  if (G.mech && G.mech.active) {
+    G.dntm.mechActiveTime = (G.dntm.mechActiveTime || 0) + dt;
+  }
+
+  if (G.dntm.timer >= 4.0) {
+    G.dntm.timer = 0;
+    // 1. Evaluate Killbox Density
+    let maxCluster = 0;
+    for (const t1 of (G.towers || [])) {
+      let cluster = 0;
+      for (const t2 of (G.towers || [])) {
+        if (Math.hypot(t1.x - t2.x, t1.y - t2.y) <= 3.2 * TILE) cluster++;
+      }
+      if (cluster > maxCluster) maxCluster = cluster;
+    }
+    G.dntm.killboxScore = maxCluster;
+
+    // 2. Evaluate Element Monopoly
+    const eb = G.dntm.elementBias || { phys: 0, plasma: 0, cryo: 0, energy: 0 };
+    const totalElemDmg = eb.phys + eb.plasma + eb.cryo + eb.energy;
+    if (totalElemDmg > 500) {
+      let dominant = 'phys', maxVal = eb.phys;
+      for (const k in eb) {
+        if (eb[k] > maxVal) { maxVal = eb[k]; dominant = k; }
+      }
+      if (maxVal / totalElemDmg >= 0.60) {
+        G.dntm.dominantElement = dominant;
+      }
+    }
+
+    // Spawn Dynamic Counter Hostiles if conditions met
+    if (G.dntm.killboxScore >= 6 && (!G.dntm.lastSapperWave || G.dntm.lastSapperWave !== G.wave)) {
+      G.dntm.lastSapperWave = G.wave;
+      const sapper = {
+        id: ++eid,
+        type: 'seismic_sapper',
+        name: 'Seismic Sapper',
+        color: '#b45309',
+        hp: 650,
+        maxHp: 650,
+        armor: 0.40,
+        speed: 48,
+        r: 16,
+        d: 20,
+        pathId: 0,
+        x: 0, y: 0,
+        dead: false,
+        subterranean: true,
+        eruptTimer: 6.0
+      };
+      if (typeof getPointOnPath === 'function') {
+        const pt = getPointOnPath(0, 20);
+        sapper.x = pt.x; sapper.y = pt.y;
+      }
+      if (!G.enemies) G.enemies = [];
+      G.enemies.push(sapper);
+      if (typeof addText === 'function') addText(sapper.x, sapper.y - 20, '⚠️ SEISMIC SAPPER INBOUND!', '#b45309', 14);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('dreadnought_horn');
+    }
+  }
+}
+
+function updateApexAscendantSystems(dt) {
+  if (!G) return;
+
+  // 1. Chrono-Anchor Recording & Countdown
+  if (G.chronoAnchor && G.chronoAnchor.active) {
+    G.chronoAnchor.t -= dt;
+    if (G.chronoAnchor.t <= 0) {
+      triggerChronoReverberation();
+    }
+  }
+
+  // 2. Temporal Echoes Decay
+  if (G.temporalEchoes && G.temporalEchoes.length > 0) {
+    for (let i = G.temporalEchoes.length - 1; i >= 0; i--) {
+      const echo = G.temporalEchoes[i];
+      echo.life -= dt;
+      if (echo.life <= 0) G.temporalEchoes.splice(i, 1);
+    }
+  }
+
+  // 3. Geomorphic Magma Fissures Update & Burn
+  if (G.geomorphicFissures && G.geomorphicFissures.length > 0) {
+    for (let i = G.geomorphicFissures.length - 1; i >= 0; i--) {
+      const fis = G.geomorphicFissures[i];
+      fis.life -= dt;
+      if (fis.life <= 0) {
+        G.geomorphicFissures.splice(i, 1);
+        continue;
+      }
+      for (const e of (G.enemies || [])) {
+        if (!e.dead) {
+          const midX = (fis.x1 + fis.x2) / 2, midY = (fis.y1 + fis.y2) / 2;
+          const dist = Math.hypot(e.x - midX, e.y - midY);
+          if (dist <= 65) {
+            dealDamage(e, fis.dps * dt, 'plasma', null);
+            e.slowAmt = Math.max(e.slowAmt || 0, 0.40);
+            e.slowT = 0.5;
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Zero-Gravity Juggle Fields Update
+  if (G.zeroGravityFields && G.zeroGravityFields.length > 0) {
+    for (let i = G.zeroGravityFields.length - 1; i >= 0; i--) {
+      const zg = G.zeroGravityFields[i];
+      zg.life -= dt;
+      if (zg.life <= 0) {
+        G.zeroGravityFields.splice(i, 1);
+        continue;
+      }
+      for (const e of (G.enemies || [])) {
+        if (!e.dead && Math.hypot(e.x - zg.x, e.y - zg.y) <= zg.r) {
+          e.slowAmt = Math.max(e.slowAmt || 0, 0.85);
+          e.slowT = 0.5;
+          e.inZeroGravity = true;
+        }
+      }
+    }
+  }
+
+  // 5. Finisher Prompt Timeout
+  if (G.finisherPrompt) {
+    G.finisherPrompt.t -= dt;
+    if (G.finisherPrompt.t <= 0 || G.finisherPrompt.boss.dead) {
+      G.finisherPrompt = null;
+    }
+  }
+
+  // 6. DNTM Tactical Profiler Update
+  updateDNTMProfiler(dt);
 }

@@ -54,13 +54,18 @@ button {
   background: none;
 }
 
-/* Custom sleek sci-fi scrollbars */
+/* Universal sleek sci-fi scrollbars & standard CSS Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 rgba(11, 15, 23, 0.7);
+}
+
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(11, 15, 23, 0.6);
+  background: rgba(11, 15, 23, 0.7);
 }
 ::-webkit-scrollbar-thumb {
   background: #334155;
@@ -72,13 +77,6 @@ button {
 }
 ::-webkit-scrollbar-corner {
   background: transparent;
-}
-
-@supports (-moz-appearance: none) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: #334155 #0b0f17;
-  }
 }
 
 .ico {
@@ -379,11 +377,24 @@ button {
 .cbtn-bonds:hover:not(:disabled) { border-color: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.35); }
 .cbtn-bonds .cbtn-badge { background: #78350f; color: #fef3c7; }
 
+.cbtn-bourse { color: #c084fc; border-color: rgba(192, 132, 252, 0.4); }
+.cbtn-bourse:hover:not(:disabled) { border-color: #c084fc; box-shadow: 0 0 10px rgba(192, 132, 252, 0.35); }
+
+.cbtn-engrams { color: #e879f9; border-color: rgba(232, 121, 249, 0.4); }
+.cbtn-engrams:hover:not(:disabled) { border-color: #e879f9; box-shadow: 0 0 10px rgba(232, 121, 249, 0.35); }
+.cbtn-engrams .cbtn-badge { background: #86198f; color: #fae8ff; }
+
+.cbtn-exosuit { color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
+.cbtn-exosuit:hover:not(:disabled) { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.35); }
+
 .cbtn-purge { color: #f97316; border-color: rgba(249, 115, 22, 0.4); }
 .cbtn-purge:hover:not(:disabled) { border-color: #f97316; box-shadow: 0 0 10px rgba(249, 115, 22, 0.35); }
 
 .cbtn-chrono { color: #06b6d4; border-color: rgba(6, 182, 212, 0.4); }
 .cbtn-chrono:hover:not(:disabled) { border-color: #06b6d4; box-shadow: 0 0 10px rgba(6, 182, 212, 0.35); }
+
+.cbtn-anchor { color: #06b6d4; border-color: rgba(6, 182, 212, 0.4); }
+.cbtn-anchor:hover:not(:disabled) { border-color: #06b6d4; box-shadow: 0 0 10px rgba(6, 182, 212, 0.35); }
 
 .cbtn-overload { color: #f43f5e; border-color: rgba(244, 63, 94, 0.4); }
 .cbtn-overload:hover:not(:disabled) { border-color: #f43f5e; box-shadow: 0 0 10px rgba(244, 63, 94, 0.35); }
@@ -842,14 +853,14 @@ kbd, .kbd {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 10px;
+  padding: 6px 8px;
 }
 #inspector > h3 {
   position: sticky;
   top: 0;
   background: linear-gradient(180deg, #131920 88%, rgba(19, 25, 32, 0) 100%);
   z-index: 3;
-  padding-bottom: 4px;
+  padding-bottom: 3px;
   margin-top: -2px;
 }
 
@@ -920,18 +931,19 @@ kbd, .kbd {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 5px;
-  margin: 5px 0 6px;
+  margin: 4px 0 5px;
 }
 .tower-actions .span-2 {
   grid-column: 1 / -1;
   width: 100%;
 }
 .tower-actions .primary,
-.tower-actions .sell {
+.tower-actions .sell,
+.tower-actions button {
   clip-path: none !important;
-  border-radius: 3px !important;
-  padding: 6px 6px !important;
-  font-size: 10px !important;
+  border-radius: 4px !important;
+  padding: 5px 6px !important;
+  font-size: 9.5px !important;
   font-weight: 800 !important;
   letter-spacing: .02em !important;
   gap: 4px !important;
@@ -939,19 +951,24 @@ kbd, .kbd {
   align-items: center !important;
   justify-content: center !important;
   white-space: nowrap !important;
-  min-height: 30px;
+  min-height: 28px;
   box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tower-actions .primary svg,
-.tower-actions .sell svg {
-  width: 13px;
-  height: 13px;
+.tower-actions .sell svg,
+.tower-actions button svg {
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
 }
 .tower-actions .coin,
 .sell .coin {
   margin: 0 1px 0 2px;
   flex-shrink: 0;
+  width: 10px;
+  height: 10px;
 }
 .sell {
   display: flex;
@@ -964,8 +981,8 @@ kbd, .kbd {
   font-weight: 800;
   letter-spacing: .04em;
   text-transform: uppercase;
-  font-size: 10.5px;
-  padding: 6px 8px;
+  font-size: 10px;
+  padding: 5px 8px;
   border-radius: 4px;
   transition: all .14s ease;
   white-space: nowrap;
@@ -979,8 +996,8 @@ kbd, .kbd {
 
 /* Tactical Telemetry Meters (Megastructures, Barricades, Bosses) */
 .telemetry-card {
-  margin: 4px 0;
-  padding: 4px 8px;
+  margin: 3px 0;
+  padding: 4px 7px;
   background: rgba(15, 23, 42, 0.75);
   border: 1px solid rgba(56, 189, 248, 0.25);
   border-radius: 4px;
@@ -990,10 +1007,10 @@ kbd, .kbd {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: .04em;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 .telemetry-hdr span:first-child {
   color: #94a3b8;
@@ -1016,30 +1033,30 @@ kbd, .kbd {
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 3px 8px;
+  gap: 2px 8px;
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid var(--line2);
   border-radius: 4px;
-  padding: 5px 8px;
-  margin-bottom: 5px;
+  padding: 4px 7px;
+  margin-bottom: 4px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 .srow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 10.5px;
+  font-size: 10px;
   padding: 0;
 }
 .srow span:first-child {
   color: var(--text-dim);
   letter-spacing: .08em;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 700;
 }
 .srow .sv {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   color: #f8fafc;
 }
@@ -1047,9 +1064,9 @@ kbd, .kbd {
 /* Priority Selector */
 .prio {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 3px;
-  margin: 4px 0;
+  margin: 3px 0 4px;
 }
 .prio button {
   background: var(--panel2);
