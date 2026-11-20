@@ -1885,6 +1885,55 @@ Berdasarkan tinjauan visual langsung terhadap antarmuka Bastion TD dan tangkapan
 
 ---
 
+## 30. Penyempurnaan Visual & Pemecahan Masalah Screenshot Pengguna
+
+Berdasarkan analisis visual mendalam terhadap screenshot yang dilampirkan pengguna, ditemukan dan dituntaskan dua isu ergonomi UI spesifik:
+
+### 30.1 Masalah Teridentifikasi dari Screenshot
+1. **Pemotongan Teks Ekstrem pada Kartu Shop Dock (Screenshot 1):**
+   * Kartu megastruktur di dock bawah terpotong parah menjadi singkatan 2-3 huruf (`Io... 2x2`, `A... 2x2`, `Te... 2x2`) serta peran terpotong (`Sol...`, `Air...`, `Sei...`).
+   * **Penyebab Akar:** Flex container membagi kartu dengan `min-width: 104px`. Setelah dipotong padding kartu (12px), kanvas (34px), celah (6px), dan padding kanan `.meta` (22px) untuk lencana `.key`, lebar yang tersisa untuk teks nama hanya ~30px. Akibatnya teks apapun dengan lebih dari 3 huruf langsung terpotong ellipsis (`...`).
+2. **Asimetri Kisi Tombol Aksi Inspektur (Screenshot 2):**
+   * Baris 1: `[↑ OVERCLOCK 40]` (kolom 1.5fr) dan `[🔧 OVERHAUL]` (kolom 1fr). Kolom 1fr terlalu sempit sehingga teks overhaul berhimpitan dan ikon koin terpotong di tepi kanan.
+   * Baris 2: `[🏷️ DISMANTLE FACILITY 560]` sendirian di kolom 1, meninggalkan kolom 2 kosong melompong secara janggal.
+3. **Kemunculan Scrollbar Putih Native Windows 16px (Screenshot 2):**
+   * Windows merender scrollbar putih native bertombol panah di dalam batas kartu `#inspector`, memangkas lebar area kerja sebesar 16px dan merusak estetika gelap bertema sci-fi cyberpunk.
+   * **Penyebab Akar:** Chromium 121+ mengabaikan aturan pseudo-elemen `::-webkit-scrollbar` jika `scrollbar-width: thin` dideklarasikan tanpa `scrollbar-color`. Tanpa `scrollbar-color`, browser jatuh kembali ke scrollbar sistem Windows. Selain itu, tumpukan vertikal inspektur melebihi batas wadah flex sekitar 15-20px sehingga memicu scrollbar yang tidak diinginkan.
+
+---
+
+### 30.2 Solusi Desain & Implementasi Kode
+1. **Anti-Truncation & Pelebaran Kartu Dock (`css/style.css`, `js/data.js`):**
+   * Menetapkan `min-width: 126px` (dan basis `flex: 1 1 128px`) pada `.shop`, memastikan nama menara dan peran fasilitas memiliki ruang baca ~50-60px setelah dikurangi ruang badge `.key`.
+   * Menyesuaikan ukuran tipografi nama `.shop .nm` menjadi `9.5px` dengan `letter-spacing: 0` agar nama fasilitas seperti *Ion Uplink*, *Drone Base*, *Tectonic*, *Barricade*, dan *Prism* terbaca utuh tanpa terpotong.
+   * Menambahkan bilah gulir horizontal tersembunyi/halus pada `#dock` dengan `scrollbar-color: var(--line2) transparent` dan `overflow-y: hidden`.
+2. **Restrukturisasi Grid Tombol Aksi 2-Kolom Simetris (`css/style.css`, `js/ui.js`):**
+   * Mengubah `.tower-actions` menjadi `grid-template-columns: 1fr 1fr; gap: 5px; margin: 5px 0 6px;`.
+   * Menambahkan utilitas `.tower-actions .span-2 { grid-column: 1 / -1; width: 100%; }`.
+   * **Ketika Fasilitas Mengalami Aus/Kerusakan (3 Tombol):**
+     - Kolom 1 (Baris 1): `[↑ Overclock 40]` (lebar 50%).
+     - Kolom 2 (Baris 1): `[🔧 Overhaul 280]` (lebar 50%, tanpa margin-top inline yang merusak kesejajaran, teks dan koin muat dengan lega).
+     - Baris 2 Penuh: `[🏷️ Dismantle Facility 560]` dengan kelas `sell span-2` (lebar 100% simetris membentang di bawah kedua tombol).
+   * **Ketika Fasilitas Prima / Rusak Total (2 Tombol):**
+     - Kolom 1 & 2 berdampingan seimbang (50% / 50%), tanpa ada celah kosong.
+3. **Pemberantasan Scrollbar Putih & Cyber Dark Scrollbars (`css/style.css`):**
+   * Menambahkan aturan global standar CSS Scrollbars Level 1:
+     `* { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }`
+     serta spesifik pada `#inspector, #side, #dock, body`.
+   * Menyesuaikan `::-webkit-scrollbar` dengan lebar `4px` dan thumb `rgba(148, 163, 184, 0.28)` beraksen hover amber (`var(--amber)`).
+   * Memangkas margin/padding vertikal inspektur (header, kotak bilah status, kisi statistik, prioritas bidikan, dan catatan taktis) hingga menghemat ~42px vertikal, sehingga kartu pas tanpa memicu overflow vertikal pada resolusi layar standar (1080p/900p).
+
+---
+
+### 30.3 Verifikasi Akhir
+- `tests/test_new_defense_inspector.js`: **LULUS (100%)**
+- `tests/test_ui_layout_overhaul.js`: **LULUS (100%)**
+- `tests/test_megastructure_rebalance.js`: **LULUS (100%)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs**
+- **Seluruh 22 Unit Test Suites: 100% LULUS.**
+
+---
+
 ## 28. Implementasi Bastion TD 11.0: The Infinite Chronicles (Procedural Campaign Matrix, Prismatic Affixes, Nemesis Genome & Quantum Heat)
 
 ### 28.1 Arsitektur & Filosofi Sistem
@@ -2054,3 +2103,52 @@ Berdasarkan tinjauan visual langsung terhadap antarmuka Bastion TD dan tangkapan
 - `tests/test_new_defense_inspector.js`: **100% PASS** (Kelengkapan kartu inspektur Megastructure, Barricade, Standard Tower, dan handler aksi).
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs** (60 SFX dipanggil vs 62 terdefinisi, 25 data-act, 30 data-ov, 39 ID elemen HTML).
 - **Semua 24 Test Suites: 100% LULUS (Zero Regressions).**
+
+---
+
+## 30. Penyempurnaan Visual & Pemecahan Masalah Screenshot Pengguna
+
+Berdasarkan analisis visual mendalam terhadap screenshot yang dilampirkan pengguna, ditemukan dan dituntaskan dua isu ergonomi UI spesifik:
+
+### 30.1 Masalah Teridentifikasi dari Screenshot
+1. **Pemotongan Teks Ekstrem pada Kartu Shop Dock (Screenshot 1):**
+   * Kartu megastruktur di dock bawah terpotong parah menjadi singkatan 2-3 huruf (`Io... 2x2`, `A... 2x2`, `Te... 2x2`) serta peran terpotong (`Sol...`, `Air...`, `Sei...`).
+   * **Penyebab Akar:** Flex container membagi kartu dengan `min-width: 104px`. Setelah dipotong padding kartu (12px), kanvas (34px), celah (6px), dan padding kanan `.meta` (22px) untuk lencana `.key`, lebar yang tersisa untuk teks nama hanya ~30px. Akibatnya teks apapun dengan lebih dari 3 huruf langsung terpotong ellipsis (`...`).
+2. **Asimetri Kisi Tombol Aksi Inspektur (Screenshot 2):**
+   * Baris 1: `[↑ OVERCLOCK 40]` (kolom 1.5fr) dan `[🔧 OVERHAUL]` (kolom 1fr). Kolom 1fr terlalu sempit sehingga teks overhaul berhimpitan dan ikon koin terpotong di tepi kanan.
+   * Baris 2: `[🏷️ DISMANTLE FACILITY 560]` sendirian di kolom 1, meninggalkan kolom 2 kosong melompong secara janggal.
+3. **Kemunculan Scrollbar Putih Native Windows 16px (Screenshot 2):**
+   * Windows merender scrollbar putih native bertombol panah di dalam batas kartu `#inspector`, memangkas lebar area kerja sebesar 16px dan merusak estetika gelap bertema sci-fi cyberpunk.
+   * **Penyebab Akar:** Chromium 121+ mengabaikan aturan pseudo-elemen `::-webkit-scrollbar` jika `scrollbar-width: thin` dideklarasikan tanpa `scrollbar-color`. Tanpa `scrollbar-color`, browser jatuh kembali ke scrollbar sistem Windows. Selain itu, tumpukan vertikal inspektur melebihi batas wadah flex sekitar 15-20px sehingga memicu scrollbar yang tidak diinginkan.
+
+---
+
+### 30.2 Solusi Desain & Implementasi Kode
+1. **Anti-Truncation & Pelebaran Kartu Dock (`css/style.css`, `js/data.js`):**
+   * Menetapkan `min-width: 126px` (dan basis `flex: 1 1 128px`) pada `.shop`, memastikan nama menara dan peran fasilitas memiliki ruang baca ~50-60px setelah dikurangi ruang badge `.key`.
+   * Menyesuaikan ukuran tipografi nama `.shop .nm` menjadi `9.5px` dengan `letter-spacing: 0` agar nama fasilitas seperti *Ion Uplink*, *Drone Base*, *Tectonic*, *Barricade*, dan *Prism* terbaca utuh tanpa terpotong.
+   * Menambahkan bilah gulir horizontal tersembunyi/halus pada `#dock` dengan `scrollbar-color: var(--line2) transparent` dan `overflow-y: hidden`.
+2. **Restrukturisasi Grid Tombol Aksi 2-Kolom Simetris (`css/style.css`, `js/ui.js`):**
+   * Mengubah `.tower-actions` menjadi `grid-template-columns: 1fr 1fr; gap: 5px; margin: 5px 0 6px;`.
+   * Menambahkan utilitas `.tower-actions .span-2 { grid-column: 1 / -1; width: 100%; }`.
+   * **Ketika Fasilitas Mengalami Aus/Kerusakan (3 Tombol):**
+     - Kolom 1 (Baris 1): `[↑ Overclock 40]` (lebar 50%).
+     - Kolom 2 (Baris 1): `[🔧 Overhaul 280]` (lebar 50%, tanpa margin-top inline yang merusak kesejajaran, teks dan koin muat dengan lega).
+     - Baris 2 Penuh: `[🏷️ Dismantle Facility 560]` dengan kelas `sell span-2` (lebar 100% simetris membentang di bawah kedua tombol).
+   * **Ketika Fasilitas Prima / Rusak Total (2 Tombol):**
+     - Kolom 1 & 2 berdampingan seimbang (50% / 50%), tanpa ada celah kosong.
+3. **Pemberantasan Scrollbar Putih & Cyber Dark Scrollbars (`css/style.css`):**
+   * Menambahkan aturan global standar CSS Scrollbars Level 1:
+     `* { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }`
+     serta spesifik pada `#inspector, #side, #dock, body`.
+   * Menyesuaikan `::-webkit-scrollbar` dengan lebar `4px` dan thumb `rgba(148, 163, 184, 0.28)` beraksen hover amber (`var(--amber)`).
+   * Memangkas margin/padding vertikal inspektur (header, kotak bilah status, kisi statistik, prioritas bidikan, dan catatan taktis) hingga menghemat ~42px vertikal, sehingga kartu pas tanpa memicu overflow vertikal pada resolusi layar standar (1080p/900p).
+
+---
+
+### 30.3 Verifikasi Akhir
+- `tests/test_new_defense_inspector.js`: **LULUS (100%)**
+- `tests/test_ui_layout_overhaul.js`: **LULUS (100%)**
+- `tests/test_megastructure_rebalance.js`: **LULUS (100%)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs**
+- **Seluruh 22 Unit Test Suites: 100% LULUS.**

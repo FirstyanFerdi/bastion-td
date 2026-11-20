@@ -54,17 +54,22 @@ button {
   background: none;
 }
 
-/* Custom sleek scrollbars */
+/* Custom sleek scrollbars & standard CSS Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line2) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--line2);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--steel);
@@ -661,6 +666,7 @@ kbd, .kbd {
   gap: 8px;
   padding-right: 2px;
   scrollbar-width: thin;
+  scrollbar-color: var(--line2) transparent;
 }
 
 .card {
@@ -814,8 +820,9 @@ kbd, .kbd {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 10px;
+  padding: 7px 9px;
   scrollbar-width: thin;
+  scrollbar-color: var(--line2) transparent;
 }
 
 /* Tactical Inspector Terminal Tabs */
@@ -823,13 +830,13 @@ kbd, .kbd {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 3px;
-  margin-bottom: 7px;
+  margin-bottom: 5px;
 }
 .itab {
   background: var(--panel2);
   border: 1px solid var(--line);
   border-radius: 3px;
-  padding: 4px 2px;
+  padding: 3px 2px;
   font: 800 8.5px var(--mono);
   letter-spacing: .03em;
   color: var(--mute);
@@ -855,41 +862,45 @@ kbd, .kbd {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 .insp-name canvas {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   background: var(--panel2);
   border: 1px solid var(--line);
   border-radius: 3px;
   flex-shrink: 0;
 }
 .insp-name h4 {
-  font-size: 14px;
-  letter-spacing: .03em;
+  font-size: 13.5px;
+  letter-spacing: .02em;
   font-weight: 800;
   line-height: 1.1;
 }
 .insp-name small {
   color: var(--mute);
-  letter-spacing: .08em;
-  font-size: 9.5px;
+  letter-spacing: .06em;
+  font-size: 9px;
   font-weight: 700;
   display: block;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 /* Primary Tower Actions (Top of Inspector) */
 .tower-actions {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 6px;
-  margin: 6px 0 8px;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin: 5px 0 6px;
+}
+.tower-actions .span-2 {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 .tower-actions .primary {
-  padding: 8px 10px;
-  font-size: 11px;
+  padding: 6px 8px;
+  font-size: 10.5px;
 }
 .sell {
   display: flex;
@@ -902,8 +913,8 @@ kbd, .kbd {
   font-weight: 800;
   letter-spacing: .04em;
   text-transform: uppercase;
-  font-size: 11px;
-  padding: 7px 8px;
+  font-size: 10.5px;
+  padding: 6px 8px;
   border-radius: 4px;
   transition: all .14s ease;
   white-space: nowrap;
@@ -919,30 +930,30 @@ kbd, .kbd {
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px 10px;
+  gap: 3px 8px;
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid var(--line2);
   border-radius: 4px;
-  padding: 6px 10px;
-  margin-bottom: 7px;
+  padding: 5px 8px;
+  margin-bottom: 5px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 .srow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
-  padding: 1px 0;
+  font-size: 10.5px;
+  padding: 0;
 }
 .srow span:first-child {
   color: var(--text-dim);
   letter-spacing: .08em;
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
 }
 .srow .sv {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   color: #f8fafc;
 }
@@ -951,16 +962,16 @@ kbd, .kbd {
 .prio {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  margin: 6px 0;
+  gap: 3px;
+  margin: 4px 0;
 }
 .prio button {
   background: var(--panel2);
   border: 1px solid var(--line2);
   border-radius: 3px;
-  padding: 5px 3px;
-  font: 700 10px var(--cond);
-  letter-spacing: .04em;
+  padding: 3px 2px;
+  font: 700 9.5px var(--cond);
+  letter-spacing: .03em;
   color: var(--text-dim);
   transition: all .14s ease;
   cursor: pointer;
@@ -1234,15 +1245,17 @@ kbd, .kbd {
   gap: 6px;
   flex-shrink: 0;
   overflow-x: auto;
-  padding-bottom: 3px;
+  overflow-y: hidden;
+  padding-bottom: 4px;
   scrollbar-width: thin;
+  scrollbar-color: var(--line2) transparent;
 }
 
 .shop {
   --tc: #22d3ee;
   position: relative;
-  flex: 1 1 0;
-  min-width: 104px;
+  flex: 1 1 128px;
+  min-width: 126px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1304,8 +1317,8 @@ kbd, .kbd {
 }
 .shop .nm {
   font-weight: 800;
-  font-size: 10px;
-  letter-spacing: .01em;
+  font-size: 9.5px;
+  letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

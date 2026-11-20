@@ -509,6 +509,7 @@ function renderInspector() {
     const durStatus = isBroken ? '0 / ' + maxDur + ' WAVES (BROKEN)' : curDur + ' / ' + maxDur + ' WAVES REMAINING';
 
     let actionBtns = '';
+    let dismantleClass = 'sell';
     if (isBroken) {
       const canAfford = G.gold >= repCost;
       actionBtns = canAfford ?
@@ -518,11 +519,13 @@ function renderInspector() {
       const ocPart = isOverclocked ?
         '<button class="primary" disabled style="width:100%;background:#059669;color:#fff;font-weight:800">★ OVERCLOCKED</button>' :
         '<button class="primary" data-act="overclock_mega" style="width:100%">' + svg('up') + 'Overclock <i class="coin"></i>40</button>';
-      const repPart = (curDur < maxDur && G.gold >= repCost) ?
-        '<button class="primary" data-act="repair_mega" style="width:100%;background:#0284c7;color:#fff;margin-top:4px">' + svg('wrench') + 'Overhaul <i class="coin"></i>' + repCost + '</button>' : '';
+      const hasRep = (curDur < maxDur && G.gold >= repCost);
+      const repPart = hasRep ?
+        '<button class="primary" data-act="repair_mega" style="width:100%;background:#0284c7;color:#fff">' + svg('wrench') + 'Overhaul <i class="coin"></i>' + repCost + '</button>' : '';
       actionBtns = ocPart + repPart;
+      if (hasRep) dismantleClass = 'sell span-2';
     }
-    const dismantleBtn = '<button class="sell" tabindex="-1" data-act="dismantle_mega">' + svg('tag') + 'Dismantle Facility <i class="coin"></i>' + refund + '</button>';
+    const dismantleBtn = '<button class="' + dismantleClass + '" tabindex="-1" data-act="dismantle_mega">' + svg('tag') + 'Dismantle Facility <i class="coin"></i>' + refund + '</button>';
 
     const prioHtml = '<div class="prio" id="prioBox">' +
       PRIOS.map(p => '<button tabindex="-1" data-act="prio" data-prio="' + p[0] + '" class="' + ((ms.prio || 'first') === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') +
@@ -534,7 +537,7 @@ function renderInspector() {
 
     box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
       '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + d.color + '">' + d.name + '</h4>' + subtitleText + '</div></div>' +
-      '<div style="margin:4px 0;padding:4px 8px;background:rgba(15,23,42,0.7);border:1px solid ' + durColor + '50;border-radius:3px">' +
+      '<div style="margin:3px 0;padding:3px 8px;background:rgba(15,23,42,0.7);border:1px solid ' + durColor + '50;border-radius:3px">' +
       '<div style="display:flex;justify-content:space-between;font-size:9.5px;font-weight:700;margin-bottom:2px">' +
       '<span style="color:#94a3b8">OPERATIONAL LIFESPAN</span>' +
       '<span style="color:' + durColor + '">' + durStatus + '</span>' +
@@ -543,7 +546,7 @@ function renderInspector() {
       '<div style="width:' + durPct + '%;height:100%;background:' + durColor + '"></div>' +
       '</div>' +
       '</div>' +
-      '<div style="margin:4px 0 5px;padding:4px 8px;background:rgba(15,23,42,0.6);border:1px solid ' + meterColor + '40;border-radius:3px">' +
+      '<div style="margin:3px 0 4px;padding:3px 8px;background:rgba(15,23,42,0.6);border:1px solid ' + meterColor + '40;border-radius:3px">' +
       '<div style="display:flex;justify-content:space-between;font-size:9.5px;font-weight:700;margin-bottom:2px">' +
       '<span style="color:#94a3b8">' + meterLabel + '</span>' +
       '<span style="color:' + meterColor + '">' + meterVal + '</span>' +
@@ -560,7 +563,7 @@ function renderInspector() {
       '<div class="srow"><span>' + stat4[0] + '</span><span class="sv">' + (isBroken ? '0 MW' : stat4[1]) + '</span></div>' +
       '</div>' +
       prioHtml +
-      '<div class="note" style="border-left:3px solid ' + (isBroken ? '#ef4444' : d.color) + ';background:' + (isBroken ? 'rgba(239,68,68,0.12)' : (d.color + '15')) + ';color:#f8fafc;margin-top:6px">' +
+      '<div class="note" style="border-left:3px solid ' + (isBroken ? '#ef4444' : d.color) + ';background:' + (isBroken ? 'rgba(239,68,68,0.12)' : (d.color + '15')) + ';color:#f8fafc;margin-top:4px">' +
       (isBroken ? '⚠️ <b>FACILITY SEIZED:</b> Core mechanics fractured from operational wear. Pay repair cost to restore operational integrity.' : d.desc) +
       '</div>';
 
