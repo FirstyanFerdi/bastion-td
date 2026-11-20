@@ -158,7 +158,36 @@ function newGame(keepSpeed) {
       { id: 'crag_2', c: 9, r: 6, roadC: 8, roadR: 6, hp: 300, maxHp: 300, collapsed: false, x: 9 * TILE + TILE / 2, y: 6 * TILE + TILE / 2 }
     ],
     rockslides: [],
-    barricades: []
+    barricades: [],
+    // 10.0 Crucible of Ascendancy Systems
+    cer: 1.0,
+    playerActions: 0,
+    apmTimer: 0,
+    activeGambit: null,
+    prisms: [],
+    singularityPens: [],
+    bulletTimeT: 0,
+    bulletTimeCd: 0,
+    bulletTimePainted: [],
+    enigmaPolarity: 'thermal',
+    enigmaTimer: 0,
+    devastatorTimer: 0,
+    catalystPylons: [],
+    midasCoins: [],
+    pandoraRelics: {},
+    airdropCrates: [],
+    rhythmFeedback: null,
+    placingPrism: false,
+    // 11.0 The Infinite Chronicles Systems
+    expedition: (typeof generateExpeditionTree === 'function') ? { nodes: generateExpeditionTree(), currentNodeId: 'node_0_0', history: [], active: true } : null,
+    activeHeatModifiers: [],
+    currentHeat: 0,
+    chimeraDraft: null,
+    nemesisGenome: null,
+    chaosIncursion: null,
+    chaosTimer: 0,
+    dynamicPathMorphed: false,
+    ruleRelics: {}
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -1479,6 +1508,119 @@ function dealDamage(e, amount, type, src, opts) {
     if (Math.random() < 0.2) addText(e.x, e.y - e.r - 18, 'DEFLECT -50%', '#94a3b8', 11);
   }
 
+  // 10.0 Enigma Boss Polarity Mechanics
+  if (e.type === 'boss' && G && G.enigmaPolarity && typeof ENIGMA_BOSS_CONFIG !== 'undefined') {
+    const curPol = ENIGMA_BOSS_CONFIG[G.enigmaPolarity];
+    if (curPol) {
+      if (type === curPol.absorbs) {
+        e.hp = Math.min(e.maxHp, e.hp + a * 1.5);
+        burst(e.x, e.y, 8, '#22c55e', 80, 0.3, 2.5, false);
+        addText(e.x, e.y - e.r - 20, '+' + Math.round(a * 1.5) + ' ABSORBED!', '#22c55e', 14);
+        return 0;
+      } else if (type === curPol.vulnerable) {
+        a *= 2.0;
+        opts.crit = true;
+        burst(e.x, e.y, 10, curPol.color, 110, 0.4, 3, true);
+        addText(e.x, e.y - e.r - 20, 'VULNERABILITY 200%!', curPol.color, 14);
+      }
+    }
+  }
+
+  // 10.0 Crucible Gambits: Thermodynamic Meltdown
+  if (G && G.activeGambit === 'meltdown') {
+    opts.crit = true;
+    a *= 1.5;
+  }
+
+  // 10.0 Crucible Gambits: Void Tithe (Megastructure 4x damage)
+  if (G && G.activeGambit === 'void_tithe' && src && src.type && (src.type === 'ion_uplink' || src.type === 'drone_carrier' || src.type === 'tectonic_siphon')) {
+    a *= 4.0;
+  }
+
+  // 10.0 Pandora Relics: The Glass Monolith
+  if (G && G.pandoraRelics && G.pandoraRelics.glass_monolith) {
+    a *= 1.80;
+  }
+
+  // 11.0 Rule Bending Relics: Quantum Power Reroute
+  if (G && G.ruleRelics && G.ruleRelics.quantum_reroute) {
+    const pStatus = (typeof getGridPowerStatus === 'function') ? getGridPowerStatus() : { used: 0, capacity: 60 };
+    const bonus = 1 + ((pStatus.capacity || 60) / 10) * 0.15;
+    a *= bonus;
+  }
+
+  // 11.0 Chimera Tower Prefixes
+  if (src && src.chimeraPrefix) {
+    if (src.chimeraPrefix === 'glacial') {
+      if (e.slowT > 0) a *= 1.20;
+      e.slowT = Math.max(e.slowT || 0, 2.5);
+      e.slowAmt = Math.max(e.slowAmt || 0, 0.35);
+      burst(e.x, e.y, 6, '#38bdf8', 60, 0.25, 2, false);
+    } else if (src.chimeraPrefix === 'thermobaric') {
+      a *= 1.25;
+      burst(e.x, e.y, 12, '#f97316', 80, 0.35, 3, false);
+    } else if (src.chimeraPrefix === 'singularity') {
+      if (Math.random() < 0.20 && G.enemies) {
+        burst(e.x, e.y, 14, '#a855f7', 90, 0.4, 3, true);
+        for (const o of G.enemies) {
+          if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) <= 90) {
+            o.x = (o.x + e.x) / 2; o.y = (o.y + e.y) / 2;
+          }
+        }
+      }
+    } else if (src.chimeraPrefix === 'vanguard') {
+      a *= 1.20;
+    } else if (src.chimeraPrefix === 'hyper_thermal') {
+      a *= 1.15;
+    }
+  }
+
+  // 11.0 Chimera Tower Suffixes
+  if (src && src.chimeraSuffix) {
+    if (src.chimeraSuffix === 'of_execution' && e.maxHp && (e.hp / e.maxHp <= 0.30)) {
+      a *= 2.20;
+      opts.crit = true;
+      addText(e.x, e.y - e.r - 20, 'EXECUTION 220%!', '#c084fc', 13);
+    } else if (src.chimeraSuffix === 'of_midas') {
+      src.midasHitCount = (src.midasHitCount || 0) + 1;
+      if (src.midasHitCount >= 4) {
+        src.midasHitCount = 0;
+        G.gold = (G.gold || 0) + 3;
+        addText(e.x, e.y - e.r - 16, '+3G', '#eab308', 11);
+      }
+    } else if (src.chimeraSuffix === 'of_superconductor' && !opts.isChain && G.enemies) {
+      let chainCount = 0;
+      for (const o of G.enemies) {
+        if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) <= 100) {
+          chainCount++;
+          addFx('tracer', e.x, e.y, o.x, o.y, 0.1, '#818cf8', 2);
+          dealDamage(o, Math.round(a * 0.5), 'energy', src, { isChain: true });
+          if (chainCount >= 3) break;
+        }
+      }
+    }
+  }
+
+  // 11.0 Adaptive Nemesis Genome Trait Defenses
+  if (G && G.nemesisGenome) {
+    if (G.nemesisGenome === 'kinetic_dissipation') {
+      if (type === 'phys') {
+        a *= 0.40; // -60% ballistic
+        burst(e.x, e.y, 5, '#94a3b8', 50, 0.25, 2, false);
+      } else if (type === 'energy' || type === 'plasma') {
+        a *= 2.50; // +150% energy vulnerability
+        burst(e.x, e.y, 8, '#c084fc', 80, 0.3, 2.5, true);
+      }
+    } else if (G.nemesisGenome === 'cryo_metabolic') {
+      if (type === 'cryo') {
+        e.slowT = 0; e.slowAmt = 0;
+        e.speedBoostT = 3.0; e.speedBoost = 1.5;
+        addText(e.x, e.y - e.r - 18, 'CRYO SURGE +50% SPD!', '#38bdf8', 12);
+        return 0;
+      }
+    }
+  }
+
   // 6.0 Chrono-Horror Void Immunity (Physical damage phased into void)
   if (e.isParadoxHorror && type === 'phys') {
     burst(e.x, e.y, 4, '#c084fc', 60, 0.25, 2, false);
@@ -1657,10 +1799,28 @@ function killEnemy(e, src) {
   const scoreStreakMult = (G && G.callStreak && G.callStreak > 1) ? (1 + (G.callStreak - 1) * 0.5) : 1;
   const isBloodPact = G && G.cursedProtocols && G.cursedProtocols.includes('blood_pact');
   const bloodMult = isBloodPact ? 3.0 : 1.0;
-  const finalReward = Math.round(e.reward * streakMult * bloodMult);
+  const isBlind = G && G.activeGambit === 'blind_perimeter';
+  const blindMult = isBlind ? 2.0 : 1.0;
+  const finalReward = Math.round(e.reward * streakMult * bloodMult * blindMult);
   const finalScore = Math.round(e.reward * 10 * scoreStreakMult);
-  G.gold += finalReward; G.score += finalScore; G.kills++;
+  const isMidas = G && G.pandoraRelics && G.pandoraRelics.midas_transmutation;
+  if (isMidas && typeof spawnMidasCoin === 'function') {
+    spawnMidasCoin(e.x, e.y, finalReward * 2);
+  } else {
+    G.gold += finalReward;
+  }
+  G.score += finalScore; G.kills++;
   if (src) src.kills++;
+
+  // 11.0 Chimera Suffix: of_fission
+  if (src && src.chimeraSuffix === 'of_fission' && G.enemies) {
+    burst(e.x, e.y, 16, '#e11d48', 100, 0.45, 3, true);
+    for (const o of G.enemies) {
+      if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) <= 80) {
+        dealDamage(o, 90, 'plasma', src, { isFission: true });
+      }
+    }
+  }
 
   // 8.0 Strategic Hivemind: Record Pheromone Death Heatmap
   if (typeof recordPheromoneDeath === 'function') {
@@ -2537,4 +2697,579 @@ function spawnNemesisCommander(nemesisData) {
     addText(boss.x, boss.y - 35, 'NEMESIS INVADER: ' + nd.title.toUpperCase(), '#a855f7', 16);
   }
   return boss;
+}
+
+/* ============================================================
+   BASTION TD 10.0: THE CRUCIBLE OF ASCENDANCY - GAMEPLAY SYSTEMS
+   ============================================================ */
+
+function trackPlayerAction() {
+  if (!G) return;
+  G.playerActions = (G.playerActions || 0) + 1;
+}
+
+function updateSkillProfiler(dt) {
+  if (!G || G.state !== 'active') return;
+  G.apmTimer = (G.apmTimer || 0) + dt;
+  if (G.apmTimer >= 2.0) {
+    const apm = ((G.playerActions || 0) / G.apmTimer) * 60;
+    G.playerActions = 0;
+    G.apmTimer = 0;
+    let avgDist = 300;
+    if (G.enemies && G.enemies.length > 0) {
+      const sumDist = G.enemies.reduce((acc, e) => acc + (e.d || 0), 0);
+      avgDist = sumDist / G.enemies.length;
+    }
+    const goldBuffer = Math.min(2.0, (G.gold || 0) / 400);
+    const speedPenalty = Math.max(0.5, 2.0 - (avgDist / 250));
+    const apmFactor = Math.min(2.0, Math.max(0.5, apm / 35));
+    const streakFactor = Math.min(1.5, 1 + ((G.wave || 1) - (G.leakedThisWave || 0) * 2) * 0.05);
+
+    G.cer = Math.round((apmFactor * 0.3 + speedPenalty * 0.3 + goldBuffer * 0.2 + streakFactor * 0.2) * 100) / 100;
+  }
+}
+
+function activateGambit(gambitId) {
+  if (!G || typeof CRUCIBLE_GAMBITS === 'undefined' || !CRUCIBLE_GAMBITS[gambitId]) return false;
+  const sW = typeof W !== 'undefined' ? W : 960;
+  if (G.activeGambit === gambitId) {
+    G.activeGambit = null;
+    addText(sW / 2, 85, 'CRUCIBLE GAMBIT CLEARED', '#94a3b8', 14);
+  } else {
+    G.activeGambit = gambitId;
+    const gDef = CRUCIBLE_GAMBITS[gambitId];
+    addText(sW / 2, 85, 'GAMBIT ACTIVATED: ' + gDef.name.toUpperCase(), gDef.color, 16);
+    burst(sW / 2, 85, 25, gDef.color, 120, 0.5, 3.5, true);
+    shake(6);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+  }
+  G.uiDirty = true;
+  return true;
+}
+
+function canPlacePrism(col, row) {
+  if (!G || col < 0 || row < 0 || col >= COLS || row >= ROWS) return false;
+  if (pathTile[row][col] || G.grid[row][col]) return false;
+  if (G.fuelCells && G.fuelCells.some(fc => !fc.dead && fc.c === col && fc.row === row)) return false;
+  const cost = (typeof PHOTON_PRISM_CONFIG !== 'undefined' ? PHOTON_PRISM_CONFIG.cost : 60);
+  return G.gold >= cost;
+}
+
+function placePrism(col, row) {
+  if (!canPlacePrism(col, row)) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return null;
+  }
+  const conf = typeof PHOTON_PRISM_CONFIG !== 'undefined' ? PHOTON_PRISM_CONFIG : { cost: 60, color: '#38bdf8', glowColor: '#818cf8' };
+  G.gold -= conf.cost;
+  const prism = {
+    id: 'prism_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+    type: 'photon_prism',
+    name: conf.name || 'Photon Reflection Prism',
+    c: col,
+    r: row,
+    x: col * TILE + TILE / 2,
+    y: row * TILE + TILE / 2,
+    angle: 0,
+    angleIndex: 0,
+    color: conf.color || '#38bdf8',
+    glowColor: conf.glowColor || '#818cf8',
+    hp: 150,
+    maxHp: 150,
+    active: true
+  };
+  G.grid[row][col] = prism;
+  G.prisms = G.prisms || [];
+  G.prisms.push(prism);
+  trackPlayerAction();
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('place');
+  burst(prism.x, prism.y, 20, prism.color, 100, 0.4, 3, false);
+  addRing(prism.x, prism.y, 8, 45, 0.4, prism.glowColor, 3);
+  addText(prism.x, prism.y - 20, 'PRISM ALIGNED', prism.color, 12);
+  checkSingularityPens();
+  G.uiDirty = true;
+  return prism;
+}
+
+function rotatePrism(prism) {
+  if (!prism || prism.type !== 'photon_prism') return;
+  prism.angleIndex = ((prism.angleIndex || 0) + 1) % 4;
+  prism.angle = prism.angleIndex * (Math.PI / 2);
+  trackPlayerAction();
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+  burst(prism.x, prism.y, 12, prism.color, 60, 0.3, 2, false);
+  addRing(prism.x, prism.y, 6, 32, 0.3, prism.glowColor, 2);
+  checkSingularityPens();
+  G.uiDirty = true;
+}
+
+function checkSingularityPens() {
+  if (!G || !G.prisms || G.prisms.length < 3) {
+    G.singularityPens = [];
+    return;
+  }
+  const maxD = (typeof PHOTON_PRISM_CONFIG !== 'undefined' && PHOTON_PRISM_CONFIG.maxLinkDistance) || 320;
+  const pens = [];
+  const p = G.prisms;
+  for (let i = 0; i < p.length - 2; i++) {
+    for (let j = i + 1; j < p.length - 1; j++) {
+      for (let k = j + 1; k < p.length; k++) {
+        const d1 = Math.hypot(p[i].x - p[j].x, p[i].y - p[j].y);
+        const d2 = Math.hypot(p[j].x - p[k].x, p[j].y - p[k].y);
+        const d3 = Math.hypot(p[k].x - p[i].x, p[k].y - p[i].y);
+        if (d1 <= maxD && d2 <= maxD && d3 <= maxD) {
+          pens.push({
+            p1: p[i], p2: p[j], p3: p[k],
+            prisms: [p[i], p[j], p[k]],
+            cx: (p[i].x + p[j].x + p[k].x) / 3,
+            cy: (p[i].y + p[j].y + p[k].y) / 3
+          });
+        }
+      }
+    }
+  }
+  G.singularityPens = pens;
+  if (pens.length > 0 && typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('fusion');
+}
+
+function isPointInTriangle(pt, v1, v2, v3) {
+  const d1 = (pt.x - v2.x) * (v1.y - v2.y) - (v1.x - v2.x) * (pt.y - v2.y);
+  const d2 = (pt.x - v3.x) * (v2.y - v3.y) - (v2.x - v3.x) * (pt.y - v3.y);
+  const d3 = (pt.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (pt.y - v1.y);
+  const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+  const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+  return !(hasNeg && hasPos);
+}
+
+function updatePrisms(dt) {
+  if (!G || !G.prisms || G.prisms.length === 0) return;
+  if (G.singularityPens && G.singularityPens.length > 0 && G.enemies) {
+    for (const pen of G.singularityPens) {
+      for (const e of G.enemies) {
+        if (e.dead) continue;
+        if (isPointInTriangle(e, pen.p1, pen.p2, pen.p3)) {
+          e.slowT = Math.max(e.slowT || 0, 1.0);
+          e.slowAmt = Math.max(e.slowAmt || 0, 0.60);
+          if (e.armor && e.armor > 0) {
+            e.armor = Math.max(0, e.armor - 5 * dt);
+          }
+          if (Math.random() < 0.08) {
+            addFx('tracer', pen.cx, pen.cy, e.x, e.y, 0.1, '#818cf8', 1.5);
+          }
+        }
+      }
+    }
+  }
+}
+
+function updateEnigmaBoss(dt) {
+  if (!G || !G.enemies) return;
+  const boss = G.enemies.find(e => !e.dead && e.type === 'boss');
+  if (!boss) return;
+
+  const sW = typeof W !== 'undefined' ? W : 960;
+  G.enigmaTimer = (G.enigmaTimer || 0) + dt;
+  if (G.enigmaTimer >= 8.0) {
+    G.enigmaTimer = 0;
+    const pols = ['thermal', 'cryo', 'conductive'];
+    const curIdx = pols.indexOf(G.enigmaPolarity || 'thermal');
+    G.enigmaPolarity = pols[(curIdx + 1) % pols.length];
+    const polConf = (typeof ENIGMA_BOSS_CONFIG !== 'undefined' && ENIGMA_BOSS_CONFIG[G.enigmaPolarity]) ? ENIGMA_BOSS_CONFIG[G.enigmaPolarity] : { color: '#f97316', name: 'Thermal' };
+    shake(6);
+    burst(boss.x, boss.y, 30, polConf.color, 140, 0.6, 4, true);
+    addRing(boss.x, boss.y, 15, 80, 0.5, polConf.color, 4);
+    addText(boss.x, boss.y - 45, 'POLARITY SHIFT: ' + polConf.name.toUpperCase(), polConf.color, 15);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+    G.uiDirty = true;
+  }
+
+  if (boss.hp <= boss.maxHp * 0.30 && !boss.devastatorActive && !boss.devastatorDefeated) {
+    boss.devastatorActive = true;
+    G.devastatorTimer = 12.0;
+    shake(10);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('dreadnought_horn');
+    addText(sW / 2, 75, 'CITADEL DEVASTATOR INITIATED! DESTROY CATALYST PYLONS!', '#ef4444', 18);
+    G.catalystPylons = [
+      { id: 'pylon_1', x: boss.x - 70, y: boss.y - 50, hp: 180, maxHp: 180, color: '#f43f5e' },
+      { id: 'pylon_2', x: boss.x + 70, y: boss.y - 50, hp: 180, maxHp: 180, color: '#38bdf8' },
+      { id: 'pylon_3', x: boss.x, y: boss.y + 60, hp: 180, maxHp: 180, color: '#fbbf24' }
+    ];
+  }
+
+  if (boss.devastatorActive && G.devastatorTimer > 0) {
+    G.devastatorTimer -= dt;
+    const livePylons = (G.catalystPylons || []).filter(p => p.hp > 0);
+    if (livePylons.length === 0) {
+      boss.devastatorActive = false;
+      boss.devastatorDefeated = true;
+      G.devastatorTimer = 0;
+      boss.stunT = 6.0;
+      shake(12);
+      burst(boss.x, boss.y, 40, '#34d399', 180, 0.8, 5, true);
+      addText(boss.x, boss.y - 45, 'CITADEL DEVASTATOR SEVERED! BOSS STAGGERED!', '#34d399', 16);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('titan_break');
+    } else if (G.devastatorTimer <= 0) {
+      G.lives = Math.max(1, G.lives - 10);
+      shake(15);
+      const bX = typeof BASE_PT !== 'undefined' ? BASE_PT.x : 850;
+      const bY = typeof BASE_PT !== 'undefined' ? BASE_PT.y : 300;
+      burst(bX, bY, 50, '#ef4444', 200, 1.0, 6, true);
+      addText(sW / 2, 85, 'CITADEL DEVASTATOR IMPACT! -10 LIVES!', '#ef4444', 20);
+      boss.devastatorActive = false;
+      boss.devastatorDefeated = true;
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('orbital_impact');
+    }
+  }
+}
+
+function damageCatalystPylon(pylonId, dmg) {
+  if (!G || !G.catalystPylons) return;
+  const p = G.catalystPylons.find(py => py.id === pylonId);
+  if (!p || p.hp <= 0) return;
+  p.hp = Math.max(0, p.hp - dmg);
+  burst(p.x, p.y, 6, p.color, 60, 0.3, 2, false);
+  if (p.hp <= 0) {
+    burst(p.x, p.y, 25, p.color, 120, 0.6, 3.5, true);
+    addText(p.x, p.y - 20, 'PYLON DESTROYED!', '#34d399', 13);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shatter');
+  }
+}
+
+function triggerBulletTime() {
+  if (!G || G.state !== 'active') return false;
+  if ((G.bulletTimeCd || 0) > 0) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const sH = typeof H !== 'undefined' ? H : 540;
+  G.bulletTimeT = 4.0;
+  G.bulletTimeCd = 45.0;
+  G.bulletTimePainted = [];
+  trackPlayerAction();
+  shake(5);
+  addRing(sW / 2, sH / 2, 20, 300, 0.6, '#38bdf8', 4);
+  addText(sW / 2, 85, 'BULLET-TIME MATRIX ACTIVE [PAINT TARGETS]', '#38bdf8', 18);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('time_rewind');
+  G.uiDirty = true;
+  return true;
+}
+
+function paintBulletTimeTarget(x, y) {
+  if (!G || (G.bulletTimeT || 0) <= 0 || !G.enemies) return false;
+  let target = null, nearDist = 36;
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    const dst = Math.hypot(e.x - x, e.y - y);
+    if (dst < nearDist) { nearDist = dst; target = e; }
+  }
+  if (target && !G.bulletTimePainted.includes(target)) {
+    G.bulletTimePainted.push(target);
+    trackPlayerAction();
+    burst(target.x, target.y, 10, '#38bdf8', 70, 0.3, 2.5, false);
+    addText(target.x, target.y - 20, 'MARKED [' + G.bulletTimePainted.length + '/5]', '#38bdf8', 12);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+
+    if (G.bulletTimePainted.length >= 5) {
+      shake(12);
+      for (const t of G.bulletTimePainted) {
+        if (!t.dead) {
+          dealDamage(t, 1500, 'energy', null);
+          burst(t.x, t.y, 25, '#38bdf8', 140, 0.5, 4, true);
+        }
+      }
+      const sW = typeof W !== 'undefined' ? W : 960;
+      addText(sW / 2, 75, 'ORBITAL EXECUTION CLEAVE! (1500 TRUE DMG)', '#38bdf8', 20);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('orbital_impact');
+      G.bulletTimePainted = [];
+    }
+    return true;
+  }
+  return false;
+}
+
+function triggerRhythmOverclock(tower, timingQuality) {
+  if (!tower) return;
+  trackPlayerAction();
+  if (timingQuality === 'perfect') {
+    tower.overclockT = 20;
+    tower.heat = 0;
+    tower.rhythmSync = true;
+    burst(tower.x, tower.y, 30, '#fbbf24', 150, 0.6, 4, true);
+    addRing(tower.x, tower.y, 10, 75, 0.5, '#fbbf24', 4);
+    addText(tower.x, tower.y - 28, 'PERFECT SYNCHRONIZATION! (+100% SPD / 0 HEAT)', '#fbbf24', 14);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+  } else if (timingQuality === 'miss') {
+    tower.stunT = 3.0;
+    burst(tower.x, tower.y, 20, '#ef4444', 100, 0.5, 3, false);
+    addText(tower.x, tower.y - 25, 'THERMAL BACKFIRE! (STUNNED 3s)', '#ef4444', 13);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+  } else {
+    tower.overclockT = 15;
+    burst(tower.x, tower.y, 20, '#f59e0b', 120, 0.5, 3.5, false);
+    addText(tower.x, tower.y - 25, 'OVERCLOCKED (+50% SPD)', '#f59e0b', 13);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+  }
+  G.uiDirty = true;
+}
+
+function applyPandoraRelic(relicId) {
+  if (!G || typeof PANDORA_RELICS === 'undefined' || !PANDORA_RELICS[relicId]) return false;
+  G.pandoraRelics = G.pandoraRelics || {};
+  G.pandoraRelics[relicId] = true;
+  const r = PANDORA_RELICS[relicId];
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const sH = typeof H !== 'undefined' ? H : 540;
+  burst(sW / 2, sH / 2, 35, r.color, 160, 0.7, 4, true);
+  addText(sW / 2, 85, 'PANDORA RELIC BOUND: ' + r.name.toUpperCase(), r.color, 16);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('vault_open');
+  G.uiDirty = true;
+  return true;
+}
+
+function spawnMidasCoin(x, y, goldVal) {
+  if (!G) return;
+  G.midasCoins = G.midasCoins || [];
+  G.midasCoins.push({
+    x, y, gold: goldVal || 10,
+    life: 3.5, maxLife: 3.5,
+    r: 12
+  });
+}
+
+function collectMidasCoin(coin) {
+  if (!G || !coin || !G.midasCoins) return;
+  const idx = G.midasCoins.indexOf(coin);
+  if (idx !== -1) {
+    G.midasCoins.splice(idx, 1);
+    G.gold += coin.gold;
+    burst(coin.x, coin.y, 10, '#fbbf24', 60, 0.3, 2, false);
+    addText(coin.x, coin.y - 15, '+' + coin.gold + 'G', '#fbbf24', 12);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('coin');
+    G.uiDirty = true;
+  }
+}
+
+function updateMidasCoins(dt) {
+  if (!G || !G.midasCoins || G.midasCoins.length === 0) return;
+  for (let i = G.midasCoins.length - 1; i >= 0; i--) {
+    const c = G.midasCoins[i];
+    c.life -= dt;
+    if (c.life <= 0) {
+      G.midasCoins.splice(i, 1);
+      burst(c.x, c.y, 10, '#94a3b8', 50, 0.3, 2, false);
+      addText(c.x, c.y - 12, 'COIN EXPIRED', '#94a3b8', 10);
+    }
+  }
+}
+
+/* ============================================================
+   BASTION TD 11.0: THE INFINITE CHRONICLES - SYSTEMS ENGINE
+   ============================================================ */
+
+function generateChimeraDraft() {
+  const pKeys = (typeof CHIMERA_PREFIXES !== 'undefined') ? Object.keys(CHIMERA_PREFIXES) : ['glacial', 'thermobaric', 'singularity'];
+  const sKeys = (typeof CHIMERA_SUFFIXES !== 'undefined') ? Object.keys(CHIMERA_SUFFIXES) : ['of_ricochet', 'of_execution', 'of_fission'];
+  const choices = [];
+  for (let i = 0; i < 3; i++) {
+    const pKey = pKeys[(Math.floor(Math.random() * pKeys.length) + i) % pKeys.length];
+    const sKey = sKeys[(Math.floor(Math.random() * sKeys.length) + i) % sKeys.length];
+    choices.push({
+      id: 'draft_' + i + '_' + pKey + '_' + sKey,
+      prefix: CHIMERA_PREFIXES[pKey] || { id: pKey, name: pKey, color: '#38bdf8' },
+      suffix: CHIMERA_SUFFIXES[sKey] || { id: sKey, name: sKey, color: '#fbbf24' }
+    });
+  }
+  return choices;
+}
+
+function applyChimeraAffix(tower, prefixId, suffixId) {
+  if (!tower) return false;
+  tower.chimeraPrefix = prefixId;
+  tower.chimeraSuffix = suffixId;
+  const p = (typeof CHIMERA_PREFIXES !== 'undefined' && CHIMERA_PREFIXES[prefixId]) || { name: prefixId, color: '#38bdf8' };
+  const s = (typeof CHIMERA_SUFFIXES !== 'undefined' && CHIMERA_SUFFIXES[suffixId]) || { name: suffixId, color: '#fbbf24' };
+  const baseName = (TD[tower.type] && TD[tower.type].name) || 'Tower';
+  tower.chimeraName = p.name + ' ' + baseName + ' ' + s.name;
+  burst(tower.x, tower.y, 25, p.color, 120, 0.5, 3.5, true);
+  addRing(tower.x, tower.y, 10, 60, 0.45, s.color, 4);
+  addText(tower.x, tower.y - 28, 'CHIMERA INFUSION: ' + tower.chimeraName.toUpperCase(), p.color, 14);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
+  G.uiDirty = true;
+  return true;
+}
+
+function applyRuleBendingRelic(relicId) {
+  if (!G || typeof RULE_BENDING_RELICS === 'undefined' || !RULE_BENDING_RELICS[relicId]) return false;
+  G.ruleRelics = G.ruleRelics || {};
+  G.ruleRelics[relicId] = true;
+  const r = RULE_BENDING_RELICS[relicId];
+  const sW = typeof W !== 'undefined' ? W : 960;
+  burst(sW / 2, 90, 30, r.color, 150, 0.6, 4, true);
+  addText(sW / 2, 85, '★ PRISMATIC RELIC BOUND: ' + r.name.toUpperCase() + ' ★', r.color, 16);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('vault_open');
+  G.uiDirty = true;
+  return true;
+}
+
+function evolveNemesisGenome() {
+  if (!G || !G.damageTrack || typeof NEMESIS_GENOME_TRAITS === 'undefined') return;
+  const dtTrack = G.damageTrack;
+  const phys = dtTrack.phys || 0;
+  const cryo = dtTrack.cryo || 0;
+  const energy = (dtTrack.energy || 0) + (dtTrack.plasma || 0);
+  const total = phys + cryo + energy;
+  if (total < 100) return;
+
+  let selected = 'kinetic_dissipation';
+  if (cryo / total >= 0.40) {
+    selected = 'cryo_metabolic';
+  } else if (energy / total >= 0.50) {
+    selected = 'resonance_stealth';
+  } else if (phys / total >= 0.55) {
+    selected = 'kinetic_dissipation';
+  } else {
+    selected = 'swarm_fission';
+  }
+
+  G.nemesisGenome = selected;
+  const trait = NEMESIS_GENOME_TRAITS[selected];
+  const sW = typeof W !== 'undefined' ? W : 960;
+  shake(8);
+  burst(sW / 2, 95, 25, trait.color, 140, 0.6, 3.5, true);
+  addText(sW / 2, 90, '★ NEMESIS HIVE ADAPTED: ' + trait.name.toUpperCase() + ' ★', trait.color, 16);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('alpha_roar');
+  G.uiDirty = true;
+}
+
+function triggerDynamicPathMorph(type) {
+  if (!G || G.dynamicPathMorphed) return false;
+  G.dynamicPathMorphed = true;
+  const morphType = type || 'bio_excavation';
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const sH = typeof H !== 'undefined' ? H : 540;
+  shake(12);
+
+  if (morphType === 'bio_excavation') {
+    if (G.destructibleCrags && G.destructibleCrags.length > 0) {
+      const crag = G.destructibleCrags[0];
+      crag.collapsed = true;
+      if (typeof triggerRockslide === 'function') triggerRockslide(crag);
+    }
+    burst(sW / 2, sH / 2, 35, '#84cc16', 180, 0.7, 4, true);
+    addText(sW / 2, 85, '⚠️ SECTOR ENTROPY: BIO-EXCAVATION CREATED NEW DETOUR!', '#84cc16', 16);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('rockslide');
+  } else {
+    burst(sW / 2, sH / 2, 35, '#f97316', 180, 0.7, 4, true);
+    addText(sW / 2, 85, '⚠️ TECTONIC SUBDUCTION: ROAD MELTED INTO LAVA!', '#f97316', 16);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('soil_burn');
+  }
+  G.uiDirty = true;
+  return true;
+}
+
+function triggerChaosIncursion(incursionId) {
+  if (!G || G.chaosIncursion || typeof CHAOS_INCURSIONS === 'undefined') return false;
+  const inc = CHAOS_INCURSIONS[incursionId] || CHAOS_INCURSIONS.smuggler_heist;
+  G.chaosIncursion = inc.id;
+  G.chaosTimer = inc.duration || 15.0;
+  const sW = typeof W !== 'undefined' ? W : 960;
+  shake(10);
+  burst(sW / 2, 80, 30, inc.color, 160, 0.7, 4, true);
+  addText(sW / 2, 80, '⚡ CHAOS INCURSION DETECTED: ' + inc.name.toUpperCase(), inc.color, 16);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('syndicate_drop');
+  G.uiDirty = true;
+  return true;
+}
+
+function resolveChaosIncursion(success) {
+  if (!G || !G.chaosIncursion || typeof CHAOS_INCURSIONS === 'undefined') return;
+  const inc = CHAOS_INCURSIONS[G.chaosIncursion];
+  const sW = typeof W !== 'undefined' ? W : 960;
+  if (success && inc) {
+    if (inc.rewardGold) G.gold = (G.gold || 0) + inc.rewardGold;
+    if (inc.rewardCores && typeof addCores === 'function') addCores(inc.rewardCores);
+    burst(sW / 2, 90, 30, '#fbbf24', 160, 0.6, 4, true);
+    addText(sW / 2, 90, '★ INCURSION NEUTRALIZED! +' + (inc.rewardGold || 150) + 'G REWARD! ★', '#fbbf24', 16);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('victory');
+  } else {
+    addText(sW / 2, 90, 'INCURSION TIMED OUT / ESCAPED', '#94a3b8', 14);
+  }
+  G.chaosIncursion = null;
+  G.chaosTimer = 0;
+  G.uiDirty = true;
+}
+
+function toggleQuantumHeatModifier(modId) {
+  if (!G || typeof QUANTUM_HEAT_MODIFIERS === 'undefined' || !QUANTUM_HEAT_MODIFIERS[modId]) return;
+  G.activeHeatModifiers = G.activeHeatModifiers || [];
+  const idx = G.activeHeatModifiers.indexOf(modId);
+  if (idx !== -1) {
+    G.activeHeatModifiers.splice(idx, 1);
+  } else {
+    G.activeHeatModifiers.push(modId);
+  }
+  G.currentHeat = G.activeHeatModifiers.reduce((acc, k) => acc + (QUANTUM_HEAT_MODIFIERS[k].heat || 0), 0);
+  G.uiDirty = true;
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+}
+
+function startExpeditionNode(nodeId) {
+  if (!G || !G.expedition || !G.expedition.nodes) return false;
+  const node = G.expedition.nodes.find(n => n.id === nodeId);
+  if (!node || (!node.active && !node.cleared)) return false;
+  G.expedition.currentNodeId = nodeId;
+  G.expedition.history = G.expedition.history || [];
+  G.expedition.history.push(nodeId);
+
+  // Load sector corresponding to this node
+  if (node.sectorId && typeof loadSector === 'function') {
+    loadSector(node.sectorId);
+  }
+
+  // Node specific setup
+  if (node.type === 'elite') {
+    G.activeGambit = 'meltdown';
+  } else if (node.type === 'rest_depot') {
+    if (G.megastructures) {
+      for (const ms of G.megastructures) {
+        ms.durability = ms.maxDurability || 3;
+        ms.isBroken = false;
+        ms.active = true;
+      }
+    }
+    G.lives = Math.min(25, (G.lives || 20) + 5);
+  }
+
+  G.uiDirty = true;
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
+  return true;
+}
+
+function completeExpeditionNode() {
+  if (!G || !G.expedition || !G.expedition.currentNodeId) return;
+  const node = G.expedition.nodes.find(n => n.id === G.expedition.currentNodeId);
+  if (node) {
+    node.cleared = true;
+    node.active = false;
+    if (node.connections) {
+      for (const nextId of node.connections) {
+        const nextNode = G.expedition.nodes.find(n => n.id === nextId);
+        if (nextNode) nextNode.active = true;
+      }
+    }
+  }
+  G.chimeraDraft = generateChimeraDraft();
+  G.uiDirty = true;
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('victory');
+}
+
+function updateInfiniteChronicles(dt) {
+  if (!G || G.state !== 'active') return;
+  if (G.chaosTimer > 0) {
+    G.chaosTimer -= dt;
+    if (G.chaosTimer <= 0) {
+      resolveChaosIncursion(false);
+    }
+  }
 }

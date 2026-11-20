@@ -14,6 +14,36 @@ function startWave() {
   G.emergencyBlackoutUsed = false;
   if (n > SAVE.bestWave) { SAVE.bestWave = n; Store.set('nb_bestWave', n); addCores(3); }
 
+  // 10.0 Crucible Gambits: Blood Oath of the Vanguard (1 Live Only)
+  if (G.activeGambit === 'blood_oath') {
+    G.lives = 1;
+    shake(8);
+    const sW = typeof W !== 'undefined' ? W : 960;
+    addText(sW / 2, 70, 'BLOOD OATH OF THE VANGUARD: 1 LIVE ONLY! DO NOT LEAK!', '#ef4444', 16);
+  }
+
+  // 11.0 Quantum Heat Modifiers
+  if (G.activeHeatModifiers && G.activeHeatModifiers.includes('heat_permadeath')) {
+    G.lives = Math.min(G.lives, 3);
+  }
+
+  // 11.0 Rule Bending Relics: Symbiotic Parasite
+  if (G.ruleRelics && G.ruleRelics.symbiotic_parasite && n % 3 === 0) {
+    G.lives = Math.max(1, (G.lives || 20) - 1);
+    const sW = typeof W !== 'undefined' ? W : 960;
+    addText(sW / 2, 85, 'SYMBIOTIC PARASITE: -1 LIFE SACRIFICED', '#f43f5e', 14);
+  }
+
+  // 11.0 Dynamic Path Morphing (Every 4 waves)
+  if (n % 4 === 0 && !G.dynamicPathMorphed && typeof triggerDynamicPathMorph === 'function') {
+    triggerDynamicPathMorph();
+  }
+
+  // 11.0 Emergent Chaos Incursions
+  if (!G.chaosIncursion && [3, 7, 11].includes(n) && typeof triggerChaosIncursion === 'function') {
+    triggerChaosIncursion(n === 3 ? 'smuggler_heist' : (n === 7 ? 'anomaly_rift' : 'solar_emp_storm'));
+  }
+
   // Living Hive Mutation Evaluation (wave >= 6)
   if (n >= 6 && G.damageTrack) {
     const dtTrack = G.damageTrack;
@@ -148,6 +178,21 @@ function onWaveClear() {
     burst(W / 2, 164, 20, '#818cf8', 120, 0.5, 3, true);
     G.uiDirty = true;
   }
+
+  // 10.0 Crucible Gambits: Blood Oath Rewards
+  if (G.activeGambit === 'blood_oath' && G.leakedThisWave === 0) {
+    const extraBloodInt = Math.floor(G.gold * 2.0);
+    G.gold += extraBloodInt;
+    addCores(3);
+    const chipKeys = typeof MODULAR_CHIPS !== 'undefined' ? Object.keys(MODULAR_CHIPS) : [];
+    if (chipKeys.length > 0 && typeof addChip === 'function') {
+      const luckyChip = chipKeys[Math.floor(Math.random() * chipKeys.length)];
+      addChip(luckyChip, 1);
+    }
+    addText(W / 2, 185, '★ BLOOD OATH FULFILLED! +200% INTEREST (+' + extraBloodInt + 'G) & +3 CORES! ★', '#ef4444', 16);
+    burst(W / 2, 185, 30, '#ef4444', 160, 0.7, 4, true);
+    Sfx.play('victory');
+  }
   Sfx.play('coin');
 
   // Defense Contract evaluation & reward
@@ -213,6 +258,16 @@ function onWaveClear() {
       }
     }
     G.uiDirty = true;
+  }
+
+  // 11.0 Adaptive Nemesis Hive Evolution on Wave Clear
+  if (typeof evolveNemesisGenome === 'function') {
+    evolveNemesisGenome();
+  }
+
+  // 11.0 Expedition Node Cleared & Chimera Draft
+  if (n % 5 === 0 && typeof completeExpeditionNode === 'function') {
+    completeExpeditionNode();
   }
 
   saveBest();
@@ -850,6 +905,21 @@ function update(dt) {
       G.bloodForgeKills = 0;
     }
   }
+
+  // 10.0 Crucible of Ascendancy Updates
+  if (typeof updateSkillProfiler === 'function') updateSkillProfiler(dt);
+  if (typeof updatePrisms === 'function') updatePrisms(dt);
+  if (typeof updateEnigmaBoss === 'function') updateEnigmaBoss(dt);
+  if (typeof updateMidasCoins === 'function') updateMidasCoins(dt);
+  if (G && G.bulletTimeT > 0) {
+    G.bulletTimeT = Math.max(0, G.bulletTimeT - dt);
+  }
+  if (G && G.bulletTimeCd > 0) {
+    G.bulletTimeCd = Math.max(0, G.bulletTimeCd - dt);
+  }
+
+  // 11.0 The Infinite Chronicles Updates
+  if (typeof updateInfiniteChronicles === 'function') updateInfiniteChronicles(dt);
 }
 
 /* ============================================================

@@ -453,7 +453,7 @@ function getTierData(t) {
   return base;
 }
 
-const TKEYS = ['gatling', 'plasma', 'cryo', 'tesla', 'rail', 'relay', 'fusion_hellfire', 'fusion_deathray', 'fusion_zero', 'fusion_antimatter'];
+const TKEYS = ['gatling', 'plasma', 'cryo', 'tesla', 'rail', 'relay'];
 const PRIOS = [['first', 'First'], ['last', 'Last'], ['strongest', 'Strongest'], ['weakest', 'Weakest']];
 
 /* ============================================================
@@ -1430,6 +1430,7 @@ const MEGASTRUCTURE_CONFIG = {
     id: 'ion_uplink',
     name: 'Ion Beam Orbital Uplink Array',
     shortName: 'Ion Uplink',
+    dockRole: 'Solar Beam',
     color: '#38bdf8',
     size: 2, // 2x2 grid
     cost: 800, // Rebalanced: 280 -> 450 -> 800
@@ -1444,7 +1445,8 @@ const MEGASTRUCTURE_CONFIG = {
   drone_carrier: {
     id: 'drone_carrier',
     name: 'Autonomous Drone Carrier Base',
-    shortName: 'Drone Carrier',
+    shortName: 'Drone Base',
+    dockRole: 'Drone Hangar',
     color: '#10b981',
     size: 2, // 2x2 grid
     cost: 700, // Rebalanced: 260 -> 400 -> 700
@@ -1461,7 +1463,8 @@ const MEGASTRUCTURE_CONFIG = {
   tectonic_siphon: {
     id: 'tectonic_siphon',
     name: 'Tectonic Resonance Siphon',
-    shortName: 'Tectonic Siphon',
+    shortName: 'Tectonic',
+    dockRole: 'Seismic Drill',
     color: '#f59e0b',
     size: 2, // 2x2 grid
     cost: 950, // Rebalanced: 300 -> 500 -> 950
@@ -1699,5 +1702,491 @@ const ECO_MUTATION_CONFIG = {
     hp: 120,
     absorbCc: true
   }
+};
+
+/* ============================================================
+   BASTION TD 10.0: THE CRUCIBLE OF ASCENDANCY DATA SPECIFICATIONS
+   ============================================================ */
+
+const CRUCIBLE_GAMBITS = {
+  blood_oath: {
+    id: 'blood_oath',
+    name: 'Blood Oath of the Vanguard',
+    icon: 'target',
+    color: '#ef4444',
+    risk: 'Lethal',
+    desc: 'Base HP is forced to 1 Live! A single breach triggers instant game over. Hostile speed +25%.',
+    rewardDesc: '+200% Gold Interest, +3 Nanite Cores, and guaranteed random Modular Chip.',
+    bonusInterest: 2.0,
+    bonusCores: 3,
+    grantChip: true
+  },
+  meltdown: {
+    id: 'meltdown',
+    name: 'Thermodynamic Meltdown',
+    icon: 'spark',
+    color: '#f97316',
+    risk: 'Extreme',
+    desc: 'All towers produce 3x thermal heat. Overheating >100% causes violent detonation and destruction.',
+    rewardDesc: '100% Guaranteed Critical Strike on all towers and +50% explosive AoE radius.',
+    critRate: 1.0,
+    critMult: 2.0,
+    splashBoost: 1.5
+  },
+  void_tithe: {
+    id: 'void_tithe',
+    name: 'Cursed Tithe of the Void',
+    icon: 'spark',
+    color: '#a855f7',
+    risk: 'High',
+    desc: 'Megastructure lifespan reduced to 1 wave (seizes immediately after wave). Repair cost +100%.',
+    rewardDesc: 'Megastructure damage quadrupled (4x damage output; Ion Uplink deals 1,680 DPS!).',
+    megaDmgMult: 4.0
+  },
+  blind_perimeter: {
+    id: 'blind_perimeter',
+    name: 'Blinded Perimeter',
+    icon: 'flag',
+    color: '#64748b',
+    risk: 'Moderate',
+    desc: 'Battlefield covered in impenetrable combat fog. Tower targeting range reduced by 30%.',
+    rewardDesc: 'Every enemy defeated drops double gold (2x Gold bounty).',
+    goldMult: 2.0,
+    rangePenalty: 0.70
+  }
+};
+
+const PHOTON_PRISM_CONFIG = {
+  cost: 60,
+  size: 1,
+  color: '#38bdf8',
+  glowColor: '#818cf8',
+  backfireStun: 4.0,
+  deflectAngleStep: Math.PI / 2, // 90 degrees rotation
+  singularitySlow: 0.60,
+  singularityShred: 0.10, // 10% armor shred per sec in pen
+  name: 'Photon Reflection Prism',
+  desc: 'Optical prism that bends energy lasers and sabot rounds 90°. Aligning 3 prisms forms a Singularity Pen stasis field!'
+};
+
+const ENIGMA_BOSS_CONFIG = {
+  polarities: ['thermal', 'cryo', 'conductive'],
+  cycleInterval: 8.0, // Shifts element every 8 seconds
+  thermal: {
+    color: '#f97316',
+    name: 'Thermal Resonance',
+    absorbs: 'plasma', // heals 150% from plasma
+    vulnerable: 'cryo', // takes 200% damage from cryo
+    immuneDesc: 'Absorbs Plasma & Heat to Heal. Vulnerable to Cryo!'
+  },
+  cryo: {
+    color: '#38bdf8',
+    name: 'Cryogenic Sheath',
+    absorbs: 'cryo', // immune/heals from freeze
+    vulnerable: 'phys', // takes 200% from gatling/rail
+    immuneDesc: 'Absorbs Freeze & Slow. Vulnerable to Kinetic Sabot!'
+  },
+  conductive: {
+    color: '#c084fc',
+    name: 'Superconductor Matrix',
+    absorbs: 'energy', // reflects tesla lightning
+    vulnerable: 'plasma', // vulnerable to plasma splash
+    immuneDesc: 'Reflects Tesla Lightning. Vulnerable to Plasma Explosions!'
+  },
+  devastatorChargeTime: 12.0, // 12 seconds countdown to apocalyptic wipe
+  catalystPylons: 3 // Pylons spawned around map to interrupt wipe
+};
+
+const PANDORA_RELICS = {
+  glass_monolith: {
+    id: 'glass_monolith',
+    name: 'The Glass Monolith',
+    color: '#f43f5e',
+    buff: '+80% All Tower & Defense Damage',
+    drawback: '+50% Higher Construction & Repair Gold Costs',
+    dmgMult: 1.80,
+    costMult: 1.50
+  },
+  midas_transmutation: {
+    id: 'midas_transmutation',
+    name: "Midas' Transmutation",
+    color: '#fbbf24',
+    buff: '+100% Gold Dropped from Defeated Enemies',
+    drawback: 'Gold drops as physical coins expiring in 3.5s before rotting',
+    coinLifespan: 3.5,
+    coinBonus: 2.0
+  },
+  chrono_debt: {
+    id: 'chrono_debt',
+    name: 'Chrono-Debt Matrix',
+    color: '#818cf8',
+    buff: 'Emergency 8-Second Time Rewind at Will (Key [Z])',
+    drawback: 'Every rewind spawns an extra Berserk Champion on the next wave',
+    rewindDuration: 8.0
+  }
+};
+
+const SKILL_PROFILER_CONFIG = {
+  highThreshold: 1.35,
+  lowThreshold: 0.70,
+  antimatterBonusSpeed: 1.30,
+  antimatterTrialZoneRadius: 180,
+  airdropGoldReward: 120,
+  airdropEmpDuration: 3.0
+};
+
+/* ============================================================
+   BASTION TD 11.0: THE INFINITE CHRONICLES DATA SPECIFICATIONS
+   ============================================================ */
+
+const EXPEDITION_NODE_TYPES = {
+  combat: { id: 'combat', name: 'Combat Sector', icon: 'target', color: '#f59e0b', desc: 'Standard hostile wave incursion. Yields tactical gold and combat XP.' },
+  elite: { id: 'elite', name: 'Elite Crucible', icon: 'spark', color: '#ef4444', desc: 'High-threat sector with Champion hostiles. Guarantees Prismatic Relic and Nanite Cores.' },
+  black_market: { id: 'black_market', name: 'Smuggler Black Market', icon: 'coin', color: '#fbbf24', desc: 'Underground trading depot. Barter cores for prototype weapons and mercenary drones.' },
+  void_shrine: { id: 'void_shrine', name: 'Mystery Void Shrine', icon: 'flag', color: '#a855f7', desc: 'Ancient alien obelisk. Offers cursed pacts with extreme risk and transcendent rewards.' },
+  rest_depot: { id: 'rest_depot', name: 'Overhaul Engineering Depot', icon: 'wrench', color: '#38bdf8', desc: 'Forward defense repair depot. Restores all defenses, vents heat, and repairs megastructures.' },
+  cataclysm_gate: { id: 'cataclysm_gate', name: 'Cataclysm Apex Gate', icon: 'shield', color: '#ec4899', desc: 'Apex confrontation with a procedurally evolved Colossal Titan Boss.' }
+};
+
+function generateExpeditionTree(seed) {
+  const rng = (s) => {
+    let t = s += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+  let curSeed = seed || Date.now();
+  const nextRng = () => rng(curSeed++);
+
+  const sectors = ['foundry', 'biolab', 'core', 'glacial'];
+  const nodes = [];
+
+  // Tier 0: Landing Zone (1 node)
+  nodes.push({
+    id: 'node_0_0',
+    tier: 0,
+    type: 'combat',
+    sectorId: 'foundry',
+    name: 'Sector Entry: Foundry Perimeter',
+    color: '#f59e0b',
+    icon: 'target',
+    cleared: false,
+    active: true,
+    connections: ['node_1_0', 'node_1_1']
+  });
+
+  // Tier 1: Two diverging sectors
+  nodes.push({
+    id: 'node_1_0',
+    tier: 1,
+    type: 'combat',
+    sectorId: 'biolab',
+    name: 'Biolab Xenomorphic Spores',
+    color: '#84cc16',
+    icon: 'target',
+    cleared: false,
+    active: false,
+    connections: ['node_2_0', 'node_2_1']
+  });
+  nodes.push({
+    id: 'node_1_1',
+    tier: 1,
+    type: nextRng() > 0.5 ? 'void_shrine' : 'black_market',
+    sectorId: 'foundry',
+    name: 'Smuggler Relay Depot',
+    color: '#fbbf24',
+    icon: 'coin',
+    cleared: false,
+    active: false,
+    connections: ['node_2_1', 'node_2_2']
+  });
+
+  // Tier 2: Three sectors
+  nodes.push({
+    id: 'node_2_0',
+    tier: 2,
+    type: 'elite',
+    sectorId: 'glacial',
+    name: 'Cryogenic Crucible Rift',
+    color: '#ef4444',
+    icon: 'spark',
+    cleared: false,
+    active: false,
+    connections: ['node_3_0']
+  });
+  nodes.push({
+    id: 'node_2_1',
+    tier: 2,
+    type: 'void_shrine',
+    sectorId: 'core',
+    name: 'Void Anomaly Shrine',
+    color: '#a855f7',
+    icon: 'flag',
+    cleared: false,
+    active: false,
+    connections: ['node_3_0', 'node_3_1']
+  });
+  nodes.push({
+    id: 'node_2_2',
+    tier: 2,
+    type: 'combat',
+    sectorId: 'core',
+    name: 'Magma Core Sub-Level',
+    color: '#f97316',
+    icon: 'target',
+    cleared: false,
+    active: false,
+    connections: ['node_3_1']
+  });
+
+  // Tier 3: Two pre-boss preparation hubs
+  nodes.push({
+    id: 'node_3_0',
+    tier: 3,
+    type: 'rest_depot',
+    sectorId: 'foundry',
+    name: 'Engineering Overhaul Depot',
+    color: '#38bdf8',
+    icon: 'wrench',
+    cleared: false,
+    active: false,
+    connections: ['node_4_0']
+  });
+  nodes.push({
+    id: 'node_3_1',
+    tier: 3,
+    type: 'elite',
+    sectorId: 'core',
+    name: 'Apex Vanguard Gauntlet',
+    color: '#ef4444',
+    icon: 'spark',
+    cleared: false,
+    active: false,
+    connections: ['node_4_0']
+  });
+
+  // Tier 4: Cataclysm Boss Gate
+  nodes.push({
+    id: 'node_4_0',
+    tier: 4,
+    type: 'cataclysm_gate',
+    sectorId: 'core',
+    name: 'Cataclysm Apex Colossus',
+    color: '#ec4899',
+    icon: 'shield',
+    cleared: false,
+    active: false,
+    connections: []
+  });
+
+  return nodes;
+}
+
+const CHIMERA_PREFIXES = {
+  glacial: {
+    id: 'glacial',
+    name: 'Glacial',
+    color: '#38bdf8',
+    desc: 'Infuses projectiles with liquid nitrogen. Hits slow hostiles by 35% and deal +20% damage to already chilled targets.'
+  },
+  thermobaric: {
+    id: 'thermobaric',
+    name: 'Thermobaric',
+    color: '#f97316',
+    desc: 'Explosive thermobaric warheads. Grants +45% explosive splash radius and burns targets for 3 seconds.'
+  },
+  singularity: {
+    id: 'singularity',
+    name: 'Singularity',
+    color: '#a855f7',
+    desc: 'Gravitational collapse rounds. 20% chance on impact to spawn a micro-vortex pulling nearby foes together.'
+  },
+  vanguard: {
+    id: 'vanguard',
+    name: 'Vanguard',
+    color: '#34d399',
+    desc: 'Titan-grade optical sensors. Grants +40% targeting range and +20% kinetic armor piercing.'
+  },
+  hyper_thermal: {
+    id: 'hyper_thermal',
+    name: 'Hyper-Thermal',
+    color: '#ef4444',
+    desc: 'Supercharged plasma feeds. Grants +65% attack rate but generates +2 heat units per shot.'
+  }
+};
+
+const CHIMERA_SUFFIXES = {
+  of_ricochet: {
+    id: 'of_ricochet',
+    name: 'of Ricochet',
+    color: '#fbbf24',
+    desc: 'Reflective alloy sabots. Projectiles bounce to 2 additional nearby hostiles dealing 60% splash damage.'
+  },
+  of_fission: {
+    id: 'of_fission',
+    name: 'of Fission',
+    color: '#e11d48',
+    desc: 'Unstable isotope cores. Slain hostiles violently burst into 3 seeking shrapnel clusters.'
+  },
+  of_execution: {
+    id: 'of_execution',
+    name: 'of Execution',
+    color: '#c084fc',
+    desc: 'Neural reaper matrix. Deals +120% true critical damage against enemies below 30% maximum HP.'
+  },
+  of_midas: {
+    id: 'of_midas',
+    name: 'of Midas',
+    color: '#eab308',
+    desc: 'Alchemical transmutation. Every 4th shot directly extracts +3 Gold from target enemy.'
+  },
+  of_superconductor: {
+    id: 'of_superconductor',
+    name: 'of Superconductor',
+    color: '#818cf8',
+    desc: 'Zero-resistance coils. Discharges electric arcs to 3 adjacent targets with 40% chance to briefly stun.'
+  }
+};
+
+const RULE_BENDING_RELICS = {
+  temporal_battery: {
+    id: 'temporal_battery',
+    name: 'Temporal Siphon Battery',
+    color: '#38bdf8',
+    desc: 'During Bullet-Time or Pause, towers accumulate kinetic charge released as a 1,200 damage piercing laser upon resume.'
+  },
+  transmutation_chamber: {
+    id: 'transmutation_chamber',
+    name: 'Transmutation Chamber',
+    color: '#a855f7',
+    desc: 'Upgrades 1 random Tier I tower directly into a Tier III Branch for free, but disables the ability to sell defenses.'
+  },
+  symbiotic_parasite: {
+    id: 'symbiotic_parasite',
+    name: 'Symbiotic Parasite Colony',
+    color: '#f43f5e',
+    desc: 'Sacrifices 1 Markas Live every 3 waves, but all constructed towers gain a massive +85% attack rate boost.'
+  },
+  quantum_reroute: {
+    id: 'quantum_reroute',
+    name: 'Quantum Power Reroute',
+    color: '#10b981',
+    desc: 'Channels total grid power directly into weapon amplifiers: every 10 MW of power increases all tower damage by +15%.'
+  }
+};
+
+const NEMESIS_GENOME_TRAITS = {
+  kinetic_dissipation: {
+    id: 'kinetic_dissipation',
+    name: 'Kinetic Dissipation Shell',
+    color: '#94a3b8',
+    desc: 'Absorbs ballistic impacts: takes -60% damage from Gatling & Railgun, but takes +150% damage from Tesla & Plasma.',
+    counterType: 'phys'
+  },
+  cryo_metabolic: {
+    id: 'cryo_metabolic',
+    name: 'Cryo-Metabolic Adrenaline',
+    color: '#38bdf8',
+    desc: 'Immune to freeze & slow. Being chilled stimulates adrenal glands, surging movement speed by +50%!',
+    counterType: 'cryo'
+  },
+  swarm_fission: {
+    id: 'swarm_fission',
+    name: 'Swarm Fission Reaction',
+    color: '#ef4444',
+    desc: 'When receiving >25% maximum HP damage in a single hit, unit violently splits into 3 fast mini-skitterers.',
+    counterType: 'plasma'
+  },
+  resonance_stealth: {
+    id: 'resonance_stealth',
+    name: 'Resonance Stealth Cloak',
+    color: '#c084fc',
+    desc: 'Unit activates cloaking camouflage when passing within 140px of high-power towers (>= 6 MW load).',
+    counterType: 'energy'
+  }
+};
+
+const QUANTUM_HEAT_MODIFIERS = {
+  heat_speed: {
+    id: 'heat_speed',
+    name: 'Vanguard Thrusters',
+    heat: 1,
+    color: '#38bdf8',
+    desc: 'Hostile movement speed increased by +15% across all sectors.'
+  },
+  heat_costs: {
+    id: 'heat_costs',
+    name: 'Supply Line Embargo',
+    heat: 2,
+    color: '#f59e0b',
+    desc: 'All tower construction and upgrade gold costs increased by +20%.'
+  },
+  heat_armor: {
+    id: 'heat_armor',
+    name: 'Reinforced Carapace',
+    heat: 3,
+    color: '#f97316',
+    desc: 'All hostiles gain +40 base Armor and +15% damage resistance.'
+  },
+  heat_bosses: {
+    id: 'heat_bosses',
+    name: 'Dual Colossi Protocol',
+    heat: 5,
+    color: '#ef4444',
+    desc: 'Boss encounters spawn TWO Titan Colossi simultaneously with split HP!'
+  },
+  heat_overheat: {
+    id: 'heat_overheat',
+    name: 'Volatile Meltdown',
+    heat: 4,
+    color: '#dc2626',
+    desc: 'Towers whose heat exceeds 100% explode violently, destroying the tower.'
+  },
+  heat_permadeath: {
+    id: 'heat_permadeath',
+    name: 'Ironclad Command',
+    heat: 5,
+    color: '#7c3aed',
+    desc: 'Base HP is hard-capped at 3 Lives for the entire expedition. Markas healing disabled.'
+  },
+  heat_extinction: {
+    id: 'heat_extinction',
+    name: 'Absolute Extinction',
+    heat: 5,
+    color: '#ec4899',
+    desc: 'Enigma bosses have 4 shifting polarities, hostile HP doubled (+100%), double Champion affixes.'
+  }
+};
+
+const CHAOS_INCURSIONS = {
+  smuggler_heist: {
+    id: 'smuggler_heist',
+    name: 'Smuggler Cargo Heist',
+    color: '#fbbf24',
+    duration: 15.0,
+    rewardGold: 250,
+    rewardCores: 8,
+    desc: 'Neutral high-speed smuggler vessel crossing sector! Intercept before it escapes in 15s to claim +250G and cores!'
+  },
+  anomaly_rift: {
+    id: 'anomaly_rift',
+    name: 'Void Anomaly Tear',
+    color: '#a855f7',
+    duration: 20.0,
+    desc: 'Dimensional tear opened! Continuously leaks Void Horrors until sealed by clicking or triggering an orbital skill!'
+  },
+  solar_emp_storm: {
+    id: 'solar_emp_storm',
+    name: 'Solar EMP Storm Front',
+    color: '#38bdf8',
+    duration: 8.0,
+    desc: 'Solar flare disruption: 50% of grid power is knocked offline! Towers throttled until power stabilizes!'
+  }
+};
+
+const DYNAMIC_ENTROPY_CONFIG = {
+  morphIntervalWaves: 4,
+  maxDetoursPerSector: 2,
+  cragCollapseDamage: 400
 };
 

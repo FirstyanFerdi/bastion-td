@@ -487,6 +487,11 @@ function render() {
   drawEcologySoil(c, time);
   drawDestructibleCrags(c, time);
   drawBarricades(c, time);
+  // 10.0 Crucible of Ascendancy Ground Systems
+  drawSingularityPens(c, time);
+  drawPhotonPrisms(c, time);
+  drawMidasCoins(c, time);
+  drawCatalystPylons(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -533,6 +538,18 @@ function render() {
       c.fillStyle = good ? '#38bdf8' : '#f43f5e';
       c.textAlign = 'center';
       c.fillText(ok ? (afford ? 'PLACE BARRICADE (40G)' : 'NEED 40G') : 'ROAD ONLY', x + TILE / 2, y + TILE / 2 + 4);
+    } else if (G.placingPrism) {
+      const ok = typeof canPlacePrism === 'function' && canPlacePrism(hc, hr);
+      const afford = G.gold >= 60, good = ok && afford;
+      c.fillStyle = good ? 'rgba(56,189,248,0.22)' : 'rgba(244,63,94,0.25)';
+      c.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+      c.strokeStyle = good ? '#38bdf8' : '#f43f5e';
+      c.lineWidth = 2;
+      c.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+      c.font = '800 10px ' + FONT;
+      c.fillStyle = good ? '#38bdf8' : '#f43f5e';
+      c.textAlign = 'center';
+      c.fillText(ok ? (afford ? 'PLACE PRISM (60G)' : 'NEED 60G') : 'GROUND ONLY', x + TILE / 2, y + TILE / 2 + 4);
     } else if (G.placing) {
       const def = TD[G.placing];
       const cost = typeof getTowerCost === 'function' ? getTowerCost(G.placing) : def.cost;
@@ -567,10 +584,13 @@ function render() {
       c.strokeStyle = '#fff'; c.lineWidth = 2; rr(c, t.x - 48, t.y - 48, 96, 96, 12); c.stroke();
     } else if (t.hp !== undefined && t.c !== undefined && t.roadC === undefined) {
       c.strokeStyle = '#38bdf8'; c.lineWidth = 2; rr(c, t.x - 24, t.y - 24, 48, 48, 8); c.stroke();
+    } else if (t.type === 'photon_prism') {
+      c.strokeStyle = '#38bdf8'; c.lineWidth = 2; rr(c, t.x - 24, t.y - 24, 48, 48, 8); c.stroke();
     }
   }
   for (const t of G.towers) drawTowerSprite(c, t.type, t.tier, t, time);
   drawTowerHeatGauges(c, time);
+  drawChimeraAuras(c, time);
   for (const e of G.enemies) if (e.type !== 'boss' && e.x > -30) drawEnemy(c, e, time);
   for (const e of G.enemies) if (e.type === 'boss' && e.x > -40) { drawEnemy(c, e, time); drawBossAnatomicalParts(c, e, time); }
   for (const e of G.enemies) if (e.x > -10) drawBars(c, e);
@@ -636,6 +656,11 @@ function render() {
   drawMechHUD(c);
   // 9.0 Micro-Climate Atmospheric Weather Atmosphere
   drawWeatherAtmosphere(c, time);
+  // 10.0 Crucible of Ascendancy Post-Processing & HUD Overlays
+  drawEnigmaBossAura(c, time);
+  drawBulletTimeMatrix(c, time);
+  drawCrucibleGambitBadge(c, time);
+  drawChaosIncursionHUD(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -1999,5 +2024,402 @@ function drawNemesisBosses(c, time) {
       c.fillText('★ ' + e.nemesisTitle.toUpperCase() + ' ★', e.x, ty + 2);
     }
   }
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 10.0: THE CRUCIBLE OF ASCENDANCY - RENDER PIPELINE
+   ============================================================ */
+
+function drawPhotonPrisms(c, time) {
+  if (!G || !G.prisms || G.prisms.length === 0) return;
+  c.save();
+  for (const pr of G.prisms) {
+    const x = pr.x, y = pr.y;
+    // Outer prism glow
+    const pulse = 0.5 + 0.5 * Math.sin(time * 3 + pr.c);
+    c.fillStyle = 'rgba(56,189,248,' + (0.15 + 0.1 * pulse) + ')';
+    c.beginPath();
+    c.arc(x, y, 18, 0, Math.PI * 2);
+    c.fill();
+
+    // Triangular crystal body
+    c.save();
+    c.translate(x, y);
+    c.rotate(pr.angle || 0);
+
+    c.fillStyle = '#0f172a';
+    c.strokeStyle = '#38bdf8';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(0, -14);
+    c.lineTo(12, 10);
+    c.lineTo(-12, 10);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // Internal refraction core
+    c.fillStyle = '#818cf8';
+    c.beginPath();
+    c.moveTo(0, -7);
+    c.lineTo(6, 5);
+    c.lineTo(-6, 5);
+    c.closePath();
+    c.fill();
+
+    // Directional deflection arrow
+    c.strokeStyle = '#a855f7';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.lineTo(16, 0);
+    c.lineTo(12, -4);
+    c.moveTo(16, 0);
+    c.lineTo(12, 4);
+    c.stroke();
+
+    c.restore();
+
+    // Selection ring
+    if (G.sel === pr) {
+      c.strokeStyle = '#38bdf8';
+      c.lineWidth = 1.5;
+      c.setLineDash([4, 4]);
+      c.beginPath();
+      c.arc(x, y, 22, 0, Math.PI * 2);
+      c.stroke();
+      c.setLineDash([]);
+    }
+  }
+  c.restore();
+}
+
+function drawSingularityPens(c, time) {
+  if (!G || !G.singularityPens || G.singularityPens.length === 0) return;
+  c.save();
+  for (const pen of G.singularityPens) {
+    const [p1, p2, p3] = pen.prisms;
+    if (!p1 || !p2 || !p3) continue;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 4);
+
+    // Translucent cosmic triangle field
+    c.fillStyle = 'rgba(168,85,247,' + (0.18 + 0.1 * pulse) + ')';
+    c.beginPath();
+    c.moveTo(p1.x, p1.y);
+    c.lineTo(p2.x, p2.y);
+    c.lineTo(p3.x, p3.y);
+    c.closePath();
+    c.fill();
+
+    // Resonating border beams
+    c.strokeStyle = 'rgba(192,132,252,' + (0.6 + 0.4 * pulse) + ')';
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.moveTo(p1.x, p1.y);
+    c.lineTo(p2.x, p2.y);
+    c.lineTo(p3.x, p3.y);
+    c.closePath();
+    c.stroke();
+
+    // Stasis vortex centroid
+    const cx = (p1.x + p2.x + p3.x) / 3;
+    const cy = (p1.y + p2.y + p3.y) / 3;
+    c.strokeStyle = '#a855f7';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(cx, cy, 14 + pulse * 6, 0, Math.PI * 2);
+    c.stroke();
+
+    c.font = '800 9px ' + FONT;
+    c.fillStyle = '#e9d5ff';
+    c.textAlign = 'center';
+    c.fillText('SINGULARITY STASIS', cx, cy + 3);
+  }
+  c.restore();
+}
+
+function drawMidasCoins(c, time) {
+  if (!G || !G.midasCoins || G.midasCoins.length === 0) return;
+  c.save();
+  for (const coin of G.midasCoins) {
+    const bob = Math.sin(time * 6 + coin.x) * 3;
+    const cx = coin.x, cy = coin.y + bob;
+    const lifeRatio = Math.max(0, coin.life / coin.maxLife);
+
+    // Glow
+    c.fillStyle = 'rgba(251,191,36,0.3)';
+    c.beginPath();
+    c.arc(cx, cy, 14, 0, Math.PI * 2);
+    c.fill();
+
+    // Coin disk
+    c.fillStyle = '#fbbf24';
+    c.strokeStyle = '#d97706';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(cx, cy, 10, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+
+    // Inner symbol
+    c.fillStyle = '#78350f';
+    c.font = '800 10px ' + FONT;
+    c.textAlign = 'center';
+    c.fillText('G', cx, cy + 3.5);
+
+    // Expiring timer ring
+    c.strokeStyle = lifeRatio > 0.3 ? '#fbbf24' : '#ef4444';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(cx, cy, 13, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * lifeRatio));
+    c.stroke();
+  }
+  c.restore();
+}
+
+function drawCatalystPylons(c, time) {
+  if (!G || !G.catalystPylons || G.catalystPylons.length === 0) return;
+  c.save();
+  for (const p of G.catalystPylons) {
+    if (p.hp <= 0) continue;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 5 + p.x);
+    // Beacon circle
+    c.fillStyle = 'rgba(239,68,68,0.25)';
+    c.beginPath();
+    c.arc(p.x, p.y, 20 + pulse * 4, 0, Math.PI * 2);
+    c.fill();
+
+    // Hexagonal pylon
+    c.fillStyle = '#0f172a';
+    c.strokeStyle = p.color || '#ef4444';
+    c.lineWidth = 2.5;
+    c.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i * Math.PI) / 3;
+      const hx = p.x + Math.cos(a) * 14;
+      const hy = p.y + Math.sin(a) * 14;
+      if (i === 0) c.moveTo(hx, hy); else c.lineTo(hx, hy);
+    }
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // Core crystal
+    c.fillStyle = p.color || '#ef4444';
+    c.beginPath();
+    c.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    c.fill();
+
+    // HP Bar
+    const pct = Math.max(0, p.hp / p.maxHp);
+    c.fillStyle = '#1e293b';
+    c.fillRect(p.x - 18, p.y - 24, 36, 4);
+    c.fillStyle = '#ef4444';
+    c.fillRect(p.x - 18, p.y - 24, 36 * pct, 4);
+
+    c.font = '800 8.5px ' + FONT;
+    c.fillStyle = '#fca5a5';
+    c.textAlign = 'center';
+    c.fillText('PYLON: ' + p.hp + ' HP', p.x, p.y - 28);
+  }
+  c.restore();
+}
+
+function drawEnigmaBossAura(c, time) {
+  if (!G || !G.enemies) return;
+  c.save();
+  for (const e of G.enemies) {
+    if (e.dead || e.type !== 'boss' || !G.enigmaPolarity || typeof ENIGMA_BOSS_CONFIG === 'undefined') continue;
+    const conf = ENIGMA_BOSS_CONFIG[G.enigmaPolarity];
+    if (!conf) continue;
+
+    // Elemental shield aura
+    const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+    c.strokeStyle = conf.color;
+    c.lineWidth = 3;
+    c.beginPath();
+    c.arc(e.x, e.y, (e.r || 26) + 12 + pulse * 3, 0, Math.PI * 2);
+    c.stroke();
+
+    // Rotating orbital runes
+    for (let i = 0; i < 3; i++) {
+      const a = time * 2 + (i * Math.PI * 2) / 3;
+      const rx = e.x + Math.cos(a) * ((e.r || 26) + 14);
+      const ry = e.y + Math.sin(a) * ((e.r || 26) + 14);
+      c.fillStyle = conf.color;
+      c.beginPath();
+      c.arc(rx, ry, 3.5, 0, Math.PI * 2);
+      c.fill();
+    }
+
+    // Polarity HUD badge
+    const ty = e.y - (e.r || 26) - 44;
+    c.font = '800 10px ' + FONT;
+    const label = '★ ENIGMA: ' + conf.name.toUpperCase() + ' (' + conf.immuneDesc + ') ★';
+    const tw = c.measureText(label).width + 16;
+    c.fillStyle = 'rgba(15,23,42,0.92)';
+    c.fillRect(e.x - tw / 2, ty - 12, tw, 18);
+    c.strokeStyle = conf.color;
+    c.lineWidth = 1.5;
+    c.strokeRect(e.x - tw / 2, ty - 12, tw, 18);
+    c.fillStyle = conf.color;
+    c.textAlign = 'center';
+    c.fillText(label, e.x, ty + 2);
+  }
+
+  // Citadel Devastator Apocalyptic Countdown
+  if (G.devastatorTimer > 0) {
+    const tW = 480, tH = 34, tx = W / 2 - tW / 2, ty = 20;
+    const pct = Math.max(0, G.devastatorTimer / 12.0);
+    c.fillStyle = 'rgba(15,23,42,0.95)';
+    c.fillRect(tx, ty, tW, tH);
+    c.strokeStyle = '#ef4444';
+    c.lineWidth = 2;
+    c.strokeRect(tx, ty, tW, tH);
+
+    // Red warning progress bar
+    c.fillStyle = 'rgba(239,68,68,0.4)';
+    c.fillRect(tx + 2, ty + 2, (tW - 4) * pct, tH - 4);
+
+    c.font = '800 12px ' + FONT;
+    c.fillStyle = '#fee2e2';
+    c.textAlign = 'center';
+    c.fillText('⚠️ CITADEL DEVASTATOR CHARGING: ' + G.devastatorTimer.toFixed(1) + 's (DESTROY 3 CATALYST PYLONS!)', W / 2, ty + 22);
+  }
+  c.restore();
+}
+
+function drawBulletTimeMatrix(c, time) {
+  if (!G) return;
+  c.save();
+  if (G.bulletTimeT > 0) {
+    // Time Dilation Cyan Screen Vignette
+    const g = c.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.85);
+    g.addColorStop(0, 'rgba(56,189,248,0)');
+    g.addColorStop(1, 'rgba(56,189,248,0.35)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, H);
+
+    // Bullet-Time HUD Bar
+    c.fillStyle = 'rgba(15,23,42,0.85)';
+    c.fillRect(W / 2 - 200, 16, 400, 28);
+    c.strokeStyle = '#38bdf8';
+    c.lineWidth = 1.5;
+    c.strokeRect(W / 2 - 200, 16, 400, 28);
+    c.font = '800 11px ' + FONT;
+    c.fillStyle = '#38bdf8';
+    c.textAlign = 'center';
+    const paintedCount = G.bulletTimePainted ? G.bulletTimePainted.length : 0;
+    c.fillText('⚡ BULLET-TIME MATRIX ACTIVE: PAINT 5 WEAKPOINTS [' + paintedCount + '/5]', W / 2, 34);
+
+    // Target markers over painted foes
+    if (G.bulletTimePainted) {
+      for (const t of G.bulletTimePainted) {
+        if (t.dead) continue;
+        const pulse = 0.5 + 0.5 * Math.sin(time * 12);
+        c.strokeStyle = '#38bdf8';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.arc(t.x, t.y, (t.r || 16) + 8 + pulse * 4, 0, Math.PI * 2);
+        c.stroke();
+        // Crosshairs
+        c.beginPath();
+        c.moveTo(t.x - 14, t.y); c.lineTo(t.x + 14, t.y);
+        c.moveTo(t.x, t.y - 14); c.lineTo(t.x, t.y + 14);
+        c.stroke();
+      }
+    }
+  }
+  c.restore();
+}
+
+function drawCrucibleGambitBadge(c, time) {
+  if (!G || !G.activeGambit || typeof CRUCIBLE_GAMBITS === 'undefined') return;
+  const gambit = CRUCIBLE_GAMBITS[G.activeGambit];
+  if (!gambit) return;
+  c.save();
+  const bx = 16, by = 16, bw = 240, bh = 26;
+  c.fillStyle = 'rgba(15,23,42,0.88)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = gambit.color;
+  c.lineWidth = 1.5;
+  c.strokeRect(bx, by, bw, bh);
+
+  c.font = '800 9.5px ' + FONT;
+  c.fillStyle = gambit.color;
+  c.textAlign = 'left';
+  c.fillText('⚡ WAGER: ' + gambit.name.toUpperCase(), bx + 8, by + 17);
+  c.restore();
+}
+
+function drawChimeraAuras(c, time) {
+  if (!G || !G.towers) return;
+  for (const t of G.towers) {
+    if (!t.chimeraPrefix && !t.chimeraSuffix) continue;
+    c.save();
+    const pCol = (t.chimeraPrefix && typeof CHIMERA_PREFIXES !== 'undefined' && CHIMERA_PREFIXES[t.chimeraPrefix]) ? CHIMERA_PREFIXES[t.chimeraPrefix].color : '#a855f7';
+    const sCol = (t.chimeraSuffix && typeof CHIMERA_SUFFIXES !== 'undefined' && CHIMERA_SUFFIXES[t.chimeraSuffix]) ? CHIMERA_SUFFIXES[t.chimeraSuffix].color : '#38bdf8';
+
+    // Rotating prismatic aura ring
+    const rad = 28 + Math.sin(time * 3) * 2;
+    c.lineWidth = 1.8;
+    c.strokeStyle = pCol;
+    c.beginPath();
+    c.arc(t.x, t.y, rad, time * 2, time * 2 + Math.PI * 1.2);
+    c.stroke();
+
+    c.strokeStyle = sCol;
+    c.beginPath();
+    c.arc(t.x, t.y, rad + 3, -time * 1.5, -time * 1.5 + Math.PI * 1.2);
+    c.stroke();
+
+    // Orbital sparkles
+    for (let i = 0; i < 3; i++) {
+      const ang = time * 2.5 + (i * Math.PI * 2) / 3;
+      const spkX = t.x + Math.cos(ang) * (rad + 1.5);
+      const spkY = t.y + Math.sin(ang) * (rad + 1.5);
+      c.fillStyle = i % 2 === 0 ? pCol : sCol;
+      c.fillRect(spkX - 1.5, spkY - 1.5, 3, 3);
+    }
+    c.restore();
+  }
+}
+
+function drawChaosIncursionHUD(c, time) {
+  if (!G || !G.chaosIncursion || G.chaosTimer <= 0) return;
+  const incKey = G.chaosIncursion;
+  const conf = typeof CHAOS_INCURSIONS !== 'undefined' ? CHAOS_INCURSIONS[incKey] : null;
+  if (!conf) return;
+
+  c.save();
+  const bw = 280, bh = 38;
+  const bx = (W - bw) / 2, by = 16;
+  const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+
+  // Background box
+  c.fillStyle = 'rgba(15, 23, 42, 0.92)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = conf.color;
+  c.lineWidth = 2;
+  c.strokeRect(bx, by, bw, bh);
+
+  // Warning icon / pulses
+  c.fillStyle = conf.color;
+  c.globalAlpha = 0.8 + 0.2 * pulse;
+  c.font = '800 11px ' + FONT;
+  c.textAlign = 'left';
+  c.fillText('⚠ CHAOS EVENT: ' + conf.name.toUpperCase(), bx + 10, by + 16);
+
+  // Timer & Objective
+  c.font = '700 9.5px ' + FONT;
+  c.fillStyle = '#f8fafc';
+  c.fillText(conf.desc, bx + 10, by + 30);
+
+  c.textAlign = 'right';
+  c.font = '800 12px ' + FONT;
+  c.fillStyle = '#fbbf24';
+  c.fillText(Math.ceil(G.chaosTimer) + 's', bx + bw - 10, by + 23);
+
   c.restore();
 }

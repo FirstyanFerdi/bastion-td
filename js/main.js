@@ -58,7 +58,14 @@ function init() {
     if (dep) {
       Sfx.init(); Sfx.resume();
       if (!G || (G.state !== 'prep' && G.state !== 'active')) return;
-      G.placingBarricade = !G.placingBarricade;
+      const dType = dep.dataset.deployType;
+      if (dType === 'prism') {
+        G.placingPrism = !G.placingPrism;
+        G.placingBarricade = null;
+      } else {
+        G.placingBarricade = !G.placingBarricade;
+        G.placingPrism = null;
+      }
       G.placing = null; G.placingMegastructure = null; G.sel = null; G.casting = null;
       G.uiDirty = true; Sfx.play('click');
       return;
@@ -84,8 +91,55 @@ function init() {
     if (b && b.dataset.skill) triggerSkill(b.dataset.skill);
   });
   $('inspector').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b || !G.sel) return;
+    const b = e.target.closest('button'); if (!b) return;
     const act = b.dataset.act;
+    if (act === 'toggle_gambit') {
+      if (typeof activateGambit === 'function') activateGambit(b.dataset.gambit);
+      return;
+    }
+    if (act === 'set_insp_tab') {
+      if (b.dataset.tab) {
+        G.inspectorTab = b.dataset.tab;
+        renderInspector();
+        Sfx.play('click');
+      }
+      return;
+    }
+    if (act === 'open_chimera_draft') {
+      showOverlay('chimera_draft');
+      return;
+    }
+    if (act === 'trigger_bullet_time') {
+      if (typeof triggerBulletTime === 'function') triggerBulletTime();
+      return;
+    }
+    if (act === 'rotate_prism') {
+      if (G.sel && typeof rotatePrism === 'function') rotatePrism(G.sel);
+      return;
+    }
+    if (act === 'dismantle_prism') {
+      if (G.sel && G.sel.type === 'photon_prism') {
+        const pr = G.sel;
+        const refund = 42;
+        G.gold += refund;
+        if (G.grid[pr.r] && G.grid[pr.r][pr.c] === pr) G.grid[pr.r][pr.c] = null;
+        const idx = G.prisms ? G.prisms.indexOf(pr) : -1;
+        if (idx !== -1) G.prisms.splice(idx, 1);
+        if (typeof checkSingularityPens === 'function') checkSingularityPens();
+        burst(pr.x, pr.y, 15, '#38bdf8', 80, 0.4, 3, false);
+        addText(pr.x, pr.y - 18, '+' + refund + 'G SALVAGED', '#fbbf24', 12);
+        G.sel = null; G.uiDirty = true;
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('sell');
+      }
+      return;
+    }
+    if (act === 'trigger_rhythm_oc') {
+      if (G.sel && typeof triggerRhythmOverclock === 'function') {
+        triggerRhythmOverclock(G.sel, b.dataset.quality || 'perfect');
+      }
+      return;
+    }
+    if (!G.sel) return;
     if (act === 'upgrade') upgradeTower(G.sel, b.dataset.branch);
     else if (act === 'sell') sellTower(G.sel);
     else if (act === 'prio') { G.sel.prio = b.dataset.prio; G.uiDirty = true; Sfx.play('click'); }
@@ -279,6 +333,18 @@ function init() {
       if (typeof triggerDreadnoughtStrike === 'function') triggerDreadnoughtStrike();
     });
   }
+  if ($('btnExpedition')) {
+    $('btnExpedition').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('expedition');
+    });
+  }
+  if ($('btnQuantumHeat')) {
+    $('btnQuantumHeat').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('quantum_heat');
+    });
+  }
   if ($('btnGeneLab')) {
     $('btnGeneLab').addEventListener('click', () => {
       Sfx.init(); Sfx.resume(); Sfx.play('click');
@@ -380,6 +446,42 @@ function init() {
       showOverlay(G && G.state === 'menu' ? 'menu' : null);
       Sfx.play('click');
     }
+    else if (a === 'start_expedition_node') {
+      if (b.dataset.node && typeof startExpeditionNode === 'function') {
+        startExpeditionNode(b.dataset.node);
+        showOverlay(null);
+      }
+    }
+    else if (a === 'close_expedition') {
+      showOverlay(null);
+      Sfx.play('click');
+    }
+    else if (a === 'pick_chimera_draft') {
+      const choiceIdx = parseInt(b.dataset.choice, 10);
+      if (G && G.chimeraDraft && G.chimeraDraft[choiceIdx]) {
+        const choice = G.chimeraDraft[choiceIdx];
+        const target = G.sel || (G.towers && G.towers[0]);
+        if (target && typeof applyChimeraAffix === 'function') {
+          applyChimeraAffix(target, choice.prefix.id, choice.suffix.id);
+          G.chimeraDraft = null;
+          showOverlay(null);
+        }
+      }
+    }
+    else if (a === 'close_chimera_draft') {
+      showOverlay(null);
+      Sfx.play('click');
+    }
+    else if (a === 'toggle_heat_mod') {
+      if (b.dataset.mod && typeof toggleQuantumHeatModifier === 'function') {
+        toggleQuantumHeatModifier(b.dataset.mod);
+        showOverlay('quantum_heat');
+      }
+    }
+    else if (a === 'close_heat') {
+      showOverlay(null);
+      Sfx.play('click');
+    }
     else if (a === 'close_smuggler' || a === 'close_codex' || a === 'close') {
       showOverlay(G && G.state === 'menu' ? 'menu' : null);
       Sfx.play('click');
@@ -396,5 +498,9 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   canPlaceMegastructure, placeMegastructure, updateMegastructures, setupBossMultiParts, damageBossPart, mechGrappleStrike, routeLogistics, updateLogistics, recordPheromoneDeath, updatePheromones, applyGeneSplice, applyDarkCurio, MEGASTRUCTURE_CONFIG, MULTI_PART_TITAN_CONFIG, LOGISTICS_CONFIG, GENE_SPLICING_CONFIG, DARK_TECH_CURIOS,
   // 9.0 Living Ecosystem & Nemesis Network Exports
   addSoilTile, setWeather, updateEcology, updateProfiler, damageCrag, triggerRockslide, placeBarricade, feedGorger, recordNemesisEscape, spawnNemesisCommander, ECOSYSTEM_CONFIG, NEURAL_NEMESIS_CONFIG, DESTRUCTIBLE_TERRAIN_CONFIG, ECO_MUTATION_CONFIG,
+  // 10.0 Crucible of Ascendancy Exports
+  CRUCIBLE_GAMBITS, PHOTON_PRISM_CONFIG, ENIGMA_BOSS_CONFIG, PANDORA_RELICS, SKILL_PROFILER_CONFIG, trackPlayerAction, updateSkillProfiler, activateGambit, canPlacePrism, placePrism, rotatePrism, checkSingularityPens, updatePrisms, updateEnigmaBoss, damageCatalystPylon, triggerBulletTime, paintBulletTimeTarget, triggerRhythmOverclock, applyPandoraRelic, spawnMidasCoin, collectMidasCoin, updateMidasCoins,
+  // 11.0 The Infinite Chronicles Exports
+  EXPEDITION_NODE_TYPES, generateExpeditionTree, CHIMERA_PREFIXES, CHIMERA_SUFFIXES, RULE_BENDING_RELICS, NEMESIS_GENOME_TRAITS, QUANTUM_HEAT_MODIFIERS, CHAOS_INCURSIONS, DYNAMIC_ENTROPY_CONFIG, generateChimeraDraft, applyChimeraAffix, applyRuleBendingRelic, evolveNemesisGenome, triggerDynamicPathMorph, triggerChaosIncursion, resolveChaosIncursion, toggleQuantumHeatModifier, startExpeditionNode, completeExpeditionNode, updateInfiniteChronicles,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
 };

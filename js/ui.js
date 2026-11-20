@@ -152,6 +152,39 @@ function drawBarricadeDockIcon(ic) {
   ic.fillRect(20, 8, 8, 5);
 }
 
+function drawPrismDockIcon(ic) {
+  if (!ic) return;
+  ic.clearRect(0, 0, 48, 48);
+  ic.fillStyle = '#090e17';
+  ic.fillRect(4, 4, 40, 40);
+  ic.strokeStyle = '#38bdf8';
+  ic.lineWidth = 2;
+  ic.strokeRect(4, 4, 40, 40);
+  // Triangle Prism
+  ic.fillStyle = 'rgba(56,189,248,0.2)';
+  ic.strokeStyle = '#38bdf8';
+  ic.lineWidth = 1.8;
+  ic.beginPath();
+  ic.moveTo(24, 10);
+  ic.lineTo(38, 36);
+  ic.lineTo(10, 36);
+  ic.closePath();
+  ic.fill();
+  ic.stroke();
+  // Refracted Light Beams
+  ic.strokeStyle = '#a855f7';
+  ic.lineWidth = 2;
+  ic.beginPath();
+  ic.moveTo(6, 26);
+  ic.lineTo(20, 24);
+  ic.stroke();
+  ic.strokeStyle = '#38bdf8';
+  ic.beginPath();
+  ic.moveTo(24, 24);
+  ic.lineTo(42, 14);
+  ic.stroke();
+}
+
 function buildDock() {
   const dock = $('dock'); dock.innerHTML = '';
   TKEYS.forEach((k, idx) => {
@@ -177,8 +210,9 @@ function buildDock() {
       el.dataset.megaType = mk;
       el.style.setProperty('--tc', md.color);
       el.style.borderTop = '2px solid ' + md.color;
-      const dispName = md.shortName || (md.name.split(' ')[0] + ' ' + (md.name.split(' ')[1] || ''));
-      el.innerHTML = '<span class="key" style="background:' + md.color + ';color:#0f172a">2x2</span><canvas width="48" height="48"></canvas><div class="meta"><div class="nm" style="color:' + md.color + '">' + dispName + '</div><div class="cost"><i class="coin"></i>' + md.cost + '</div><div class="role">' + md.role + '</div></div>' +
+      const dispName = md.shortName || md.name;
+      const dispRole = md.dockRole || md.role;
+      el.innerHTML = '<span class="key" style="background:' + md.color + ';color:#0f172a">2x2</span><canvas width="48" height="48"></canvas><div class="meta"><div class="nm" style="color:' + md.color + '">' + dispName + '</div><div class="cost"><i class="coin"></i>' + md.cost + '</div><div class="role">' + dispRole + '</div></div>' +
         '<div class="tip"><b style="color:' + md.color + '">★ MEGASTRUCTURE (2x2): ' + md.name + '</b>' + md.desc + '<div class="st"><span><em>POWER</em> -' + md.power + ' MW</span><span><em>LIFESPAN</em> ' + (md.maxDurability || 3) + ' WAVES</span></div></div>';
       dock.appendChild(el);
       const ic = el.querySelector('canvas').getContext('2d');
@@ -197,6 +231,18 @@ function buildDock() {
   dock.appendChild(barEl);
   const barIc = barEl.querySelector('canvas').getContext('2d');
   drawBarricadeDockIcon(barIc);
+
+  // 10.0 Deployable Photon Prism Facility
+  const prismEl = document.createElement('div');
+  prismEl.className = 'shop deployable-shop';
+  prismEl.dataset.deployType = 'prism';
+  prismEl.style.setProperty('--tc', '#38bdf8');
+  prismEl.style.borderTop = '2px solid #38bdf8';
+  prismEl.innerHTML = '<span class="key" style="background:#38bdf8;color:#0f172a">P</span><canvas width="48" height="48"></canvas><div class="meta"><div class="nm" style="color:#38bdf8">Prism</div><div class="cost"><i class="coin"></i>60</div><div class="role">Optical Deflect</div></div>' +
+    '<div class="tip"><b style="color:#38bdf8">★ PHOTON REFLECTION PRISM (60G)</b>Deploy an optical prism on ground tiles. Bends lasers & sabots 90°. 3 connected prisms form a Singularity Pen (-60% Speed, -10% Armor/s)!</div>';
+  dock.appendChild(prismEl);
+  const prismIc = prismEl.querySelector('canvas').getContext('2d');
+  drawPrismDockIcon(prismIc);
 }
 function selectShop(type) {
   if (!G || (G.state !== 'prep' && G.state !== 'active')) return;
@@ -217,6 +263,21 @@ function renderInspector() {
   const box = $('inspector');
   const t = G.sel;
   if (!t) {
+    if (G.placingPrism) {
+      box.innerHTML = '<h3>DEPLOYING DEFENSE</h3>' +
+        '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:#38bdf8">Photon Reflection Prism</h4><small>OPTICAL DEFLECTOR · <i class="coin"></i>60</small></div></div>' +
+        '<div class="stats-grid">' +
+        '<div class="srow"><span>DEFLECT</span><span class="sv">90° Angle</span></div>' +
+        '<div class="srow"><span>STASIS</span><span class="sv">Singularity Pen</span></div>' +
+        '<div class="srow"><span>SLOW</span><span class="sv">-60% Speed</span></div>' +
+        '<div class="srow"><span>SHRED</span><span class="sv">-10% Armor/s</span></div>' +
+        '</div>' +
+        '<div class="note" style="border-left:3px solid #38bdf8;background:rgba(56,189,248,0.12);color:#f8fafc;margin:6px 0">Optical crystalline prism. Bends energy lasers and kinetic sabot rounds. Align 3 prisms in a triangle to form a high-gravity stasis zone.</div>' +
+        '<div class="note">Click a free grid tile to construct. Press [R] when selected to rotate angle. Esc / Right-Click to cancel.</div>';
+      const ic = $('inspIcon');
+      if (ic) drawPrismDockIcon(ic.getContext('2d'));
+      return;
+    }
     if (G.placingBarricade) {
       const bCost = typeof DESTRUCTIBLE_TERRAIN_CONFIG !== 'undefined' ? DESTRUCTIBLE_TERRAIN_CONFIG.barricadeCost : 40;
       box.innerHTML = '<h3>DEPLOYING DEFENSE</h3>' +
@@ -285,18 +346,79 @@ function renderInspector() {
       '</div>'
     ).join('');
 
-    box.innerHTML = '<h3>TACTICAL INSPECTOR</h3>' +
-      '<div class="legend">' +
-      '<div style="font-size:10.5px;color:#cbd5e1;margin-bottom:4px">Select any constructed tower to manage upgrades, modular chips, and target priority.</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;font-size:10px;color:#94a3b8;background:#090d12;padding:5px 7px;border-radius:3px;border:1px solid #1e293b">' +
-      '<div><span class="kbd">1</span>-<span class="kbd">6</span> Build Tower</div><div><kbd>Q/W/E/R</kbd> Powers</div>' +
-      '<div><span class="kbd">U</span> Upgrade / <span class="kbd">X</span> Sell</div><div><kbd>Space</kbd> Wave/Pause</div>' +
-      '</div>' +
-      '<div style="margin-top:6px;font-size:9.5px;font-weight:800;color:#f8fafc;letter-spacing:0.4px">ELEMENTAL REACTIONS</div>' +
-      '<div style="display:flex;flex-direction:column;gap:3px">' + rxList + '</div>' +
-      '<div style="margin-top:6px;font-size:9.5px;font-weight:800;color:#f8fafc;letter-spacing:0.4px">LEYLINE CONDUIT NODES</div>' +
-      '<div style="display:flex;flex-direction:column;gap:3px">' + lnList + '</div>' +
+    const gambitKeys = (typeof CRUCIBLE_GAMBITS !== 'undefined') ? Object.keys(CRUCIBLE_GAMBITS) : [];
+    const gambitsHtml = gambitKeys.map(gk => {
+      const g = CRUCIBLE_GAMBITS[gk];
+      const isActive = G && G.activeGambit === gk;
+      return '<div style="background:' + (isActive ? 'rgba(239,68,68,0.18)' : '#0b1118') + ';border-left:3px solid ' + g.color + ';padding:4px 6px;border-radius:2px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<div style="font-weight:800;color:' + g.color + ';font-size:10px">' + g.name.toUpperCase() + '</div>' +
+        '<button class="gambit-toggle-btn" data-act="toggle_gambit" data-gambit="' + gk + '" style="font-size:8px;padding:2px 6px;background:' + (isActive ? g.color : '#1e293b') + ';color:' + (isActive ? '#0f172a' : '#fff') + ';border:none;border-radius:2px;font-weight:800;cursor:pointer">' + (isActive ? 'ACTIVE' : 'WAGER') + '</button>' +
+        '</div>' +
+        '<div style="font-size:9px;color:#f87171;line-height:1.2;margin-top:1px">⚠️ ' + g.desc + '</div>' +
+        '<div style="font-size:9px;color:#34d399;line-height:1.2;margin-top:1px">★ ' + g.rewardDesc + '</div>' +
+        '</div>';
+    }).join('');
+
+    const curTab = (G && G.inspectorTab) || 'directives';
+    const tabsHtml = '<div class="insp-tabs">' +
+      '<button class="itab ' + (curTab === 'directives' ? 'on' : '') + '" data-act="set_insp_tab" data-tab="directives">DIRECTIVES</button>' +
+      '<button class="itab ' + (curTab === 'gambits' ? 'on' : '') + '" data-act="set_insp_tab" data-tab="gambits">GAMBITS</button>' +
+      '<button class="itab ' + (curTab === 'reactions' ? 'on' : '') + '" data-act="set_insp_tab" data-tab="reactions">REACTIONS</button>' +
+      '<button class="itab ' + (curTab === 'leylines' ? 'on' : '') + '" data-act="set_insp_tab" data-tab="leylines">LEYLINES</button>' +
       '</div>';
+
+    let contentHtml = '';
+    if (curTab === 'gambits') {
+      contentHtml = '<div style="margin-bottom:6px;font-size:9.5px;font-weight:800;color:#f8fafc;letter-spacing:0.4px">CRUCIBLE GAMBITS (HIGH-STAKES WAGERS)</div>' +
+        '<div style="display:flex;flex-direction:column;gap:5px">' + gambitsHtml + '</div>';
+    } else if (curTab === 'reactions') {
+      contentHtml = '<div style="margin-bottom:6px;font-size:9.5px;font-weight:800;color:#f8fafc;letter-spacing:0.4px">ELEMENTAL REACTIONS (SYNERGIES)</div>' +
+        '<div style="display:flex;flex-direction:column;gap:5px">' + rxList + '</div>';
+    } else if (curTab === 'leylines') {
+      contentHtml = '<div style="margin-bottom:6px;font-size:9.5px;font-weight:800;color:#f8fafc;letter-spacing:0.4px">ANCIENT LEYLINE CONDUITS</div>' +
+        '<div style="display:flex;flex-direction:column;gap:5px">' + lnList + '</div>';
+    } else {
+      contentHtml = '<div class="legend">' +
+        '<div style="font-size:11px;color:#cbd5e1;line-height:1.35;margin-bottom:6px">Select any constructed defense on the battlefield to configure upgrades, targeting priorities, modular chips, and cyber-logic.</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;color:#94a3b8;background:#090d12;padding:6px 8px;border-radius:4px;border:1px solid #1e293b">' +
+        '<div><span class="kbd">1</span>-<span class="kbd">6</span> Build Tower</div><div><kbd>Q/W/E/R</kbd> Overrides</div>' +
+        '<div><span class="kbd">U</span> Upgrade / <span class="kbd">X</span> Sell</div><div><kbd>Space</kbd> Wave/Pause</div>' +
+        '<div><kbd>Shift+Space</kbd> Bullet-Time</div><div><kbd>P</kbd> Prism Dock</div>' +
+        '</div>' +
+        '<div style="margin-top:8px;padding:6px 8px;background:rgba(56,189,248,0.06);border-left:3px solid #38bdf8;border-radius:2px;font-size:10px;color:#94a3b8;line-height:1.3">' +
+        '<strong style="color:#38bdf8">TACTICAL BRIEFING:</strong> Combine physical kinetic, cryogenic stasis, energy chain-lightning, and thermal splash to counter adaptive enemy hive resistances.' +
+        '</div>' +
+        '</div>';
+    }
+
+    box.innerHTML = '<h3>TACTICAL INSPECTOR</h3>' + tabsHtml + contentHtml;
+    return;
+  }
+
+  // 10.0 Photon Reflection Prism Inspector
+  if (t && t.type === 'photon_prism') {
+    const prism = t;
+    const inPen = G && G.singularityPens && G.singularityPens.some(pen => pen.prisms && pen.prisms.includes(prism));
+    const deg = Math.round((prism.angle * 180) / Math.PI) % 360;
+    box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
+      '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:#38bdf8">Photon Reflection Prism</h4><small>OPTICAL DEFLECTOR · ANGLE ' + deg + '°</small></div></div>' +
+      '<div style="margin:5px 0;padding:6px;background:rgba(15,23,42,0.8);border-left:3px solid ' + (inPen ? '#a855f7' : '#38bdf8') + ';border-radius:2px">' +
+      '<div style="font-size:10px;color:#f8fafc;font-weight:700">STATUS: ' + (inPen ? '★ SINGULARITY PEN ACTIVE (-60% SPD, -10% ARMOR/S)' : 'REFRACTING (90° DEFLECT)') + '</div>' +
+      '<div style="font-size:9.5px;color:#cbd5e1;line-height:1.25;margin-top:2px">Bends laser and sabot beam trajectories. Align 3 prisms in a triangle to form a high-gravity stasis zone.</div>' +
+      '</div>' +
+      '<div class="tower-actions">' +
+      '<button class="primary" data-act="rotate_prism" style="width:100%">' + svg('redo') + 'Rotate 90° [R]</button>' +
+      '<button class="sell" tabindex="-1" data-act="dismantle_prism">' + svg('tag') + 'Salvage <i class="coin"></i>42</button>' +
+      '</div>' +
+      '<div class="stats-grid">' +
+      '<div class="srow"><span>ANGLE</span><span class="sv">' + deg + '°</span></div>' +
+      '<div class="srow"><span>DEFLECTION</span><span class="sv">+90° Clockwise</span></div>' +
+      '<div class="srow"><span>PEN STATUS</span><span class="sv">' + (inPen ? 'Online' : 'Awaiting 3 Prisms') + '</span></div>' +
+      '<div class="srow"><span>REFUND</span><span class="sv">42 Gold</span></div>' +
+      '</div>';
+    const ic = $('inspIcon');
+    if (ic) drawPrismDockIcon(ic.getContext('2d'));
     return;
   }
 
@@ -390,8 +512,8 @@ function renderInspector() {
     if (isBroken) {
       const canAfford = G.gold >= repCost;
       actionBtns = canAfford ?
-        '<button class="primary" data-act="repair_mega" style="width:100%;background:#e11d48;color:#fff;font-weight:800;border:1px solid #fda4af">' + svg('wrench') + 'Repair Facility <i class="coin"></i>' + repCost + '</button>' :
-        '<button class="primary" disabled style="width:100%;background:#334155;color:#94a3b8;font-weight:800">' + svg('wrench') + 'Repair Needs <i class="coin"></i>' + repCost + '</button>';
+        '<button class="primary" data-act="repair_mega" style="width:100%;background:#e11d48;color:#fff;font-weight:800;border:1px solid #fda4af">' + svg('wrench') + 'Repair <i class="coin"></i>' + repCost + '</button>' :
+        '<button class="primary" disabled style="width:100%;background:#334155;color:#94a3b8;font-weight:800">' + svg('wrench') + 'Needs <i class="coin"></i>' + repCost + '</button>';
     } else {
       const ocPart = isOverclocked ?
         '<button class="primary" disabled style="width:100%;background:#059669;color:#fff;font-weight:800">★ OVERCLOCKED</button>' :
@@ -676,13 +798,45 @@ function renderInspector() {
       '</div>';
   }
 
+  let rhythmHtml = '';
+  if (!isRelay && !isFusion) {
+    const isSynced = t.rhythmSync;
+    const isOc = (t.overclockT || 0) > 0;
+    rhythmHtml = '<button class="primary" data-act="trigger_rhythm_oc" data-quality="perfect" style="width:100%;margin:4px 0;background:linear-gradient(90deg, #f59e0b, #ef4444);color:#0f172a;font-weight:800">' +
+      (isSynced ? '★ RHYTHM HARMONIC (0 HEAT / +100% SPD)' : (isOc ? '★ OVERCLOCKED (' + Math.ceil(t.overclockT) + 's)' : '⚡ RHYTHM OVERDRIVE CALIBRATION')) +
+      '</button>';
+  }
+
+  let chimeraHtml = '';
+  if (t.chimeraPrefix || t.chimeraSuffix) {
+    const pref = typeof CHIMERA_PREFIXES !== 'undefined' ? CHIMERA_PREFIXES[t.chimeraPrefix] : null;
+    const suff = typeof CHIMERA_SUFFIXES !== 'undefined' ? CHIMERA_SUFFIXES[t.chimeraSuffix] : null;
+    chimeraHtml = '<div style="margin:4px 0;padding:5px 7px;background:rgba(168,85,247,0.15);border-left:3px solid #c084fc;border-radius:2px">' +
+      '<div style="font-size:10px;font-weight:800;color:#c084fc">★ CHIMERA INFUSED DEFENSE</div>' +
+      (pref ? '<div style="font-size:9.5px;color:' + pref.color + '">Prefix: <b>' + pref.name + '</b> - ' + pref.desc + '</div>' : '') +
+      (suff ? '<div style="font-size:9.5px;color:' + suff.color + '">Suffix: <b>' + suff.name + '</b> - ' + suff.desc + '</div>' : '') +
+      '</div>';
+  }
+
+  let chimeraDraftBtn = '';
+  if (G && G.chimeraDraft && G.chimeraDraft.length > 0) {
+    chimeraDraftBtn = '<button class="primary" data-act="open_chimera_draft" style="width:100%;margin:4px 0;background:linear-gradient(90deg,#a855f7,#ec4899);color:#fff;font-weight:800;border:none">' +
+      '⚡ CHIMERA DRAFT READY (INFUSE TOWER)' +
+      '</button>';
+  }
+
+  const towerDisplayName = t.chimeraName || (t.branch ? def.branches[t.branch].name : def.name);
+
   box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
-    '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + (t.branch ? def.branches[t.branch].color : def.color) + '">' + (t.branch ? def.branches[t.branch].name : def.name) + '</h4><small>' + tierTitle + ' · ' + t.kills + ' KILLS</small></div></div>' +
+    '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + (t.branch ? def.branches[t.branch].color : def.color) + '">' + towerDisplayName + '</h4><small>' + tierTitle + ' · ' + t.kills + ' KILLS</small></div></div>' +
     conduitHtml +
     synapseHtml +
     thermalHtml +
     leylineHtml +
+    chimeraHtml +
     actsHtml +
+    chimeraDraftBtn +
+    rhythmHtml +
     fusionHtml +
     '<div class="stats-grid">' + rows + '</div>' +
     relayHtml +
@@ -844,6 +998,8 @@ function refreshUI() {
   setText('vScore', String(G.score));
   setText('vBestScore', 'best ' + Math.max(SAVE.bestScore, G.score));
   setText('vBestWave', String(Math.max(SAVE.bestWave, G.wave)));
+  const vHeat = $('vHeatVal');
+  if (vHeat) vHeat.textContent = String(G.currentHeat || 0);
   setHTML('btnPause', G.paused ? svg('play') : svg('pause'));
   $('btnPause').classList.toggle('on', G.paused);
   setHTML('btnMute', Sfx.muted ? svg('muted') : svg('speaker')); $('btnMute').classList.toggle('on', Sfx.muted);
@@ -1478,6 +1634,129 @@ function showOverlay(kind) {
       '<div style="font-size:10px;font-weight:800;color:#f43f5e;margin:12px 0 4px;letter-spacing:0.08em">FORBIDDEN DARK TECH CURIOS (HIGH RISK / HIGH REWARD):</div>' +
       curiosHtml +
       '</div>';
+  } else if (kind === 'expedition') {
+    if ((!G || !G.expedition) && typeof generateExpeditionTree === 'function') {
+      if (G) G.expedition = { nodes: generateExpeditionTree(), currentNodeId: 'node_0_0', history: [], active: true };
+    }
+    const exp = G && G.expedition;
+    const allNodes = (exp && exp.nodes) || [];
+    const maxTier = allNodes.reduce((max, n) => Math.max(max, n.tier || 0), 0);
+    const currentNodeId = exp ? exp.currentNodeId : null;
+
+    let tiersHtml = '';
+    for (let t = 0; t <= maxTier; t++) {
+      const tierNodes = allNodes.filter(n => n.tier === t);
+      if (tierNodes.length === 0) continue;
+      const nodesHtml = tierNodes.map(n => {
+        const isCurrent = n.id === currentNodeId;
+        const isCompleted = n.cleared;
+        const isAccessible = n.active && !n.cleared && !isCurrent;
+        const bg = isCurrent ? 'rgba(56,189,248,0.2)' : isCompleted ? 'rgba(34,197,94,0.1)' : 'rgba(15,23,42,0.85)';
+        const borderCol = isCurrent ? '#38bdf8' : isCompleted ? '#22c55e' : (n.color || '#64748b');
+
+        let actBtn = '';
+        if (isCurrent) {
+          actBtn = '<span style="font-size:9.5px;font-weight:800;color:#38bdf8">CURRENT SECTOR</span>';
+        } else if (isCompleted) {
+          actBtn = '<span style="font-size:9.5px;font-weight:800;color:#22c55e">CLEARED ✓</span>';
+        } else if (isAccessible) {
+          actBtn = '<button class="primary" data-ov="start_expedition_node" data-node="' + n.id + '" style="font-size:9px;padding:3px 7px;background:' + n.color + ';color:#0f172a;font-weight:800">ENGAGE SECTOR</button>';
+        } else {
+          actBtn = '<span style="font-size:9.5px;color:#64748b">LOCKED</span>';
+        }
+
+        return '<div style="flex:1;min-width:130px;max-width:160px;background:' + bg + ';border:1px solid ' + borderCol + ';border-radius:4px;padding:6px;display:flex;flex-direction:column;justify-content:space-between;text-align:center">' +
+          '<div>' +
+          '<div style="font-size:18px;margin-bottom:2px">★</div>' +
+          '<div style="font-size:10.5px;font-weight:800;color:' + n.color + '">' + n.name.toUpperCase() + '</div>' +
+          '<div style="font-size:9px;color:#94a3b8;margin-top:1px">' + (n.sectorId || '').toUpperCase() + '</div>' +
+          '</div>' +
+          '<div style="margin-top:6px">' + actBtn + '</div>' +
+          '</div>';
+      }).join('');
+
+      tiersHtml += '<div style="margin-bottom:10px">' +
+        '<div style="font-size:10px;font-weight:800;color:#94a3b8;margin-bottom:4px;letter-spacing:0.05em">TIER ' + (t + 1) + '</div>' +
+        '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">' + nodesHtml + '</div>' +
+        '</div>';
+    }
+
+    h = '<div class="draft-box" style="border-top-color:#38bdf8;max-width:740px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<h2 style="margin:0;color:#38bdf8;letter-spacing:.12em">🗺️ PROCEDURAL EXPEDITION MATRIX</h2>' +
+      '<button class="ghost" data-ov="close_expedition" style="padding:2px 8px;font-size:11px">✕ CLOSE</button>' +
+      '</div>' +
+      '<div class="sub">Chart your campaign across branching sectors. Each node presents distinct hazards, modifiers, and legendary bounties.</div>' +
+      '<div style="margin:12px 0;max-height:360px;overflow-y:auto;padding-right:4px">' + tiersHtml + '</div>' +
+      '<div style="display:flex;justify-content:center">' +
+      '<button class="ghost" data-ov="close_expedition">Close Matrix</button>' +
+      '</div></div>';
+  } else if (kind === 'chimera_draft') {
+    if (G && (!G.chimeraDraft || G.chimeraDraft.length === 0) && typeof generateChimeraDraft === 'function') {
+      G.chimeraDraft = generateChimeraDraft();
+    }
+    const draftChoices = (G && G.chimeraDraft) || [];
+    const targetTower = (G && G.sel) || (G && G.towers && G.towers[0]) || null;
+    const targetName = targetTower ? (targetTower.name || 'Target Defense') : 'Active Defense';
+
+    const cards = draftChoices.map((choice, idx) => {
+      const p = choice.prefix;
+      const s = choice.suffix;
+      return '<div class="draft-card" style="border-top:3px solid ' + p.color + ';display:flex;flex-direction:column;justify-content:space-between">' +
+        '<div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+        '<span class="draft-tag" style="background:rgba(168,85,247,0.2);color:#c084fc;border:1px solid #c084fc">CHIMERA FUSION</span>' +
+        '</div>' +
+        '<div class="draft-name" style="font-size:13px;color:#fff;margin-bottom:4px"><span style="color:' + p.color + '">' + p.name + '</span> <span style="color:#94a3b8">...</span> <span style="color:' + s.color + '">' + s.name + '</span></div>' +
+        '<div style="font-size:10px;font-weight:700;color:' + p.color + ';margin-bottom:2px">PREFIX: ' + p.desc + '</div>' +
+        '<div style="font-size:10px;font-weight:700;color:' + s.color + ';margin-bottom:6px">SUFFIX: ' + s.desc + '</div>' +
+        '</div>' +
+        '<button class="draft-btn primary" data-ov="pick_chimera_draft" data-choice="' + idx + '" style="margin-top:10px;background:linear-gradient(90deg,' + p.color + ',' + s.color + ');color:#0f172a;font-weight:800">Infuse ' + targetName + '</button>' +
+        '</div>';
+    }).join('');
+
+    h = '<div class="draft-box" style="border-top-color:#c084fc;max-width:760px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+      '<h2 style="margin:0;color:#c084fc;letter-spacing:.12em">⚡ PRISMATIC CHIMERA TOWER INFUSION</h2>' +
+      '<button class="ghost" data-ov="close_chimera_draft" style="padding:2px 8px;font-size:11px">✕ LATER</button>' +
+      '</div>' +
+      '<div class="sub">Select 1 procedural affix combo to permanently evolve <b>' + targetName + '</b> with game-breaking synergies!</div>' +
+      '<div class="draft-grid" style="grid-template-columns:repeat(3, 1fr);gap:10px;margin:12px 0">' + cards + '</div>' +
+      '<div style="display:flex;justify-content:center">' +
+      '<button class="ghost" data-ov="close_chimera_draft">Postpone Infusion</button>' +
+      '</div></div>';
+  } else if (kind === 'quantum_heat') {
+    const curHeat = (G && G.currentHeat) || 0;
+    const activeMods = (G && G.activeHeatModifiers) || [];
+    const bonusPct = curHeat * 15;
+
+    const modsHtml = (typeof QUANTUM_HEAT_MODIFIERS !== 'undefined' ? Object.keys(QUANTUM_HEAT_MODIFIERS) : []).map(mk => {
+      const mod = QUANTUM_HEAT_MODIFIERS[mk];
+      const isActive = activeMods.includes(mk);
+      return '<div style="margin:6px 0;padding:8px;background:' + (isActive ? 'rgba(239,68,68,0.15)' : 'rgba(15,23,42,0.85)') + ';border-left:3px solid ' + (isActive ? '#ef4444' : '#64748b') + ';border-radius:3px;display:flex;justify-content:space-between;align-items:center">' +
+        '<div>' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
+        '<span style="font-size:11px;font-weight:800;color:' + (isActive ? '#f87171' : '#f8fafc') + '">' + mod.name.toUpperCase() + '</span>' +
+        '<span style="font-size:9px;font-weight:800;padding:1px 4px;border-radius:2px;background:#ef4444;color:#fff">+' + mod.heat + ' HEAT</span>' +
+        '</div>' +
+        '<div style="font-size:9.5px;color:#cbd5e1;margin-top:2px">' + mod.desc + '</div>' +
+        '</div>' +
+        '<div>' +
+        '<button class="' + (isActive ? 'danger' : 'primary') + '" data-ov="toggle_heat_mod" data-mod="' + mk + '" style="font-size:9.5px;padding:3px 10px;font-weight:800">' + (isActive ? 'ACTIVE' : 'ENGAGE') + '</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+
+    h = '<div class="draft-box" style="border-top-color:#ef4444;max-width:680px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<h2 style="margin:0;color:#ef4444;letter-spacing:.12em">🔥 QUANTUM ASCENSION PACTS (TOTAL HEAT: ' + curHeat + ')</h2>' +
+      '<button class="ghost" data-ov="close_heat" style="padding:2px 8px;font-size:11px">✕ CLOSE</button>' +
+      '</div>' +
+      '<div class="sub">Enable modular difficulty heat pacts. Each pact escalates enemy lethality and awards <span style="color:#fbbf24">+' + bonusPct + '% Nanite Cores & Score Multiplier</span>.</div>' +
+      '<div style="margin:10px 0;max-height:360px;overflow-y:auto;padding-right:4px">' + modsHtml + '</div>' +
+      '<div style="display:flex;justify-content:center">' +
+      '<button class="ghost" data-ov="close_heat">Close Heat Pacts</button>' +
+      '</div></div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
     const secLabel = sec ? ('SECTOR ' + sec.num + ': ' + sec.name) : 'BASTION';

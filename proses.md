@@ -1641,3 +1641,416 @@ Seluruh sistem game dan 21 berkas pengujian otomatis lulus sempurna tanpa error:
 
 
 
+
+
+---
+
+## 27. Implementasi Bastion TD 10.0: The Crucible of Ascendancy (Living Ecosystem, Spatial Puzzle & High-Stakes Crucible Mechanics)
+
+### 27.1 Arsitektur & Filosofi Sistem
+Pembaruan ekspansi **Bastion TD 10.0: The Crucible of Ascendancy** mentransformasi game dari strategi statis menjadi pengalaman *tactical action* pertahanan dinamis bertegangan tinggi (*punishment-and-reward*), teka-teki spasial optik (*spatial geometric puzzles*), dan sistem AI adaptif yang secara cerdas membaca dan merespons kapabilitas pemain secara *real-time*.
+
+```
+   ┌─────────────────────────────────────────────────────────────────┐
+   │             BASTION TD 10.0: CRUCIBLE OF ASCENDANCY             │
+   └────────────────────────────────┬────────────────────────────────┘
+                                    │
+    ┌───────────────────────────────┼───────────────────────────────┐
+    │                               │                               │
+    ▼                               ▼                               ▼
+[1. Adaptive Threat 2.0]     [2. Crucible Gambits]     [3. Photon Prisms & Pen]
+- Combat Efficiency (CER)    - Blood Oath (1 Live)     - 90° Refraction Mirrors
+- APM & Kill-Zone Profiler   - Meltdown (3x Heat)      - Singularity Pen Stasis
+- Antimatter / Supply Crates - Void Tithe (4x Mega)    - -60% Spd, -10% Armor/s
+                                    │
+    ┌───────────────────────────────┼───────────────────────────────┐
+    │                               │                               │
+    ▼                               ▼                               ▼
+[4. Living Enigma Boss]      [5. Bullet-Time Matrix]    [6. Pandora Relic Forge]
+- 8s Elemental Shift Cycle   - Shift+Space (0.25x Mo)  - Glass Monolith (+80% Dmg)
+- Elemental Absorption/Heal  - 5 Weakpoint Paint Mark  - Midas' Decaying Coins
+- 12s Citadel Devastator     - 1,500 True Dmg Cleave   - Chrono-Debt Rewind Escort
+- 3 Catalyst Pylons Puzzle   - Rhythm Overclock Sync   - Risk/Reward Calibration
+```
+
+---
+
+### 27.2 Pilar 1: Adaptive Threat Director 2.0 & Combat Efficiency Rating (CER)
+Sistem kecerdasan buatan sutradara tempur (*Director AI*) kini menghitung metrik **Combat Efficiency Rating (CER)** secara kontinu setiap 2 detik dengan formula:
+$$\text{CER} = \text{APM Factor} \times \text{Kill-Zone Speed Factor} \times \text{Gold Buffer Factor} \times \text{Wave Streak Factor}$$
+1. **Pemain Dominan ($\text{CER} \ge 1.35$):**
+   * Sutradara menyimpulkan pertahanan pemain terlalu kokoh (*over-performing*).
+   * Memicu mutasi *Volatile Antimatter Carriers* (+30% kecepatan, memancarkan aura radiasi penghancur radius 180px saat gugur).
+   * Menghilangkan zona nyaman *AFK* pemain dan menuntut reposisi taktis segera.
+2. **Pemain Terdesak ($\text{CER} \le 0.70$):**
+   * Sutradara mendeteksi krisis pertahanan (*struggling/leaking*).
+   * Menerjunkan peti pasokan darurat (*Emergency Airdrop Supply Crates*) ke garis pertahanan yang menyediakan suntikan +120 Gold dan pulsa EMP peredam musuh selama 3 detik saat dihancurkan.
+
+---
+
+### 27.3 Pilar 2: Crucible Gambits (Taruhan Taruhan Risiko & Hadiah Ekstrem)
+Pemain dapat mengaktifkan taruhan pra-gelombang (*Pre-Wave Wagers*) melalui Inspektur Taktis sebelum menekan tombol *Start Wave*:
+1. **Blood Oath of the Vanguard:**
+   * **Risiko Ekstrem:** Memaksa HP markas menjadi tepat **1 Live**! Satu kebocoran musuh berarti *Instant Game Over*. Kecepatan musuh meningkat +25%.
+   * **Hadiah Megah:** Jika wave berhasil diselesaikan tanpa kebocoran, pemain menerima **+200% Bunga Gold**, **+3 Nanite Cores**, dan jaminan gratis 1 **Modular Chip** acak.
+2. **Thermodynamic Meltdown:**
+   * **Risiko Ekstrem:** Semua menara menghasilkan panas termal 3x lipat lebih cepat.
+   * **Hadiah Megah:** Jaminan 100% *Critical Strike* untuk seluruh serangan menara dan peningkatan radius ledakan +50%.
+3. **Cursed Tithe of the Void:**
+   * **Risiko Tinggi:** Durabilitas operasional fasilitas megastruktur 2x2 berkurang drastis menjadi hanya 1 wave (langsung rusak setelah 1 ronde pertempuran).
+   * **Hadiah Megah:** *Damage output* megastruktur dilipatgandakan 4x lipat (contoh: Ion Uplink menghasilkan 1.680 DPS mematikan!).
+4. **Blinded Perimeter:**
+   * **Risiko Moderat:** Kabut pertempuran pekat membatasi jarak tembak menara sebesar 30%.
+   * **Hadiah Megah:** Setiap musuh yang dibasmi menjatuhkan Gold berlipat ganda (2x Gold Bounty).
+
+---
+
+### 27.4 Pilar 3: Spatial Puzzle Mechanics (Photon Reflection Prisms & Singularity Pen)
+1. **Photon Reflection Prism (60 Gold):**
+   * Fasilitas optik berukuran 1 tile yang dapat dibangun di sembarang petak tanah bebas (dapat dipilih di dok atau melalui pintasan `O`).
+   * Berfungsi membelokkan berkas laser energi dan peluru sabot kinetik sebesar 90 derajat searah jarum jam.
+   * Menekan tombol `R` saat prisma diseleksi akan memutar orientasi prisma 90 derajat.
+2. **The Singularity Pen (Stasis Bidang Segitiga):**
+   * Menghubungkan 3 prisma dalam jangkauan $(\le 320\text{ px})$ secara otomatis mengkristalisasi bidang resonansi segitiga stasis (*The Singularity Pen*).
+   * Menggunakan algoritma geometri *Barycentric Point-in-Triangle*: setiap musuh yang melintasi area segitiga gravitasi ini mengalami perlambatan gerak **-60% (*Stasis Slow*)** dan pengikisan zirah baja **-10% Armor per detik**.
+
+---
+
+### 27.5 Pilar 4: Living Enigma Bosses & Citadel Devastator Apocalyptic Interrupt
+1. **Pergeseran Siklus Polaritas Enigma:**
+   * Setiap 8 detik, bos berotasi di antara 3 fase polaritas pelindung:
+     * **Thermal Resonance (Oranye):** Menyerap serangan *plasma/heat* untuk memulihkan HP sebesar 150% nilai damage! Lemah terhadap elemen *Cryo* (menerima 200% damage).
+     * **Cryogenic Sheath (Biru):** Kebal terhadap efek beku/lambat. Lemah terhadap tembakan kinetik sabot (*Gatling/Railgun* menerima 200% damage).
+     * **Superconductor Matrix (Ungu):** Memantulkan kilatan petir *Tesla*. Lemah terhadap ledakan *Plasma Splash* (menerima 200% damage).
+2. **Citadel Devastator Apocalyptic Countdown:**
+   * Saat HP bos menyentuh $\le 30\%$, bos mengunci diri di tengah jalan dan memulai hitungan mundur apokaliptik selama 12 detik (*Citadel Devastator Wipe*).
+   * Tiga tiang katalis resonansi (*Catalyst Pylons*) muncul di sekeliling medan tempur.
+   * Pemain harus memfokuskan tembakan atau mengklik untuk menghancurkan ketiga pylon tersebut. Keberhasilan menghancurkan pylon seketika membatalkan peluncuran bencana apokaliptik dan melumpuhkan bos (*staggered*) selama 4 detik!
+
+---
+
+### 27.6 Pilar 5: Tactical Bullet-Time Matrix & Rhythm Overdrive Calibration
+1. **Bullet-Time Matrix (`Shift + Space`):**
+   * Memperlambat waktu simulasi game menjadi 0.25x selama 4 detik (*cooldown* 45 detik).
+   * Layar memasuki efek dilatasi waktu kromatik (*cyan vignette*).
+   * Pemain dapat mengklik hingga 5 musuh untuk menandai titik lemah mereka (*Weakpoint Painted*).
+   * Saat 5 tanda terkumpul, senjata satelit orbital melepaskan **Orbital Execution Cleave** yang menghantam kelima target secara serentak dengan **1.500 True Damage**!
+2. **Rhythm Overdrive Calibration:**
+   * Saat melakukan *Overclock* pada menara melalui tombol interaktif inspektur:
+     * **Perfect Timing:** Memberikan status sinkronisasi harmonik selama 20 detik, pendinginan instan panas ke 0 (*0 Heat*), dan lonjakan kecepatan tembak +100%.
+     * **Miss Timing:** Memicu *Thermal Backfire*, menara kepanasan dan mengalami *Stun* selama 3 detik.
+
+---
+
+### 27.7 Pilar 6: Pandora Relics & Physical Decaying Midas Coins
+1. **The Glass Monolith:**
+   * Memberikan peningkatan masif **+80% Damage** untuk seluruh menara dan megastruktur.
+   * Konsekuensi hukuman: Biaya konstruksi dan perbaikan meningkat **+50% Gold**.
+2. **Midas' Transmutation:**
+   * Musuh yang mati menjatuhkan koin fisik emas bersinar di jalanan dengan nilai **2x lipat Gold**.
+   * Koin ini hanya bertahan selama 3.5 detik di atas tanah sebelum membusuk dan lenyap jika tidak segera diklik atau dipungut oleh pemain.
+3. **Chrono-Debt Matrix:**
+   * Memberikan kemampuan pemutarbalikan waktu darurat selama 8 detik (`Z`).
+   * Konsekuensi hukuman: Setiap kali pembalikan waktu digunakan, gelombang berikutnya akan diperkuat oleh 1 unit *Berserk Champion Escort*.
+
+---
+
+### 27.8 Rincian Modifikasi Kode Sumber
+1. **`js/data.js`:**
+   * Menambahkan konfigurasi `CRUCIBLE_GAMBITS`, `PHOTON_PRISM_CONFIG`, `ENIGMA_BOSS_CONFIG`, `PANDORA_RELICS`, dan `SKILL_PROFILER_CONFIG`.
+2. **`js/state.js`:**
+   * Menginisialisasi state sistem 10.0 (`cer`, `activeGambit`, `prisms`, `singularityPens`, `bulletTimeT`, `enigmaPolarity`, `devastatorTimer`, `catalystPylons`, `midasCoins`, dll).
+   * Mengintegrasikan formula kerusakan `dealDamage` untuk Enigma absorption/vulnerability, Meltdown crits, Void Tithe 4x megastructure damage, dan Glass Monolith +80% buff.
+   * Mengintegrasikan `killEnemy` untuk Midas physical coin spawning dan Blinded Perimeter 2x gold bounty.
+   * Mengimplementasikan fungsi mesin: `trackPlayerAction`, `updateSkillProfiler`, `activateGambit`, `canPlacePrism`, `placePrism`, `rotatePrism`, `checkSingularityPens`, `isPointInTriangle`, `updatePrisms`, `updateEnigmaBoss`, `damageCatalystPylon`, `triggerBulletTime`, `paintBulletTimeTarget`, `triggerRhythmOverclock`, `applyPandoraRelic`, `spawnMidasCoin`, `collectMidasCoin`, `updateMidasCoins`.
+3. **`js/waves.js`:**
+   * Menambahkan penegakan 1 Live pada `startWave` untuk Blood Oath.
+   * Menambahkan pemberian reward bunga 200%, 3 Cores, dan modul chip pada `onWaveClear` jika Blood Oath terpenuhi.
+   * Memperbarui siklus pembaruan gelombang di `update(dt)` untuk menjalankan profiler, prisma, enigma, koin midas, dan timer bullet-time.
+4. **`js/ui.js`:**
+   * Menambahkan fungsi penggambaran ikon dok `drawPrismDockIcon`.
+   * Menambahkan kartu belanja dok Prisma Refleksi Foton (60G, tombol pintas `P`).
+   * Memperbarui `renderInspector` untuk menyajikan: status *Deploying Prism*, panel *Crucible Gambits Wagers* pada inspektur taktis saat tidak ada menara yang dipilih, kartu rincian prisma dan sudut rotasi, serta tombol kalibrasi ritme *Overdrive Calibration*.
+5. **`js/main.js`:**
+   * Menghubungkan *event listeners* `data-act` untuk `toggle_gambit`, `rotate_prism`, `dismantle_prism`, `trigger_rhythm_oc`, dan `trigger_bullet_time`.
+   * Memperbarui penanganan klik dok agar mendukung deployable `prism` terpisah dari `barricade`.
+   * Mengekspor seluruh konfigurasi dan fungsi 10.0 pada `window.__nb`.
+6. **`js/input.js`:**
+   * Memperbarui `onPointerDown`: penandaan target lemah saat Bullet-Time, interaksi penghancuran tiang katalis (*Catalyst Pylons*), pemungutan koin Midas, serta seleksi dan penempatan Prisma Refleksi Foton.
+   * Memperbarui `onKey`: pintasan `Shift + Space` untuk Bullet-Time Matrix, pintasan `R` untuk memutar sudut prisma yang dipilih, pintasan `O` untuk mode konstruksi prisma, serta pintasan `U` dan `X` untuk prisma.
+7. **`js/render.js`:**
+   * Menambahkan fungsi render kanvas: `drawPhotonPrisms`, `drawSingularityPens`, `drawMidasCoins`, `drawCatalystPylons`, `drawEnigmaBossAura`, `drawBulletTimeMatrix`, dan `drawCrucibleGambitBadge`.
+   * Mengintegrasikan visual pratinjau penempatan prisma pada hover kursor dan lingkaran seleksi prisma.
+8. **`tests/test_crucible_ascendancy.js` (Baru):**
+   * Suite pengujian komprehensif menguji ke-6 pilar secara otomatis: penghitungan CER profiler, aktivasi wagers gambit dan mekanisme blood oath, penempatan/rotasi prisma & geometri singularity pen, absorbsi polaritas bos enigma vs kerentanan 200% & interupsi devastator wipe countdown, aktivasi bullet-time matrix & orbital cleave 1500 true dmg, kalibrasi ritme perfect vs miss, dan relik pandora serta pembusukan koin midas.
+
+---
+
+### 27.9 Hasil Verifikasi 23 Test Suites (100% Lulus)
+Seluruh rangkaian pengujian sistem game (23 berkas pengujian otomatis) dijalankan dan lulus 100% sempurna tanpa satu pun kegagalan:
+1. `tests/audit_bugs.js`: **PASS (0 static inconsistency bugs, 23 data-act terverifikasi, 60 SFX terverifikasi)**
+2. `tests/smoke.js`: **PASS**
+3. `tests/test_ascension.js`: **PASS**
+4. `tests/test_balance_integrity.js`: **PASS**
+5. `tests/test_browser_init.js`: **PASS**
+6. `tests/test_champions.js`: **PASS**
+7. `tests/test_crucible_ascendancy.js`: **PASS (Semua 6 Pilar 10.0 Lulus 100%)**
+8. `tests/test_deep_synergy.js`: **PASS**
+9. `tests/test_effects_realization.js`: **PASS**
+10. `tests/test_effects_realization_deep.js`: **PASS**
+11. `tests/test_grand_expansion.js`: **PASS**
+12. `tests/test_living_ecosystem.js`: **PASS**
+13. `tests/test_map_dynamics.js`: **PASS**
+14. `tests/test_masterclass_overhaul.js`: **PASS**
+15. `tests/test_mastery.js`: **PASS**
+16. `tests/test_megastructure_rebalance.js`: **PASS**
+17. `tests/test_new_defense_inspector.js`: **PASS**
+18. `tests/test_overdrive_fusions.js`: **PASS**
+19. `tests/test_paradox_reality.js`: **PASS**
+20. `tests/test_reactions.js`: **PASS**
+21. `tests/test_sectors.js`: **PASS**
+22. `tests/test_ui_layout_overhaul.js`: **PASS**
+23. `tests/test_workshop.js`: **PASS**
+
+**STATUS PENGUJIAN KESELURUHAN: 24 / 24 TEST SUITES LULUS (100% SUCCESS RATE).**
+
+---
+
+## 29. Bastion TD UI/UX Layout Overhaul & Visual Polish (Pembersihan Tampilan Umpel-Umpelan & Anti-Truncation)
+
+### 29.1 Latar Belakang & Identifikasi Masalah Visual
+Berdasarkan tinjauan visual langsung terhadap antarmuka Bastion TD dan tangkapan layar pengguna:
+1. **Pemotongan Teks Ekstrem pada Shop Dock (Gambar 2):**
+   * Tiga kartu Megastructure 2x2 dan fasilitas pelengkap di `#dock` mengalami pemotongan teks parah (`Io... 2x2`, `A... 2x2`, `Te... 2x2`, `Sol...`, `Air...`, `Sei...`).
+   * **Akar Masalah:** Terdapat 11 fasilitas di `#dock` dalam 1 baris. Ketika layar beresolusi standar (misal 1080p, 1280px, atau 1366px), setiap kartu menyusut hingga ~88px. Dengan icon kanvas (32px), padding, dan `padding-right: 22px` pada `.meta`, ruang teks yang tersisa hanya 13-15px. Hal ini memicu `text-overflow: ellipsis` hanya setelah 2 huruf!
+2. **Kesesuaian Informasi Pertahanan Baru vs Pertahanan Lama (Gambar 1):**
+   * Pengguna membandingkan kartu inspektur pertahanan standar (`Tesla Coil`) dengan pertahanan baru (Megastructure, Barricade, Prism).
+   * Kartu pertahanan baru harus menyajikan struktur hierarki visual yang sama kayanya dengan menara standar: Ikon kanvas resolusi tinggi, bilah status hidup/daya (*Operational Lifespan & Power Load*), tombol tindakan utama yang tegas di bagian atas (*Overclock / Repair / Dismantle*), kisi telemetri 2x2 (*Stats Grid*), selektor prioritas bidikan, serta catatan doktrin taktis.
+3. **Kepadatan Teks Berlebihan pada Inspektur Saat Idle:**
+   * Ketika tidak ada menara yang dipilih, inspektur menampilkan daftar pintasan keyboard, 3 Gambits, 4 Reaksi Elemental, dan 4 Leyline secara vertikal tanpa pemisah, menghasilkan kolom teks lebih dari 1000px yang padat dan melelahkan mata.
+4. **Kepadatan Bilah Atas (#topbar):**
+   * Lebih dari 25 elemen (9 chip HUD, brand, kontrol simulasi, fasilitas markas, override tempur) dijejalkan dalam satu baris horizontal tunggal, memicu desakan horizontal.
+
+---
+
+### 29.2 Solusi Desain & Implementasi Kode Sumber
+
+1. **Restrukturisasi Shop Dock & Anti-Truncation (`css/style.css`, `js/data.js`, `js/ui.js`):**
+   * **Pembersihan Roster Menara (`TKEYS`):** Mengembalikan `TKEYS` ke 6 menara dasar yang dapat dibangun (`gatling`, `plasma`, `cryo`, `tesla`, `rail`, `relay`). Menghilangkan 4 entri fusi senjata super (`fusion_hellfire`, `fusion_deathray`, dll.) dari dock yang sebelumnya keliru masuk ke dock dan membuat dock penuh sesak hingga 15 kartu. Kini dock memuat tepat 11 kartu pertahanan aktif yang proporsional (6 Menara Standar + 3 Megastruktur + 2 Fasilitas Deployable).
+   * Menetapkan `min-width: 104px` pada `.shop` dengan `overflow-x: auto` dan bilah gulir halus (`scrollbar-width: thin`), memastikan kartu tidak pernah tertekan di bawah batas kenyamanan baca teks (~125px per kartu pada resolusi desktop).
+   * Merapikan nama pendek (*shortName*) dan peran dok (*dockRole*) di `MEGASTRUCTURE_CONFIG`:
+     - `ion_uplink`: `Ion Uplink` · `Solar Beam`
+     - `drone_carrier`: `Drone Base` · `Drone Hangar`
+     - `tectonic_siphon`: `Tectonic` · `Seismic Drill`
+   * Memperbaiki posisi badge `.key` (`top: 3px; right: 3px; font: 800 7.5px var(--mono); padding: 1px 4px;`) sehingga pas dan rapi tanpa menutupi teks nama.
+   * Memberikan tema visual khusus: `.shop.megastructure-shop` (gradien cyber-gold & glow) dan `.shop.deployable-shop` (gradien cyan taktis).
+   * Menjamin perataan tooltip tepi kanan (`.shop:nth-child(n+6) .tip { left: auto; right: 0; }`) agar tooltip fasilitas 6 hingga 11 tidak pernah terpotong di tepi kanan layar.
+   * Menghapus fragmen sintaks CSS yatim pada baris 1280.
+
+2. **Unifikasi & Ergonomi Kartu Tactical Inspector (`js/ui.js`, `css/style.css`):**
+   * **Untuk Megastructure 2x2:**
+     - Header: Ikon kanvas 48x48, nama fasilitas berwarna khusus, lencana `SELECTED MEGASTRUCTURE (2x2) · X/Y WAVES · KILLS`.
+     - Status Meter 1: *Operational Lifespan* berwarna dinamis (hijau saat prima, oranye saat aus, merah menyala saat rusak).
+     - Status Meter 2: *Facility Power Load / Overclock Boost* dengan bilah progress presisi.
+     - Action Grid Atas: Tombol `[↑ Overclock 40G]` dan `[🏷️ Dismantle Facility 560G]` berdampingan rapi; saat rusak bertransisi mulus menjadi `[🔧 Repair repCost]` darurat.
+     - 2x2 Stats Grid: Telemetri DMG/DPS, Tingkat Serangan/Pulsa, Radius Efek/Sinar, dan Beban Daya MW dengan kontras tinggi (`#f8fafc`).
+     - Prioritas Bidikan: Selektor 4 tombol (*First, Last, Strongest, Weakest*) dengan aksen glow amber saat aktif.
+     - Catatan Taktis: Penjelasan doktrin dan peringatan kerusakan.
+   * **Untuk Road Barricade & Photon Prism:**
+     - Menampilkan bilah integritas struktural, tombol perbaikan/rotasi prism [R], status Singularity Pen, dan tombol pembongkaran (*Salvage*).
+   * **Untuk Pertahanan Standar (Menara 1-6):**
+     - Mempertahankan tata letak unggulan Gambar 1: Header unit $\rightarrow$ Meter Thermal/Conduit $\rightarrow$ Tombol Upgrade & Sell tepat di atas $\rightarrow$ Peningkatan Khusus (Chimera/Rhythm/Fusion) $\rightarrow$ Stats Grid $\rightarrow$ Prioritas Bidikan $\rightarrow$ Modular Chip Sockets.
+     - Memperbaiki kotak `.chips-panel` dan `.note` dengan bantalan dan kontras elegan.
+
+3. **Terminal Inspektur Interaktif 4-Tab Saat Idle (`js/ui.js`, `js/main.js`):**
+   * Mengelompokkan tumpukan informasi saat tidak ada menara yang dipilih menjadi 4 tab taktis modern:
+     - `[DIRECTIVES]`: Lembar contekan tombol pintas, kontrol operasional, dan briefing taktis.
+     - `[GAMBITS]`: Taruhan berisiko tinggi Crucible Gambits lengkap dengan tombol aktivasi wajik wajar (*WAGER / ACTIVE*).
+     - `[REACTIONS]`: Matriks kombo 4 reaksi elemental dan efek pelemahan zirah.
+     - `[LEYLINES]`: Peta conduit leylines kuno dan bonus medan pertempuran.
+   * Navigasi tab dikendalikan oleh aksi `set_insp_tab` yang responsif dengan efek suara klik taktis.
+
+4. **Pemisahan Topbar 2-Tingkat, Visual Elevation & Pelebaran Sidebar (`index.html`, `css/style.css`):**
+   * `#topbar` dibagi menjadi 2 baris bersih: `.topbar-vitals` (Brand, 9 Chip Telemetri, Kontrol Kecepatan) dan `.topbar-actions` (Fasilitas Markas dan Protokol Tempur).
+   * Kolom sidebar `#side` diperlebar dari 316px ke 345px pada grid `#main`, memberi ruang bernapas yang leluasa bagi kartu wave dan inspektur.
+   * Peningkatan visual `.card`, `#waveCard` (bingkai cyber-panel dengan aksen amber), tombol peluncur wave `#btnCall` yang gagah dan tegap, serta bingkai `#canvasWrap` yang memiliki kedalaman bayangan sci-fi.
+
+---
+
+### 29.3 Hasil Pengujian & Verifikasi Kualitas
+- `tests/test_ui_layout_overhaul.js`: **100% PASS** (Pengelompokan semantik topbar, aturan CSS anti-collision, integritas dock canvas icon, dekonflik banner tutorial).
+- `tests/test_new_defense_inspector.js`: **100% PASS** (Kelengkapan kartu inspektur Megastructure, Barricade, Standard Tower, dan handler aksi).
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs** (60 SFX dipanggil vs 62 terdefinisi, 25 data-act, 30 data-ov, 39 ID elemen HTML).
+- **Semua 24 Test Suites: 100% LULUS (Zero Regressions).**
+
+---
+
+## 28. Implementasi Bastion TD 11.0: The Infinite Chronicles (Procedural Campaign Matrix, Prismatic Affixes, Nemesis Genome & Quantum Heat)
+
+### 28.1 Arsitektur & Filosofi Sistem
+Versi 11.0 **The Infinite Chronicles** dirancang khusus untuk menciptakan pengalaman bermain tak terbatas (*hundreds of hours of emergent replayability*) dengan memadukan 6 pilar inovasi sistemik mutakhir:
+
+1. **Pillar 1: Procedural Expedition Matrix (Branching Campaign Map):**
+   * Peta kampanye node prosedural dinamis yang menghasilkan jalur bercabang 5 tier (Tier 0 Landing Zone hingga Tier 4 Cataclysm Apex Colossus).
+   * Node jenis spesifik: `combat`, `elite`, `black_market`, `void_shrine`, `rest_depot`, dan `cataclysm_gate`.
+   * Integrasi pemilihan node via antarmuka overlay `expedition` (`data-ov="start_expedition_node"`), transisi sektor otomatis (`loadSector`), dan hadiah Chimera Draft saat membersihkan node.
+
+2. **Pillar 2: Dynamic Path Morphing & Chokepoint Entropy:**
+   * Entropi medan dinamis setiap 4 wave (`triggerDynamicPathMorph`).
+   * Rute labirin musuh secara reaktif meregenerasi jalur baru akibat bio-ekskavasi bawah tanah atau subduksi lava tektonik, meruntuhkan batuan rintangan (*Destructible Crags*) dan memaksa adaptasi titik pembantaian (*kill-zone*).
+
+3. **Pillar 3: Prismatic Chimera Tower Draft & Rule-Bending Relics:**
+   * Sistem infusi afiks prosedural 2-slot (`Prefix` + `Suffix`) yang merevolusi kapabilitas menara pertahanan standar.
+   * Prefix: *Glacial* (slow + shatter bonus), *Thermobaric* (splash burst), *Singularity* (vortex gravitational pull), *Vanguard* (sabot armor penetration), *Hyper-Thermal* (scalding heat aura).
+   * Suffix: *of Ricochet* (bouncing projectiles), *of Fission* (cluster bomb shrapnel on kill), *of Execution* (+120% crit vs foes <30% HP), *of Midas* (gold yield every 4 hits), *of Superconductor* (chain lightning arcs).
+   * Relik Perubah Hukum Fisika (*Rule-Bending Relics*): `quantum_reroute` (refleksi sabot/laser memantul ke musuh sekunder), `absolute_zero` (permafrost freeze aura), `entropy_catalyst` (eksplosi reaksi berantai), `chrono_tether` (rewind posis musuh bocor).
+
+4. **Pillar 4: Adaptive Nemesis Genome (Reactive Hive Evolution):**
+   * Hive Alien memantau profil kerusakan dominan pemain secara *real-time* via `G.damageTrack`.
+   * Pada pembersihan wave (`onWaveClear`), jika satu tipe damage melampaui ambang batas (>40–55%), hive berevolusi mengadopsi genom pertahanan:
+     - Fisik/Kinetik dominan: *Kinetic Dissipation* (-30% damage kinetik & -50% knockback).
+     - Cryo dominan: *Cryo-Metabolic* (imun pembekuan total & +25% speed saat terkena efek dingin).
+     - Plasma/Energi dominan: *Resonance Stealth* (fase pembelokan laser & kamuflase periodik).
+     - Seimbang: *Swarm Fission* (membelah menjadi 3 larva saat tereliminasi).
+
+5. **Pillar 5: Quantum Ascension Heat Modifiers (Customizable Escalation Pacts):**
+   * Sistem eskalasi kesulitan modular terinspirasi mekanisme Heat *Hades* (0 hingga 25 Heat).
+   * Modifikator: `heat_speed` (Vanguard Thrusters, +1 Heat), `heat_costs` (Supply Line Embargo, +2 Heat), `heat_armor` (Reinforced Carapace, +3 Heat), `heat_bosses` (Dual Colossi Protocol, +5 Heat), `heat_meltdown` (Volatile Core, +4 Heat), `heat_permadeath` (Ironclad Command, +5 Heat), `heat_entropy` (Absolute Extinction, +5 Heat).
+   * Setiap poin Heat memberikan pengganda hadiah +15% Nanite Cores & Skor Pertahanan.
+
+6. **Pillar 6: Emergent Chaos Incursions:**
+   * Kejadian taktis mendadak di tengah wave (`triggerChaosIncursion` & `updateInfiniteChronicles`).
+   * *Smuggler Cargo Heist*: Pesawat kargo netral melintasi sektor dalam 15 detik; dapat dihancurkan untuk bonus +250 Gold dan Nanite Cores.
+   * *Void Anomaly Tear*: Retakan dimensi membuka portal horor kehampaan hingga berhasil distabilkan.
+   * *Solar EMP Storm*: Badai matahari melumpuhkan suplai energi grid sebesar 50% selama 8 detik.
+
+---
+
+### 28.2 Rincian Modifikasi Kode Sumber
+1. **`js/data.js`:**
+   * Mendefinisikan konfigurasi 11.0: `EXPEDITION_NODE_TYPES`, fungsi generator pohon kampanye `generateExpeditionTree(seed)`, katalog afiks `CHIMERA_PREFIXES`, `CHIMERA_SUFFIXES`, `RULE_BENDING_RELICS`, `NEMESIS_GENOME_TRAITS`, `QUANTUM_HEAT_MODIFIERS`, `CHAOS_INCURSIONS`, dan `DYNAMIC_ENTROPY_CONFIG`.
+2. **`js/state.js`:**
+   * Di `newGame`: Menginisialisasi `expedition`, `activeHeatModifiers`, `currentHeat`, `chimeraDraft`, `nemesisGenome`, `chaosIncursion`, `chaosTimer`, `dynamicPathMorphed`, dan `ruleRelics`.
+   * Di `dealDamage`: Mengintegrasikan kalkulasi afiks prefix Chimera, suffix Chimera, relik `quantum_reroute`, dan mitigasi sifat adaptif Nemesis Genome.
+   * Di `killEnemy`: Mengintegrasikan ledakan pecahan cluster *of_fission*.
+   * Menambahkan engine API 11.0: `generateChimeraDraft()`, `applyChimeraAffix()`, `applyRuleBendingRelic()`, `evolveNemesisGenome()`, `triggerDynamicPathMorph()`, `triggerChaosIncursion()`, `resolveChaosIncursion()`, `toggleQuantumHeatModifier()`, `startExpeditionNode()`, `completeExpeditionNode()`, `updateInfiniteChronicles(dt)`.
+3. **`js/waves.js`:**
+   * Di `startWave`: Mengevaluasi pakta heat permadeath, memicu entropi morfologi rute wave 4/8/12, serta memicu Chaos Incursions wave 3/7/11.
+   * Di `onWaveClear`: Memicu adaptasi `evolveNemesisGenome()` dan menyelesaikan node kampanye `completeExpeditionNode()`.
+   * Di `waves.update(dt)`: Memperbarui timer kejadian dinamis via `updateInfiniteChronicles(dt)`.
+4. **`js/ui.js`:**
+   * Menambahkan penanganan modal overlay `showOverlay('expedition')`, `showOverlay('chimera_draft')`, dan `showOverlay('quantum_heat')`.
+   * Di `renderInspector`: Menampilkan lencana afiks Chimera, gelar menara kustom, dan tombol draf infusi Chimera yang bercahaya saat tersedia.
+   * Di `refreshUI`: Memperbarui badge micro-counter Heat pada bilah atas (`vHeatVal`).
+5. **`js/main.js`:**
+   * Menambahkan tombol kontrol bilah navigasi atas: `btnExpedition` dan `btnQuantumHeat`.
+   * Menambahkan event listener inspektur untuk `open_chimera_draft`.
+   * Menambahkan handler aksi overlay: `start_expedition_node`, `close_expedition`, `pick_chimera_draft`, `close_chimera_draft`, `toggle_heat_mod`, dan `close_heat`.
+   * Mengekspor seluruh API dan konfigurasi 11.0 pada objek global `window.__nb`.
+6. **`js/render.js`:**
+   * Menambahkan visualisasi kanvas `drawChimeraAuras(c, time)`: Cincin orbital celestial berputar dan partikel bercahaya sesuai warna afiks menara.
+   * Menambahkan visualisasi HUD taktis `drawChaosIncursionHUD(c, time)`: Kartu peringatan darurat dengan hitung mundur detik, warna bahaya, dan objektif taktis di tengah atas layar.
+7. **`css/style.css`:**
+   * Mengoptimalkan layout `#dock` dan `.shop` dengan `min-width: 90px`, `scrollbar-width: thin`, serta penyesuaian bantalan teks agar nama menara dan megastruktur 2x2 tidak terpotong (*anti-truncation*).
+8. **`tests/test_infinite_chronicles.js` (Baru):**
+   * Suite pengujian komprehensif menguji otomatis ke-6 pilar 11.0: generasi ekspedisi pohon node bercabang, transisi status node, dinamika morfologi jalur, draf & infusi menara Chimera, eksekusi instan musuh kritis, aktivasi relik pembelok kuantum, adaptasi reaktif Nemesis Genome terhadap muatan kinetik, pergantian pakta Heat, dan siklus hidup kejadian Chaos Incursion dengan hadiah taktikal.
+
+---
+
+### 28.3 Hasil Verifikasi 24 Test Suites (100% Lulus)
+Seluruh rangkaian pengujian sistem game (24 berkas pengujian otomatis) dijalankan dan lulus 100% sempurna tanpa satu pun kegagalan:
+1. `tests/audit_bugs.js`: **PASS (0 static inconsistency bugs, 24 data-act, 30 data-ov, 39 ID terverifikasi)**
+2. `tests/smoke.js`: **PASS**
+3. `tests/test_ascension.js`: **PASS**
+4. `tests/test_balance_integrity.js`: **PASS**
+5. `tests/test_browser_init.js`: **PASS**
+6. `tests/test_champions.js`: **PASS**
+7. `tests/test_crucible_ascendancy.js`: **PASS (Semua 6 Pilar 10.0 Lulus 100%)**
+8. `tests/test_deep_synergy.js`: **PASS**
+9. `tests/test_effects_realization.js`: **PASS**
+10. `tests/test_effects_realization_deep.js`: **PASS**
+11. `tests/test_grand_expansion.js`: **PASS**
+12. `tests/test_infinite_chronicles.js`: **PASS (Semua 6 Pilar 11.0 Lulus 100%)**
+13. `tests/test_living_ecosystem.js`: **PASS**
+14. `tests/test_map_dynamics.js`: **PASS**
+15. `tests/test_masterclass_overhaul.js`: **PASS**
+16. `tests/test_mastery.js`: **PASS**
+17. `tests/test_megastructure_rebalance.js`: **PASS**
+18. `tests/test_new_defense_inspector.js`: **PASS**
+19. `tests/test_overdrive_fusions.js`: **PASS**
+20. `tests/test_paradox_reality.js`: **PASS**
+21. `tests/test_reactions.js`: **PASS**
+22. `tests/test_sectors.js`: **PASS**
+23. `tests/test_ui_layout_overhaul.js`: **PASS**
+24. `tests/test_workshop.js`: **PASS**
+
+**STATUS PENGUJIAN KESELURUHAN: 24 / 24 TEST SUITES LULUS (100% SUCCESS RATE).**
+
+---
+
+## 29. Bastion TD UI/UX Layout Overhaul & Visual Polish (Pembersihan Tampilan Umpel-Umpelan & Anti-Truncation)
+
+### 29.1 Latar Belakang & Identifikasi Masalah Visual
+Berdasarkan tinjauan visual langsung terhadap antarmuka Bastion TD dan tangkapan layar pengguna:
+1. **Pemotongan Teks Ekstrem pada Shop Dock (Gambar 2):**
+   * Tiga kartu Megastructure 2x2 dan fasilitas pelengkap di `#dock` mengalami pemotongan teks parah (`Io... 2x2`, `A... 2x2`, `Te... 2x2`, `Sol...`, `Air...`, `Sei...`).
+   * **Akar Masalah:** Terdapat 11 fasilitas di `#dock` dalam 1 baris. Ketika layar beresolusi standar (misal 1080p, 1280px, atau 1366px), setiap kartu menyusut hingga ~88px. Dengan icon kanvas (32px), padding, dan `padding-right: 22px` pada `.meta`, ruang teks yang tersisa hanya 13-15px. Hal ini memicu `text-overflow: ellipsis` hanya setelah 2 huruf!
+2. **Kesesuaian Informasi Pertahanan Baru vs Pertahanan Lama (Gambar 1):**
+   * Pengguna membandingkan kartu inspektur pertahanan standar (`Tesla Coil`) dengan pertahanan baru (Megastructure, Barricade, Prism).
+   * Kartu pertahanan baru harus menyajikan struktur hierarki visual yang sama kayanya dengan menara standar: Ikon kanvas resolusi tinggi, bilah status hidup/daya (*Operational Lifespan & Power Load*), tombol tindakan utama yang tegas di bagian atas (*Overclock / Repair / Dismantle*), kisi telemetri 2x2 (*Stats Grid*), selektor prioritas bidikan, serta catatan doktrin taktis.
+3. **Kepadatan Teks Berlebihan pada Inspektur Saat Idle:**
+   * Ketika tidak ada menara yang dipilih, inspektur menampilkan daftar pintasan keyboard, 3 Gambits, 4 Reaksi Elemental, dan 4 Leyline secara vertikal tanpa pemisah, menghasilkan kolom teks lebih dari 1000px yang padat dan melelahkan mata.
+4. **Kepadatan Bilah Atas (#topbar):**
+   * Lebih dari 25 elemen (9 chip HUD, brand, kontrol simulasi, fasilitas markas, override tempur) dijejalkan dalam satu baris horizontal tunggal, memicu desakan horizontal.
+
+---
+
+### 29.2 Solusi Desain & Implementasi Kode Sumber
+
+1. **Restrukturisasi Shop Dock & Anti-Truncation (`css/style.css`, `js/data.js`, `js/ui.js`):**
+   * **Pembersihan Roster Menara (`TKEYS`):** Mengembalikan `TKEYS` ke 6 menara dasar yang dapat dibangun (`gatling`, `plasma`, `cryo`, `tesla`, `rail`, `relay`). Menghilangkan 4 entri fusi senjata super (`fusion_hellfire`, `fusion_deathray`, dll.) dari dock yang sebelumnya keliru masuk ke dock dan membuat dock penuh sesak hingga 15 kartu. Kini dock memuat tepat 11 kartu pertahanan aktif yang proporsional (6 Menara Standar + 3 Megastruktur + 2 Fasilitas Deployable).
+   * Menetapkan `min-width: 104px` pada `.shop` dengan `overflow-x: auto` dan bilah gulir halus (`scrollbar-width: thin`), memastikan kartu tidak pernah tertekan di bawah batas kenyamanan baca teks (~125px per kartu pada resolusi desktop).
+   * Merapikan nama pendek (*shortName*) dan peran dok (*dockRole*) di `MEGASTRUCTURE_CONFIG`:
+     - `ion_uplink`: `Ion Uplink` · `Solar Beam`
+     - `drone_carrier`: `Drone Base` · `Drone Hangar`
+     - `tectonic_siphon`: `Tectonic` · `Seismic Drill`
+   * Memperbaiki posisi badge `.key` (`top: 3px; right: 3px; font: 800 7.5px var(--mono); padding: 1px 4px;`) sehingga pas dan rapi tanpa menutupi teks nama.
+   * Memberikan tema visual khusus: `.shop.megastructure-shop` (gradien cyber-gold & glow) dan `.shop.deployable-shop` (gradien cyan taktis).
+   * Menjamin perataan tooltip tepi kanan (`.shop:nth-child(n+6) .tip { left: auto; right: 0; }`) agar tooltip fasilitas 6 hingga 11 tidak pernah terpotong di tepi kanan layar.
+   * Menghapus fragmen sintaks CSS yatim pada baris 1280.
+
+2. **Unifikasi & Ergonomi Kartu Tactical Inspector (`js/ui.js`, `css/style.css`):**
+   * **Untuk Megastructure 2x2:**
+     - Header: Ikon kanvas 48x48, nama fasilitas berwarna khusus, lencana `SELECTED MEGASTRUCTURE (2x2) · X/Y WAVES · KILLS`.
+     - Status Meter 1: *Operational Lifespan* berwarna dinamis (hijau saat prima, oranye saat aus, merah menyala saat rusak).
+     - Status Meter 2: *Facility Power Load / Overclock Boost* dengan bilah progress presisi.
+     - Action Grid Atas: Tombol `[↑ Overclock 40G]` dan `[🏷️ Dismantle Facility 560G]` berdampingan rapi; saat rusak bertransisi mulus menjadi `[🔧 Repair repCost]` darurat.
+     - 2x2 Stats Grid: Telemetri DMG/DPS, Tingkat Serangan/Pulsa, Radius Efek/Sinar, dan Beban Daya MW dengan kontras tinggi (`#f8fafc`).
+     - Prioritas Bidikan: Selektor 4 tombol (*First, Last, Strongest, Weakest*) dengan aksen glow amber saat aktif.
+     - Catatan Taktis: Penjelasan doktrin dan peringatan kerusakan.
+   * **Untuk Road Barricade & Photon Prism:**
+     - Menampilkan bilah integritas struktural, tombol perbaikan/rotasi prism [R], status Singularity Pen, dan tombol pembongkaran (*Salvage*).
+   * **Untuk Pertahanan Standar (Menara 1-6):**
+     - Mempertahankan tata letak unggulan Gambar 1: Header unit $\rightarrow$ Meter Thermal/Conduit $\rightarrow$ Tombol Upgrade & Sell tepat di atas $\rightarrow$ Peningkatan Khusus (Chimera/Rhythm/Fusion) $\rightarrow$ Stats Grid $\rightarrow$ Prioritas Bidikan $\rightarrow$ Modular Chip Sockets.
+     - Memperbaiki kotak `.chips-panel` dan `.note` dengan bantalan dan kontras elegan.
+
+3. **Terminal Inspektur Interaktif 4-Tab Saat Idle (`js/ui.js`, `js/main.js`):**
+   * Mengelompokkan tumpukan informasi saat tidak ada menara yang dipilih menjadi 4 tab taktis modern:
+     - `[DIRECTIVES]`: Lembar contekan tombol pintas, kontrol operasional, dan briefing taktis.
+     - `[GAMBITS]`: Taruhan berisiko tinggi Crucible Gambits lengkap dengan tombol aktivasi wajik wajar (*WAGER / ACTIVE*).
+     - `[REACTIONS]`: Matriks kombo 4 reaksi elemental dan efek pelemahan zirah.
+     - `[LEYLINES]`: Peta conduit leylines kuno dan bonus medan pertempuran.
+   * Navigasi tab dikendalikan oleh aksi `set_insp_tab` yang responsif dengan efek suara klik taktis.
+
+4. **Pemisahan Topbar 2-Tingkat, Visual Elevation & Pelebaran Sidebar (`index.html`, `css/style.css`):**
+   * `#topbar` dibagi menjadi 2 baris bersih: `.topbar-vitals` (Brand, 9 Chip Telemetri, Kontrol Kecepatan) dan `.topbar-actions` (Fasilitas Markas dan Protokol Tempur).
+   * Kolom sidebar `#side` diperlebar dari 316px ke 345px pada grid `#main`, memberi ruang bernapas yang leluasa bagi kartu wave dan inspektur.
+   * Peningkatan visual `.card`, `#waveCard` (bingkai cyber-panel dengan aksen amber), tombol peluncur wave `#btnCall` yang gagah dan tegap, serta bingkai `#canvasWrap` yang memiliki kedalaman bayangan sci-fi.
+
+---
+
+### 29.3 Hasil Pengujian & Verifikasi Kualitas
+- `tests/test_ui_layout_overhaul.js`: **100% PASS** (Pengelompokan semantik topbar, aturan CSS anti-collision, integritas dock canvas icon, dekonflik banner tutorial).
+- `tests/test_new_defense_inspector.js`: **100% PASS** (Kelengkapan kartu inspektur Megastructure, Barricade, Standard Tower, dan handler aksi).
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs** (60 SFX dipanggil vs 62 terdefinisi, 25 data-act, 30 data-ov, 39 ID elemen HTML).
+- **Semua 24 Test Suites: 100% LULUS (Zero Regressions).**

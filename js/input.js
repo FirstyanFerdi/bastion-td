@@ -110,7 +110,38 @@ function onPointerDown(e) {
   if (!G || (G.state !== 'prep' && G.state !== 'active') || G.drafting) return;
   Sfx.init(); Sfx.resume();
   onPointerMove(e);
-  if (e.button === 2) { G.placing = null; G.placingMegastructure = null; G.placingBarricade = null; G.sel = null; G.casting = null; G.swapSource = null; G.uiDirty = true; return; }
+  if (e.button === 2) { G.placing = null; G.placingMegastructure = null; G.placingBarricade = null; G.placingPrism = null; G.sel = null; G.casting = null; G.swapSource = null; G.uiDirty = true; return; }
+
+  // 10.0 Bullet-Time Target Painting
+  if (G && G.bulletTimeT > 0 && !G.casting) {
+    const p = canvasPos(e);
+    if (typeof paintBulletTimeTarget === 'function') {
+      const painted = paintBulletTimeTarget(p.x, p.y);
+      if (painted) return;
+    }
+  }
+
+  // 10.0 Midas Coin Collection
+  if (G && G.midasCoins && G.midasCoins.length > 0 && !G.casting) {
+    const p = canvasPos(e);
+    for (const c of G.midasCoins) {
+      if (Math.hypot(p.x - c.x, p.y - c.y) <= (c.r || 12) + 12) {
+        if (typeof collectMidasCoin === 'function') collectMidasCoin(c);
+        return;
+      }
+    }
+  }
+
+  // 10.0 Citadel Devastator Catalyst Pylon Interruption
+  if (G && G.catalystPylons && G.catalystPylons.length > 0 && !G.casting) {
+    const p = canvasPos(e);
+    for (const pyl of G.catalystPylons) {
+      if (pyl.hp > 0 && Math.hypot(p.x - pyl.x, p.y - pyl.y) <= 28) {
+        if (typeof damageCatalystPylon === 'function') damageCatalystPylon(pyl.id, 100);
+        return;
+      }
+    }
+  }
 
   // Titan Mech Manual Vulcan Fire (7.0)
   if (G.mech && G.mech.active && !G.casting) {
@@ -379,11 +410,24 @@ function onPointerDown(e) {
   }
 
   // 9.0 Deployable Road Barricade Clicking
-  if (G.barricades && G.barricades.length > 0 && !G.casting && !G.placing && !G.placingMegastructure && !G.placingBarricade) {
+  if (G.barricades && G.barricades.length > 0 && !G.casting && !G.placing && !G.placingMegastructure && !G.placingBarricade && !G.placingPrism) {
     const p = canvasPos(e);
     for (const bar of G.barricades) {
       if (Math.hypot(p.x - bar.x, p.y - bar.y) <= 24 || (G.hover && G.hover.c === bar.c && G.hover.r === bar.r)) {
         G.sel = bar;
+        Sfx.play('click');
+        G.uiDirty = true;
+        return;
+      }
+    }
+  }
+
+  // 10.0 Photon Reflection Prism Clicking
+  if (G.prisms && G.prisms.length > 0 && !G.casting && !G.placing && !G.placingMegastructure && !G.placingBarricade && !G.placingPrism) {
+    const p = canvasPos(e);
+    for (const pr of G.prisms) {
+      if (Math.hypot(p.x - pr.x, p.y - pr.y) <= 24 || (G.hover && G.hover.c === pr.c && G.hover.r === pr.r)) {
+        G.sel = pr;
         Sfx.play('click');
         G.uiDirty = true;
         return;
@@ -459,6 +503,19 @@ function onPointerDown(e) {
     }
     return;
   }
+  if (G.placingPrism) {
+    if (typeof canPlacePrism === 'function' && canPlacePrism(c, r)) {
+      const pr = placePrism(c, r);
+      if (pr) {
+        if (!e.shiftKey) G.placingPrism = null;
+        G.sel = pr;
+        G.uiDirty = true;
+      }
+    } else {
+      Sfx.play('error');
+    }
+    return;
+  }
   if (G.placing) {
     if (pathTile[r][c] || G.grid[r][c]) { Sfx.play('error'); return; }
     const t = placeTower(c, r, G.placing);
@@ -482,10 +539,14 @@ function onKey(e) {
     return;
   }
 
-  // 7.0 Titan Mech Thermal Blade [Space]
+  // 7.0 Titan Mech Thermal Blade / 10.0 Bullet-Time Matrix [Shift + Space]
   if (e.code === 'Space') {
     e.preventDefault();
     if (e.repeat) return;
+    if (e.shiftKey) {
+      if (typeof triggerBulletTime === 'function') triggerBulletTime();
+      return;
+    }
     if (G.mech && G.mech.active) {
       if (typeof mechSwingBlade === 'function') mechSwingBlade();
       return;
@@ -522,7 +583,24 @@ function onKey(e) {
       if (dSkills[2]) triggerSkill(dSkills[2]);
       break;
     }
-    case 'r': case 'R': if (dSkills[3]) triggerSkill(dSkills[3]); break;
+    case 'r': case 'R': {
+      if (G.sel && G.sel.type === 'photon_prism') {
+        if (typeof rotatePrism === 'function') rotatePrism(G.sel);
+        break;
+      }
+      if (dSkills[3]) triggerSkill(dSkills[3]);
+      break;
+    }
+    case 'o': case 'O': {
+      G.placingPrism = !G.placingPrism;
+      G.placingBarricade = null;
+      G.placing = null;
+      G.placingMegastructure = null;
+      G.sel = null;
+      G.uiDirty = true;
+      Sfx.play('click');
+      break;
+    }
     case 'g': case 'G': {
       const ov = $('overlay');
       const isOpen = ov && ov.classList.contains('show') && ov.innerHTML.includes('GENE-SPLICING');
@@ -560,13 +638,15 @@ function onKey(e) {
       }
       break;
     }
-    case 'Escape': G.placing = null; G.placingMegastructure = null; G.placingBarricade = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
+    case 'Escape': G.placing = null; G.placingMegastructure = null; G.placingBarricade = null; G.placingPrism = null; G.sel = null; G.casting = null; G.uiDirty = true; break;
     case 'p': case 'P': togglePause(); break;
     case 'm': case 'M': toggleMute(); break;
     case 'f': case 'F': setSpeed(G.speed % 3 + 1); break;
     case 'u': case 'U':
       if (G.sel) {
-        if (G.sel.hp !== undefined && G.sel.c !== undefined && G.sel.roadC === undefined) {
+        if (G.sel.type === 'photon_prism') {
+          if (typeof rotatePrism === 'function') rotatePrism(G.sel);
+        } else if (G.sel.hp !== undefined && G.sel.c !== undefined && G.sel.roadC === undefined) {
           const repBtn = document.querySelector('button[data-act="repair_barricade"]');
           if (repBtn) repBtn.click();
         } else if (typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[G.sel.type]) {
@@ -584,7 +664,10 @@ function onKey(e) {
       break;
     case 'x': case 'X': case 'Delete':
       if (G.sel) {
-        if (G.sel.hp !== undefined && G.sel.c !== undefined && G.sel.roadC === undefined) {
+        if (G.sel.type === 'photon_prism') {
+          const salBtn = document.querySelector('button[data-act="dismantle_prism"]');
+          if (salBtn) salBtn.click();
+        } else if (G.sel.hp !== undefined && G.sel.c !== undefined && G.sel.roadC === undefined) {
           const salBtn = document.querySelector('button[data-act="dismantle_barricade"]');
           if (salBtn) salBtn.click();
         } else if (typeof MEGASTRUCTURE_CONFIG !== 'undefined' && MEGASTRUCTURE_CONFIG[G.sel.type]) {
