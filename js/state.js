@@ -187,10 +187,58 @@ function newGame(keepSpeed) {
     chaosIncursion: null,
     chaosTimer: 0,
     dynamicPathMorphed: false,
-    ruleRelics: {}
+    ruleRelics: {},
+    // 12.0 Sovereign Depth & Strategic Logistics Systems
+    logistics: {
+      kinetic: (typeof MUNITIONS_LOGISTICS_CONFIG !== 'undefined' ? MUNITIONS_LOGISTICS_CONFIG.types.kinetic.start : 1000),
+      maxKinetic: (typeof MUNITIONS_LOGISTICS_CONFIG !== 'undefined' ? MUNITIONS_LOGISTICS_CONFIG.types.kinetic.max : 1000),
+      plasma: (typeof MUNITIONS_LOGISTICS_CONFIG !== 'undefined' ? MUNITIONS_LOGISTICS_CONFIG.types.plasma.start : 150),
+      maxPlasma: (typeof MUNITIONS_LOGISTICS_CONFIG !== 'undefined' ? MUNITIONS_LOGISTICS_CONFIG.types.plasma.max : 150),
+      cryo: (typeof MUNITIONS_LOGISTICS_CONFIG !== 'undefined' ? MUNITIONS_LOGISTICS_CONFIG.types.cryo.start : 80),
+      maxCryo: (typeof MUNITIONS_LOGISTICS_CONFIG !== 'undefined' ? MUNITIONS_LOGISTICS_CONFIG.types.cryo.max : 80),
+      policy: 'standard'
+    },
+    gridFreq: 50.0,
+    gridInertia: 100,
+    blackoutT: 0,
+    terraScars: {},
+    edicts: [],
+    edictModal: null,
+    syndicateDebt: { borrowed: 0, balance: 0, wavesLeft: 4, enforcersSpawned: false },
+    harmonicLattices: [],
+    tacticalProfile: { physDmg: 0, energyDmg: 0, cryoDmg: 0, chokepointKills: 0, longRangeKills: 0, totalKills: 0 },
+    activeHiveMutations: { volatileAcid: false, cryoAdrenaline: false, opticalChaff: false, burrowers: false }
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
+}
+
+function hasEdict(id) {
+  return Boolean(G && G.edicts && G.edicts.includes(id));
+}
+
+function setLogisticsPolicy(pol) {
+  const conf = typeof MUNITIONS_LOGISTICS_CONFIG !== 'undefined' ? MUNITIONS_LOGISTICS_CONFIG : null;
+  if (!G || !G.logistics || !conf || !conf.policies[pol]) return;
+  G.logistics.policy = pol;
+  G.uiDirty = true;
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+}
+
+function takeSyndicateLoan() {
+  if (!G) return false;
+  if (G.syndicateDebt && G.syndicateDebt.balance > 0) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.gold += 600;
+  G.syndicateDebt = { borrowed: 600, balance: 850, wavesLeft: 4, enforcersSpawned: false };
+  G.uiDirty = true;
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('coin');
+  if (typeof addText === 'function' && typeof BASE_PT !== 'undefined') {
+    addText(BASE_PT.x, BASE_PT.y - 30, '+600G (SYNDICATE BOND)', '#fbbf24', 16);
+  }
+  return true;
 }
 
 function detonateFuelCell(fc) {
@@ -1306,6 +1354,33 @@ function dealDamage(e, amount, type, src, opts) {
     }
   }
 
+  // 12.0 Sovereign Edicts Damage Modifiers
+  if (typeof hasEdict === 'function') {
+    if (hasEdict('edict_steel') && type === 'phys') a *= 1.40;
+    if (hasEdict('edict_fission') && (type === 'plasma' || type === 'energy')) a *= 1.35;
+    if (hasEdict('edict_subzero')) {
+      if (e.slowT > 0 || e.freezeT > 0) a *= 1.50; // +50% Brittle damage
+    }
+  }
+
+  // 12.0 Harmonic Lattice Singularity Stasis
+  if (G && G.harmonicLattices && G.harmonicLattices.length > 0 && typeof pointInTriangle === 'function') {
+    for (const lat of G.harmonicLattices) {
+      if (lat.id === 'singularity' && pointInTriangle(e.x, e.y, lat.p1.x, lat.p1.y, lat.p2.x, lat.p2.y, lat.p3.x, lat.p3.y)) {
+        if (e.shield > 0) e.shield = 0; // Strip 100% shields in singularity
+        a *= 1.25;
+        break;
+      }
+    }
+  }
+
+  // 12.0 Tactical Profiler Tracking
+  if (G && G.tacticalProfile) {
+    if (type === 'phys') G.tacticalProfile.physDmg = (G.tacticalProfile.physDmg || 0) + a;
+    else if (type === 'energy' || type === 'plasma') G.tacticalProfile.energyDmg = (G.tacticalProfile.energyDmg || 0) + a;
+    else if (type === 'cryo') G.tacticalProfile.cryoDmg = (G.tacticalProfile.cryoDmg || 0) + a;
+  }
+
   // 9.0 Symbiotic Parasite Protection & Snipe
   if (e.hasParasite) {
     e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
@@ -1801,13 +1876,46 @@ function killEnemy(e, src) {
   const bloodMult = isBloodPact ? 3.0 : 1.0;
   const isBlind = G && G.activeGambit === 'blind_perimeter';
   const blindMult = isBlind ? 2.0 : 1.0;
-  const finalReward = Math.round(e.reward * streakMult * bloodMult * blindMult);
-  const finalScore = Math.round(e.reward * 10 * scoreStreakMult);
+  const baseReward = e.reward !== undefined ? e.reward : (e.bounty || 0);
+  const finalReward = Math.round(baseReward * streakMult * bloodMult * blindMult);
+  const finalScore = Math.round(baseReward * 10 * scoreStreakMult);
+
+  // 12.0 Tactical Profiler & Chokepoint Tracking
+  if (G && G.tacticalProfile) {
+    G.tacticalProfile.totalKills = (G.tacticalProfile.totalKills || 0) + 1;
+    const isChoke = (G.barricades && G.barricades.some(b => Math.hypot(b.x - e.x, b.y - e.y) < 140)) ||
+                    (G.destructibleCrags && G.destructibleCrags.some(c => Math.hypot(c.x - e.x, c.y - e.y) < 140));
+    if (isChoke) G.tacticalProfile.chokepointKills = (G.tacticalProfile.chokepointKills || 0) + 1;
+  }
+
+  // 12.0 Volatile Acid Carapace On-Death Explosion
+  if (G && G.activeHiveMutations && G.activeHiveMutations.volatileAcid && (e.type === 'brute' || e.type === 'carrier' || e.type === 'boss')) {
+    burst(e.x, e.y, 18, '#84cc16', 110, 0.55, 3.5, true);
+    addText(e.x, e.y - 14, 'ACID BURST!', '#84cc16', 13);
+    if (G.barricades) {
+      for (const bar of G.barricades) {
+        if (Math.hypot(bar.x - e.x, bar.y - e.y) < 95) bar.hp = Math.max(0, bar.hp - 45);
+      }
+    }
+    for (const t of G.towers) {
+      if (Math.hypot(t.x - e.x, t.y - e.y) < 85) t.empT = Math.max(t.empT || 0, 2.5);
+    }
+  }
+
+  // 12.0 Syndicate War Bond Cut (25% Bounty)
+  let rewardToGive = finalReward;
+  if (G && G.syndicateDebt && G.syndicateDebt.balance > 0 && finalReward > 0) {
+    const cut = Math.min(G.syndicateDebt.balance, Math.ceil(finalReward * 0.25));
+    G.syndicateDebt.balance -= cut;
+    rewardToGive -= cut;
+    if (Math.random() < 0.25) addText(e.x, e.y - 24, 'BOND -' + cut + 'G', '#fbbf24', 11);
+  }
+
   const isMidas = G && G.pandoraRelics && G.pandoraRelics.midas_transmutation;
   if (isMidas && typeof spawnMidasCoin === 'function') {
-    spawnMidasCoin(e.x, e.y, finalReward * 2);
+    spawnMidasCoin(e.x, e.y, rewardToGive * 2);
   } else {
-    G.gold += finalReward;
+    G.gold += rewardToGive;
   }
   G.score += finalScore; G.kills++;
   if (src) src.kills++;
@@ -2174,6 +2282,9 @@ function updateMegastructures(dt) {
       if (target) {
         ms.targetX = target.x;
         ms.targetY = target.y;
+        if (G.logistics && G.logistics.plasma !== undefined) {
+          G.logistics.plasma = Math.max(0, G.logistics.plasma - 0.2 * effDt);
+        }
         const beamR = conf.beamRadius || 65;
         for (const e of G.enemies) {
           if (e.dead) continue;

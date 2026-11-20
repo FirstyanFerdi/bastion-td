@@ -270,6 +270,62 @@ function onWaveClear() {
     completeExpeditionNode();
   }
 
+  // 12.0 Sovereign Depth: Logistics Resupply, Terra-Scars, Syndicate Debt, Hive Evolution, Edicts
+  if (G.logistics && typeof MUNITIONS_LOGISTICS_CONFIG !== 'undefined') {
+    const types = MUNITIONS_LOGISTICS_CONFIG.types;
+    const autoBonus = typeof hasEdict === 'function' && hasEdict('edict_automation') ? 1.5 : 1.0;
+    for (const k of Object.keys(types)) {
+      const resupply = Math.round(types[k].resupplyPerWave * autoBonus);
+      const capKey = 'max' + k.charAt(0).toUpperCase() + k.slice(1);
+      G.logistics[k] = Math.min(G.logistics[capKey] || 1000, (G.logistics[k] || 0) + resupply);
+    }
+  }
+
+  if (G.terraScars) {
+    for (const key of Object.keys(G.terraScars)) {
+      G.terraScars[key].wavesLeft--;
+      if (G.terraScars[key].wavesLeft <= 0) {
+        delete G.terraScars[key];
+      }
+    }
+  }
+
+  if (G.syndicateDebt && G.syndicateDebt.balance > 0) {
+    G.syndicateDebt.wavesLeft--;
+    if (G.syndicateDebt.wavesLeft <= 0 && !G.syndicateDebt.enforcersSpawned) {
+      G.syndicateDebt.enforcersSpawned = true;
+      if (typeof addText === 'function') addText(W / 2, 175, '⚠️ SYNDICATE DEBT DEFAULT: ENFORCERS DEPLOYED!', '#f43f5e', 16);
+      if (typeof shake === 'function') shake(8);
+      for (let ei = 0; ei < 3; ei++) {
+        const enforcer = {
+          type: 'enforcer_dropship', hp: 800 + n * 120, maxHp: 800 + n * 120,
+          speed: 1.1, r: 16, bounty: 0, armor: 15,
+          color: '#f43f5e', isBoss: false, d: -ei * 40, x: PATH[0].x, y: PATH[0].y,
+          dead: false, slowT: 0, stunT: 0
+        };
+        G.enemies.push(enforcer);
+      }
+    }
+  }
+
+  if (G.tacticalProfile && G.activeHiveMutations) {
+    const p = G.tacticalProfile;
+    const totalDmg = (p.physDmg || 0) + (p.energyDmg || 0) + (p.cryoDmg || 0);
+    if (totalDmg > 500) {
+      if (p.physDmg / totalDmg > 0.6) G.activeHiveMutations.volatileAcid = true;
+      if (p.cryoDmg / totalDmg > 0.3) G.activeHiveMutations.cryoAdrenaline = true;
+      if (p.energyDmg / totalDmg > 0.6) G.activeHiveMutations.opticalChaff = true;
+    }
+    if (p.chokepointKills > 15) G.activeHiveMutations.burrowers = true;
+  }
+
+  if ((n === 5 || n === 10 || n === 15) && typeof SOVEREIGN_EDICTS !== 'undefined') {
+    const unratified = Object.keys(SOVEREIGN_EDICTS).filter(ek => SOVEREIGN_EDICTS[ek].waveReq <= n && !(G.edicts && G.edicts.includes(ek)));
+    if (unratified.length > 0) {
+      G.edictModal = { available: unratified.slice(0, 3) };
+    }
+  }
+
   saveBest();
 
   // Boss Wave Roguelite Tech Requisition Draft
@@ -289,6 +345,10 @@ function onWaveClear() {
     }
   }
 
+  if (G.edictModal && !G.drafting) {
+    showOverlay('edicts');
+  }
+
   if (n >= WIN_WAVE && !G.endless) { endGame(true); return; }
   G.state = 'prep'; G.prepT = 20; G.uiDirty = true;
 }
@@ -301,6 +361,9 @@ function selectPerk(id) {
   Sfx.play('upgrade');
   if (G.wave >= WIN_WAVE && !G.endless) { endGame(true); return; }
   G.state = 'prep'; G.prepT = 20; G.uiDirty = true;
+  if (G.edictModal) {
+    showOverlay('edicts');
+  }
 }
 function saveBest() {
   if (G.score > SAVE.bestScore) { SAVE.bestScore = G.score; Store.set('nb_bestScore', SAVE.bestScore); }
@@ -528,6 +591,27 @@ function update(dt) {
   if (G.meltdownT > 0) G.meltdownT -= dt;
   if (G.overloadCd > 0) G.overloadCd -= dt;
   if (G.adrenalineT > 0) G.adrenalineT -= dt;
+
+  // 12.0 Grid Frequency Stability & Rolling Blackouts
+  if (G && G.gridFreq !== undefined) {
+    const gp = typeof getGridPowerStatus === 'function' ? getGridPowerStatus() : { used: 0, capacity: 60 };
+    const loadRatio = gp.used / Math.max(1, gp.capacity);
+    if (loadRatio > 1.0) {
+      const dropRate = (loadRatio - 1.0) * 0.45;
+      G.gridFreq = Math.max(45.0, G.gridFreq - dropRate * dt);
+    } else {
+      if (G.gridFreq < 50.0) {
+        G.gridFreq = Math.min(50.0, G.gridFreq + 0.25 * dt);
+      }
+    }
+    if (G.gridFreq < 48.5 && (!G.blackoutT || G.blackoutT <= 0)) {
+      G.blackoutT = 3.5;
+      shake(8);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+      addText(W / 2, 95, '⚡ FREQUENCY TRIP < 48.5 Hz! ROLLING BLACKOUT!', '#f43f5e', 18);
+    }
+  }
+  if (G.blackoutT > 0) G.blackoutT = Math.max(0, G.blackoutT - dt);
 
   // Reactive Hivemind Dynamic Evolution (4.0)
   if (G.hivePressure && !G.hiveCounterTrait) {
@@ -920,6 +1004,9 @@ function update(dt) {
 
   // 11.0 The Infinite Chronicles Updates
   if (typeof updateInfiniteChronicles === 'function') updateInfiniteChronicles(dt);
+
+  // 12.0 Sovereign Depth Harmonic Lattices Update
+  if (typeof updateHarmonicLattices === 'function') updateHarmonicLattices();
 }
 
 /* ============================================================

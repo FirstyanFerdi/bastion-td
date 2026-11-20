@@ -408,8 +408,31 @@ function updateEnemy(e, dt) {
       }
     }
   }
+  // 12.0 Biomechanical Hive Adaptive Mutation: Cryo-Adrenaline
+  if (G && G.activeHiveMutations && G.activeHiveMutations.cryoAdrenaline) {
+    if ((e.slowT > 0 || e.stunT > 0) && (!e.adrenalineCd || e.adrenalineCd <= 0)) {
+      e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
+      e.speedBoostT = 4.0;
+      e.adrenalineCd = 7.0;
+      burst(e.x, e.y, 8, '#f97316', 70, 0.35, 2.5, true);
+      addText(e.x, e.y - e.r - 20, 'ADRENALINE SURGE +35%', '#f97316', 12);
+    }
+  }
+  if (e.adrenalineCd > 0) e.adrenalineCd -= dt;
+
   let sp = e.speed;
-  if (e.speedBoostT > 0) { e.speedBoostT -= dt; sp *= 1.25; }
+  if (e.speedBoostT > 0) { e.speedBoostT -= dt; sp *= 1.35; }
+
+  // 12.0 Harmonic Lattice Singularity Slow
+  if (G && G.harmonicLattices && typeof pointInTriangle === 'function') {
+    for (const lat of G.harmonicLattices) {
+      if (lat.id === 'singularity' && pointInTriangle(e.x, e.y, lat.p1.x, lat.p1.y, lat.p2.x, lat.p2.y, lat.p3.x, lat.p3.y)) {
+        e.shield = 0;
+        sp *= 0.50;
+        break;
+      }
+    }
+  }
   if (G.mutator && G.mutator.id === 'frenzy' && e.hp < e.maxHp * 0.4) sp *= 1.35;
   if (G.mutator && G.mutator.id === 'cryo_lockdown') sp *= 0.80;
   if (G.mutator && G.mutator.id === 'overcharge_anomaly') sp *= 1.25;

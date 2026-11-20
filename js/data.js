@@ -2190,3 +2190,165 @@ const DYNAMIC_ENTROPY_CONFIG = {
   cragCollapseDamage: 400
 };
 
+/* ============================================================
+   12.0 SOVEREIGN DEPTH & STRATEGIC LOGISTICS CONFIGURATION
+   ============================================================ */
+
+const MUNITIONS_LOGISTICS_CONFIG = {
+  types: {
+    kinetic: {
+      id: 'kinetic',
+      name: 'Solid Kinetic Shells',
+      color: '#f59e0b',
+      max: 1000,
+      start: 1000,
+      resupplyPerWave: 250,
+      towers: ['gatling', 'rail']
+    },
+    plasma: {
+      id: 'plasma',
+      name: 'Compressed Plasma Cells',
+      color: '#38bdf8',
+      max: 150,
+      start: 150,
+      resupplyPerWave: 35,
+      towers: ['plasma', 'ion_uplink', 'fusion_hellfire', 'fusion_deathray']
+    },
+    cryo: {
+      id: 'cryo',
+      name: 'Liquid Cryo Coolant',
+      color: '#06b6d4',
+      max: 80,
+      start: 80,
+      resupplyPerWave: 20,
+      towers: ['cryo', 'fusion_zero']
+    }
+  },
+  policies: {
+    standard: {
+      id: 'standard',
+      name: 'Standard Issue',
+      color: '#38bdf8',
+      fireRateMult: 1.0,
+      ammoBurnMult: 1.0,
+      desc: 'Nominal consumption & fire rate across all weapon systems.'
+    },
+    barrage: {
+      id: 'barrage',
+      name: 'Full Military Barrage',
+      color: '#ef4444',
+      fireRateMult: 1.25,
+      ammoBurnMult: 2.0,
+      desc: '+25% Fire Rate, x2.0 Ammo Burn rate.'
+    },
+    ration: {
+      id: 'ration',
+      name: 'Strict Conservation',
+      color: '#10b981',
+      fireRateMult: 0.85,
+      ammoBurnMult: 0.5,
+      critBonus: 0.10,
+      desc: '-15% Fire Rate, -50% Ammo Burn, +10% Crit Chance.'
+    }
+  }
+};
+
+const SOVEREIGN_EDICTS = {
+  edict_steel: {
+    id: 'edict_steel',
+    waveReq: 5,
+    name: 'Edict of Kinetic Industry',
+    color: '#f59e0b',
+    icon: 'zap',
+    desc: '+40% Kinetic damage & +1 pierce. Energy weapons +50% power drain; Cryo towers cost +35% gold.',
+    bonus: { kineticDmg: 0.40, pierce: 1, energyPowerMult: 1.5, cryoCostMult: 1.35 }
+  },
+  edict_subzero: {
+    id: 'edict_subzero',
+    waveReq: 5,
+    name: 'Edict of Sub-Zero Synchronicity',
+    color: '#06b6d4',
+    icon: 'shield',
+    desc: 'Freeze duration +60% and deals +50% brittle damage. Fire & plasma burn effects disabled.',
+    bonus: { freezeDurMult: 1.6, brittleDmgMult: 1.5, disableBurn: true }
+  },
+  edict_automation: {
+    id: 'edict_automation',
+    waveReq: 5,
+    name: 'Edict of Autonomous Logistics',
+    color: '#10b981',
+    icon: 'wrench',
+    desc: '+100% Ammo max reserves & +50% resupply. Tower dismantle refund reduced to 0%.',
+    bonus: { ammoReservesMult: 2.0, resupplyMult: 1.5, noRefund: true }
+  },
+  edict_fission: {
+    id: 'edict_fission',
+    waveReq: 10,
+    name: 'Edict of Hyper-Fission',
+    color: '#e11d48',
+    icon: 'burn',
+    desc: '+50% Plasma splash radius & +35% damage. Grid recovery is 30% slower.',
+    bonus: { plasmaSplash: 0.50, plasmaDmg: 0.35, gridRecoveryMult: 0.7 }
+  },
+  edict_cybernetic: {
+    id: 'edict_cybernetic',
+    waveReq: 10,
+    name: 'Edict of Cybernetic Neural Grid',
+    color: '#8b5cf6',
+    icon: 'radar',
+    desc: 'All towers gain +1 Modular Chip socket. Base lives permanently reduced by 5.',
+    bonus: { extraChipSlot: 1, livesPenalty: 5 }
+  },
+  edict_void: {
+    id: 'edict_void',
+    waveReq: 10,
+    name: 'Edict of Void Transcendence',
+    color: '#ec4899',
+    icon: 'up',
+    desc: 'Chrono-Echo Splicer rewinds 8 seconds instead of 5, +50% Echo damage. Enemy speed +10%.',
+    bonus: { chronoBonus: 3, echoDmgMult: 1.5, enemySpeedMult: 1.10 }
+  }
+};
+
+const HARMONIC_LATTICE_CONFIG = {
+  singularity: {
+    id: 'singularity',
+    towers: ['tesla', 'cryo', 'plasma'],
+    name: 'Singularity Crucible',
+    color: '#818cf8',
+    desc: 'Gravitational stasis field (-50% speed, -100% shields stripped in triangle)'
+  },
+  kinetic_grid: {
+    id: 'kinetic_grid',
+    towers: ['rail', 'gatling', 'relay'],
+    name: 'Hyper-Velocity Kinetic Grid',
+    color: '#f59e0b',
+    desc: 'Ballistic acceleration field (+25% bullet velocity, Gatling shots gain +2 pierce)'
+  }
+};
+
+const CORRUPTED_CHIPS = {
+  glass_annihilator: {
+    id: 'glass_annihilator',
+    name: 'Glass Annihilator Core',
+    color: '#ef4444',
+    desc: '+120% Crit Damage, Infinite Range, but 3x Ammo Burn & Cannot target Air.',
+    stats: { critDmg: 1.20, range: 9999, ammoBurn: 3.0, groundOnly: true }
+  },
+  symbiotic_leech: {
+    id: 'symbiotic_leech',
+    name: 'Symbiotic Leech Core',
+    color: '#10b981',
+    desc: '+2 Gold on kill & repairs Mech hull, but consumes -15 MW power while idle.',
+    stats: { bonusGold: 2, mechHeal: 10, idlePowerDrain: 15 }
+  },
+  chaos_cascade: {
+    id: 'chaos_cascade',
+    name: 'Chaos Cascade Regulator',
+    color: '#a855f7',
+    desc: 'Alternates ammo types ignoring enemy immunities, but 3% chance per shot to damage allied Barricades.',
+    stats: { omniType: true, friendlyFireChance: 0.03 }
+  }
+};
+
+

@@ -351,6 +351,18 @@ function init() {
       showOverlay('gene_lab');
     });
   }
+  if ($('btnLogistics')) {
+    $('btnLogistics').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('logistics');
+    });
+  }
+  if ($('btnBonds')) {
+    $('btnBonds').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('logistics');
+    });
+  }
   if ($('chipSector')) {
     $('chipSector').addEventListener('click', () => {
       Sfx.init(); Sfx.resume(); Sfx.play('click');
@@ -482,6 +494,31 @@ function init() {
       showOverlay(null);
       Sfx.play('click');
     }
+    else if (a === 'set_policy') {
+      if (b.dataset.policy && typeof setLogisticsPolicy === 'function') {
+        setLogisticsPolicy(b.dataset.policy);
+        showOverlay('logistics');
+      }
+    }
+    else if (a === 'syndicate_loan') {
+      if (typeof takeSyndicateLoan === 'function') {
+        takeSyndicateLoan();
+        showOverlay('logistics');
+      }
+    }
+    else if (a === 'sign_edict') {
+      const cardEl = b.closest('[data-edict]');
+      const eId = (cardEl && cardEl.dataset.edict) || b.dataset.edict;
+      if (eId && G) {
+        G.edicts = G.edicts || [];
+        if (!G.edicts.includes(eId)) G.edicts.push(eId);
+        G.edictModal = null;
+        showOverlay(null);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
+        if (typeof addText === 'function') addText(W / 2, 140, 'EDICT RATIFIED: ' + (typeof SOVEREIGN_EDICTS !== 'undefined' && SOVEREIGN_EDICTS[eId] ? SOVEREIGN_EDICTS[eId].name : eId), '#38bdf8', 18);
+        G.uiDirty = true;
+      }
+    }
     else if (a === 'close_smuggler' || a === 'close_codex' || a === 'close') {
       showOverlay(G && G.state === 'menu' ? 'menu' : null);
       Sfx.play('click');
@@ -502,5 +539,7 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   CRUCIBLE_GAMBITS, PHOTON_PRISM_CONFIG, ENIGMA_BOSS_CONFIG, PANDORA_RELICS, SKILL_PROFILER_CONFIG, trackPlayerAction, updateSkillProfiler, activateGambit, canPlacePrism, placePrism, rotatePrism, checkSingularityPens, updatePrisms, updateEnigmaBoss, damageCatalystPylon, triggerBulletTime, paintBulletTimeTarget, triggerRhythmOverclock, applyPandoraRelic, spawnMidasCoin, collectMidasCoin, updateMidasCoins,
   // 11.0 The Infinite Chronicles Exports
   EXPEDITION_NODE_TYPES, generateExpeditionTree, CHIMERA_PREFIXES, CHIMERA_SUFFIXES, RULE_BENDING_RELICS, NEMESIS_GENOME_TRAITS, QUANTUM_HEAT_MODIFIERS, CHAOS_INCURSIONS, DYNAMIC_ENTROPY_CONFIG, generateChimeraDraft, applyChimeraAffix, applyRuleBendingRelic, evolveNemesisGenome, triggerDynamicPathMorph, triggerChaosIncursion, resolveChaosIncursion, toggleQuantumHeatModifier, startExpeditionNode, completeExpeditionNode, updateInfiniteChronicles,
+  // 12.0 Sovereign Depth & Strategic Logistics Exports
+  MUNITIONS_LOGISTICS_CONFIG, SOVEREIGN_EDICTS, HARMONIC_LATTICE_CONFIG, CORRUPTED_CHIPS, setLogisticsPolicy, takeSyndicateLoan, hasEdict, consumeTowerAmmo, getTowerAmmoType, updateHarmonicLattices, pointInTriangle,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
 };

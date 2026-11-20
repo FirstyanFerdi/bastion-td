@@ -2152,3 +2152,103 @@ Berdasarkan analisis visual mendalam terhadap screenshot yang dilampirkan penggu
 - `tests/test_megastructure_rebalance.js`: **LULUS (100%)**
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs**
 - **Seluruh 22 Unit Test Suites: 100% LULUS.**
+
+
+---
+
+# BAGIAN 31: OPTIMALISASI VISUAL INSPECTOR & REALISASI SOVEREIGN DEPTH (12.0)
+
+## 31.1 Akar Masalah Visual & Tata Letak pada Screenshot Pengguna
+Berdasarkan screenshot yang dikirimkan oleh pengguna pada panel inspektur megastruktur (*Ion Beam Orbital Uplink Array*):
+1. **Penyebab Kemunculan Scrollbar Windows Bawaan (Win32/Fluent Native Scrollbar):**
+   - Pada Chromium di Windows, deklarasi `scrollbar-color: var(--line2) transparent;` pada elemen menyebabkan Chromium menonaktifkan mesin rendering pseudo-element `::-webkit-scrollbar` dan mendelegasikan styling ke tema jendela Windows bawaan. Akibatnya, browser menggambar scrollbar native Windows yang tebal (~17px) berwarna putih/abu-abu dengan tombol panah atas/bawah.
+   - Keberadaan scrollbar native selebar 17px ini memotong lebar ruang konten di dalam kartu inspektur dari ~145px per kolom menjadi ~125px per kolom.
+2. **Penyebab Terpotongnya Ikon Koin & Angka pada Tombol OVERHAUL:**
+   - Kelas `.primary` memiliki aturan `clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));`. Sudut kanan atas tombol dipotong diagonal sebesar 8 piksel.
+   - Karena tombol `[🔧 OVERHAUL <i class="coin"></i>120]` berada berdampingan dengan `[↑ OVERCLOCK <i class="coin"></i>40]` dalam layout 2 kolom, teks huruf kapital dengan letter-spacing lebar serta ikon SVG dan koin melebihi lebar kolom sempit. Akibatnya, koin terpotong setengah oleh `clip-path` dan angka biaya lenyap di luar batas tombol.
+3. **Penyebab Tampilan Padat ("Umpel-umpelan") & Header Bergeser:**
+   - Inspektur tidak memiliki header yang terkunci (`sticky`), sehingga saat konten sedikit meluap, judul `<h3>SELECTED DEFENSE</h3>` tergulung ke atas dan hilang dari pandangan.
+   - Matriks tombol targeting priority (`.prio`) menggunakan `repeat(4, 1fr)` untuk 6 tombol, menyisakan 2 tombol di baris kedua yang tampak asimetris dan renggang.
+   - Kotak status durabilitas dan beban daya menggunakan styling inline polos tanpa keseragaman visual.
+
+---
+
+## 31.2 Solusi & Implementasi Perbaikan Visual
+
+### 1. Rekayasa Scrollbar Cyberpunk Halus (`css/style.css`)
+- Menghapus deklarasi `scrollbar-color` dan `scrollbar-width` yang memicu delegasi native scrollbar di Chromium pada elemen `#side` dan `#inspector`.
+- Mengonfigurasi `::-webkit-scrollbar` modern dengan lebar ramping `5px`, track transparan gelap `rgba(11, 15, 23, 0.6)`, serta thumb rounded halus `#334155` (hover `#64748b`) dengan border mikroskopis `rgba(255, 255, 255, 0.05)`.
+- Menggunakan fallback `@supports (-moz-appearance: none)` untuk Firefox dengan warna gelap kontras `#334155 #0b0f17`, memastikan **tidak ada lagi scrollbar putih native bertombol panah di semua platform**.
+
+### 2. Eliminasi Clip-Path & Penyelarasan Tombol Tindakan (`css/style.css`, `js/ui.js`)
+- Mengesampingkan `clip-path` pada tombol di dalam `.tower-actions`:
+  ```css
+  .tower-actions .primary,
+  .tower-actions .sell {
+    clip-path: none !important;
+    border-radius: 3px !important;
+    padding: 6px 6px !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: .02em !important;
+    gap: 4px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    min-height: 30px;
+    box-sizing: border-box;
+  }
+  ```
+- Dengan menghilangkan potongan sudut diagonal 8px dan mengatur padding serta ukuran font proporsional, tombol `Overclock` dan `Overhaul` berdampingan dengan lega, ikon koin utuh 100%, dan angka biaya terlihat sangat jelas tanpa terpotong.
+- Tombol `Dismantle Facility` membentang simetris 100% di baris bawah (`span-2`) dengan tinggi dan gaya tipografi yang seragam.
+
+### 3. Komponen Telemetri Terpadu (`.telemetry-card`, `.telemetry-hdr`, `.telemetry-bar-bg`, `.telemetry-bar-fill`)
+- Merombak visual bilah status "OPERATIONAL LIFESPAN" dan "FACILITY POWER LOAD" (serta "STRUCTURAL INTEGRITY" pada Barricade) menjadi panel telemetri militer taktis beraksen neon glow halus (`box-shadow: 0 0 6px ...`).
+- Label data di kiri dan status angka di kanan tertata rapi dengan kontras tinggi (`#94a3b8` vs warna status dinamis).
+
+### 4. Header Terkunci (`Sticky`) & Prioritas Bidikan 3x2 Simetris
+- Menambahkan aturan `position: sticky; top: 0; z-index: 3;` pada `#inspector > h3` dengan gradien latar belakang transparan ke gelap, sehingga judul inspektur tidak pernah hilang saat pengguna menggulir konten.
+- Mengubah grid `.prio` dari `repeat(4, 1fr)` menjadi `repeat(3, 1fr)`, menghasilkan 2 baris seimbang berisikan 3 tombol (First, Last, Strongest | Weakest, Closest, Farthest) yang simetris dan rapi.
+
+---
+
+## 31.3 Penyelesaian Arsitektur Sovereign Depth & Strategic Logistics (12.0)
+Sesuai dengan blueprint `bastion_td_strategic_depth_blueprint.md` yang telah disetujui, seluruh fitur strategis tingkat tinggi telah diimplementasikan penuh:
+
+1. **Tri-Resource Logistics Stockpiles & Burn Policy (`js/data.js`, `js/state.js`, `js/towers.js`, `js/waves.js`):**
+   - Tiga stok amunisi terpisah: *Solid Kinetic Shells* (1000), *Compressed Plasma Cells* (150), dan *Liquid Cryo Coolant* (80).
+   - Penembakan Gatling/Rail membakar amunisi Kinetic; Plasma, Ion Uplink, Hellfire, dan DeathRay membakar Plasma; Cryo dan Absolute Zero membakar Cryo.
+   - Kebijakan Taktis: `standard` (1.0x), `barrage` (+25% SPD, 2.0x burn), dan `ration` (-15% SPD, 0.5x burn, +10% Crit).
+   - Mode Darurat (*Emergency Degraded Mode*): Ketika stok habis (0), senjata tetap menembak namun terdegradasi secara drastis (-75% Fire Rate / 4x Cooldown) tanpa menimbulkan soft-lock.
+   - Pasokan ulang amunisi otomatis setiap akhir gelombang berdasarkan konfigurasi `MUNITIONS_LOGISTICS_CONFIG`.
+2. **Kestabilan Frekuensi Jaringan Listrik & Pemadaman Bergilir (Grid Frequency & Blackouts):**
+   - Frekuensi dasar 50.0 Hz. Beban daya >1.0x kapasitas menarik frekuensi turun.
+   - Jika frekuensi anjlok di bawah 48.5 Hz, sistem pengaman memicu *Rolling Blackout* (3.5 detik) yang melumpuhkan menara non-balistik.
+   - Pemulihan bertahap menuju 50.0 Hz saat beban kembali normal.
+3. **Terra-Scars (Fondasi Retak & Puing Hangus):**
+   - Membongkar menara yang telah menembak >=8 kali atau telah di-upgrade ke Tier 2+ meninggalkan puing retak lahar aktif selama 4 gelombang.
+   - Konstruksi menara baru di atas petak Terra-Scar diblokir total hingga puing stabil, memaksa komitmen jangka panjang.
+   - Dirender di kanvas dengan visual retakan lahar membara dan hitungan mundur sisa gelombang (`SCAR Xw`).
+4. **Dekrit Kedaulatan (Sovereign Edicts):**
+   - Doktrin militer permanen yang diratifikasi pada Gelombang 5, 10, dan 15.
+   - Contoh: `edict_steel` (+25% Sabotage DMG pada proyektil Kinetic, namun biaya menara Cryo naik +35%).
+5. **Obligasi Perang Sindikat (Syndicate War Bonds):**
+   - Pinjaman darurat +600 Gold instan dengan kewajiban bayar 850 Gold.
+   - Pembayaran dicicil otomatis melalui pemotongan 25% dari setiap hadiah bounty musuh.
+   - Jika belum lunas dalam 4 gelombang, *Syndicate Enforcer Dropships* dikerahkan untuk menagih secara paksa.
+6. **Evolusi Reaktif Biomekanik Hivemind:**
+   - Profiling kerusakan pemain mendeteksi bias: dominasi Kinetic memicu *Volatile Acid Carapace* (meledak saat mati merusak barikade dan membungkam menara sekitar); bias Cryo memicu *Cryo-Adrenaline* (membersihkan freeze/slow); bias chokepoint memicu penggalian bawah tanah.
+7. **Harmonic Lattices (Triangulasi Leyline & Medan Sinergi Rahasia):**
+   - Menghubungkan 3 menara Cryo/Relay membentuk segitiga *Singularity Crucible* (menghapus perisai musuh dan -50% SPD).
+   - Menghubungkan 3 menara Gatling/Rail membentuk *Hyper-Velocity Kinetic Grid* (+30% Armor Piercing).
+
+---
+
+## 31.4 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_sovereign_depth.js`: **LULUS 100%** (Amunisi, Degraded Mode, Kebijakan, Frekuensi, Terra-Scars, Edicts, Pinjaman Sindikat, Mutasi Hive, Kisi Harmonik).
+- `tests/test_new_defense_inspector.js`: **LULUS 100%** (Tata letak inspektur Megastruktur dan Barikade tervalidasi presisi).
+- `tests/test_ui_layout_overhaul.js`: **LULUS 100%** (Semua ID, semantik grouping, dan CSS anti-tabrakan utuh).
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih).**
+- `tests/smoke.js`: **LULUS (Simulasi 10 Gelombang berjalan mulus tanpa error).**
+- **Seluruh 23 Unit Test Suites di repositori: 100% LULUS.**

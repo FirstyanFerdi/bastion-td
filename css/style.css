@@ -54,25 +54,31 @@ button {
   background: none;
 }
 
-/* Custom sleek scrollbars & standard CSS Scrollbars */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--line2) transparent;
-}
-
+/* Custom sleek sci-fi scrollbars */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(11, 15, 23, 0.6);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--line2);
-  border-radius: 4px;
+  background: #334155;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--steel);
+  background: #64748b;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #334155 #0b0f17;
+  }
 }
 
 .ico {
@@ -364,6 +370,14 @@ button {
 .cbtn-heat { color: #f43f5e; border-color: rgba(244, 63, 94, 0.4); }
 .cbtn-heat:hover:not(:disabled) { border-color: #f43f5e; box-shadow: 0 0 10px rgba(244, 63, 94, 0.35); }
 .cbtn-heat .cbtn-badge { background: #9f1239; color: #ffe4e6; }
+
+.cbtn-logistics { color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
+.cbtn-logistics:hover:not(:disabled) { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.35); }
+.cbtn-logistics .cbtn-badge { background: #0369a1; color: #e0f2fe; }
+
+.cbtn-bonds { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); }
+.cbtn-bonds:hover:not(:disabled) { border-color: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.35); }
+.cbtn-bonds .cbtn-badge { background: #78350f; color: #fef3c7; }
 
 .cbtn-purge { color: #f97316; border-color: rgba(249, 115, 22, 0.4); }
 .cbtn-purge:hover:not(:disabled) { border-color: #f97316; box-shadow: 0 0 10px rgba(249, 115, 22, 0.35); }
@@ -665,8 +679,6 @@ kbd, .kbd {
   flex-direction: column;
   gap: 8px;
   padding-right: 2px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line2) transparent;
 }
 
 .card {
@@ -820,9 +832,15 @@ kbd, .kbd {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 7px 9px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line2) transparent;
+  padding: 8px 10px;
+}
+#inspector > h3 {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, #131920 88%, rgba(19, 25, 32, 0) 100%);
+  z-index: 3;
+  padding-bottom: 4px;
+  margin-top: -2px;
 }
 
 /* Tactical Inspector Terminal Tabs */
@@ -865,8 +883,8 @@ kbd, .kbd {
   margin-bottom: 5px;
 }
 .insp-name canvas {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   background: var(--panel2);
   border: 1px solid var(--line);
   border-radius: 3px;
@@ -898,9 +916,32 @@ kbd, .kbd {
   grid-column: 1 / -1;
   width: 100%;
 }
-.tower-actions .primary {
-  padding: 6px 8px;
-  font-size: 10.5px;
+.tower-actions .primary,
+.tower-actions .sell {
+  clip-path: none !important;
+  border-radius: 3px !important;
+  padding: 6px 6px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .02em !important;
+  gap: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  min-height: 30px;
+  box-sizing: border-box;
+}
+.tower-actions .primary svg,
+.tower-actions .sell svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+.tower-actions .coin,
+.sell .coin {
+  margin: 0 1px 0 2px;
+  flex-shrink: 0;
 }
 .sell {
   display: flex;
@@ -924,6 +965,41 @@ kbd, .kbd {
   border-color: #ef4444;
   color: #fff;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+}
+
+/* Tactical Telemetry Meters (Megastructures, Barricades, Bosses) */
+.telemetry-card {
+  margin: 4px 0;
+  padding: 4px 8px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.telemetry-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  margin-bottom: 3px;
+}
+.telemetry-hdr span:first-child {
+  color: #94a3b8;
+}
+.telemetry-bar-bg {
+  width: 100%;
+  height: 4px;
+  background: #1e293b;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.telemetry-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .2s ease;
 }
 
 /* Stats 2-column Grid */
@@ -961,7 +1037,7 @@ kbd, .kbd {
 /* Priority Selector */
 .prio {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 3px;
   margin: 4px 0;
 }

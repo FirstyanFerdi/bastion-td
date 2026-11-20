@@ -492,6 +492,9 @@ function render() {
   drawPhotonPrisms(c, time);
   drawMidasCoins(c, time);
   drawCatalystPylons(c, time);
+  // 12.0 Sovereign Depth Systems
+  drawTerraScars(c, time);
+  drawHarmonicLattices(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -2421,5 +2424,85 @@ function drawChaosIncursionHUD(c, time) {
   c.fillStyle = '#fbbf24';
   c.fillText(Math.ceil(G.chaosTimer) + 's', bx + bw - 10, by + 23);
 
+  c.restore();
+}
+
+function drawTerraScars(c, time) {
+  if (!G || !G.terraScars) return;
+  c.save();
+  for (const key of Object.keys(G.terraScars)) {
+    const scar = G.terraScars[key];
+    const parts = key.split(',');
+    const col = parseInt(parts[0], 10), row = parseInt(parts[1], 10);
+    const gx = col * TILE, gy = row * TILE;
+
+    // Scorched fractured bedrock
+    c.fillStyle = '#1c0d0d';
+    c.fillRect(gx + 1, gy + 1, TILE - 2, TILE - 2);
+
+    // Glowing magma fissure cracks
+    const pulse = 0.5 + 0.5 * Math.sin(time * 3 + col * 2);
+    c.strokeStyle = 'rgba(239, 68, 68, ' + (0.4 + 0.4 * pulse) + ')';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(gx + 6, gy + 8);
+    c.lineTo(gx + 18, gy + 22);
+    c.lineTo(gx + 14, gy + 36);
+    c.moveTo(gx + 34, gy + 10);
+    c.lineTo(gx + 22, gy + 26);
+    c.lineTo(gx + 36, gy + 38);
+    c.stroke();
+
+    // Red fracture hazard border
+    c.strokeStyle = '#ef444488';
+    c.lineWidth = 1;
+    c.strokeRect(gx + 2, gy + 2, TILE - 4, TILE - 4);
+
+    // Countdown tag
+    c.fillStyle = '#fca5a5';
+    c.font = '800 8.5px ' + FONT;
+    c.textAlign = 'center';
+    c.fillText('SCAR ' + scar.wavesLeft + 'W', gx + TILE / 2, gy + TILE / 2 + 3);
+  }
+  c.restore();
+}
+
+function drawHarmonicLattices(c, time) {
+  if (!G || !G.harmonicLattices || G.harmonicLattices.length === 0) return;
+  c.save();
+  for (const lat of G.harmonicLattices) {
+    if (!lat.t1 || !lat.t2 || !lat.t3) continue;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 4);
+    const col = lat.color || '#38bdf8';
+
+    // Triangle fill
+    c.beginPath();
+    c.moveTo(lat.t1.x, lat.t1.y);
+    c.lineTo(lat.t2.x, lat.t2.y);
+    c.lineTo(lat.t3.x, lat.t3.y);
+    c.closePath();
+    c.fillStyle = col + (lat.type === 'singularity' ? '1a' : '22');
+    c.fill();
+
+    // Resonant pulsing boundary
+    c.strokeStyle = col;
+    c.globalAlpha = 0.4 + 0.3 * pulse;
+    c.lineWidth = 2;
+    c.setLineDash([8, 4]);
+    c.stroke();
+    c.setLineDash([]);
+    c.globalAlpha = 1.0;
+
+    // Centroid resonance marker
+    const cx = (lat.t1.x + lat.t2.x + lat.t3.x) / 3;
+    const cy = (lat.t1.y + lat.t2.y + lat.t3.y) / 3;
+    c.fillStyle = col;
+    c.beginPath();
+    c.arc(cx, cy, 4 + pulse * 2, 0, Math.PI * 2);
+    c.fill();
+    c.font = '800 8px ' + FONT;
+    c.textAlign = 'center';
+    c.fillText(lat.name ? lat.name.toUpperCase() : 'HARMONIC', cx, cy - 8);
+  }
   c.restore();
 }

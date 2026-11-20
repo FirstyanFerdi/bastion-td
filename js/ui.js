@@ -435,13 +435,13 @@ function renderInspector() {
 
     box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
       '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:#38bdf8">Road Barricade</h4><small>FORTIFICATION · ' + bar.hp + ' / ' + bar.maxHp + ' HP</small></div></div>' +
-      '<div style="margin:5px 0;padding:5px 8px;background:rgba(15,23,42,0.6);border:1px solid rgba(56,189,248,0.25);border-radius:3px">' +
-      '<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;margin-bottom:3px">' +
-      '<span style="color:#94a3b8">STRUCTURAL INTEGRITY</span>' +
+      '<div class="telemetry-card" style="border-color:' + barColor + '50">' +
+      '<div class="telemetry-hdr">' +
+      '<span>STRUCTURAL INTEGRITY</span>' +
       '<span style="color:' + barColor + '">' + bar.hp + ' / ' + bar.maxHp + ' HP (' + pct + '%)</span>' +
       '</div>' +
-      '<div style="width:100%;height:4px;background:#1e293b;border-radius:2px;overflow:hidden">' +
-      '<div style="width:' + pct + '%;height:100%;background:' + barColor + '"></div>' +
+      '<div class="telemetry-bar-bg">' +
+      '<div class="telemetry-bar-fill" style="width:' + pct + '%;background:' + barColor + ';box-shadow:0 0 6px ' + barColor + '80"></div>' +
       '</div>' +
       '</div>' +
       '<div class="tower-actions">' + repBtn + salvageBtn + '</div>' +
@@ -537,22 +537,22 @@ function renderInspector() {
 
     box.innerHTML = '<h3>SELECTED DEFENSE</h3>' +
       '<div class="insp-name"><canvas id="inspIcon" width="48" height="48"></canvas><div><h4 style="color:' + d.color + '">' + d.name + '</h4>' + subtitleText + '</div></div>' +
-      '<div style="margin:3px 0;padding:3px 8px;background:rgba(15,23,42,0.7);border:1px solid ' + durColor + '50;border-radius:3px">' +
-      '<div style="display:flex;justify-content:space-between;font-size:9.5px;font-weight:700;margin-bottom:2px">' +
-      '<span style="color:#94a3b8">OPERATIONAL LIFESPAN</span>' +
+      '<div class="telemetry-card" style="border-color:' + durColor + '50">' +
+      '<div class="telemetry-hdr">' +
+      '<span>OPERATIONAL LIFESPAN</span>' +
       '<span style="color:' + durColor + '">' + durStatus + '</span>' +
       '</div>' +
-      '<div style="width:100%;height:4px;background:#1e293b;border-radius:2px;overflow:hidden">' +
-      '<div style="width:' + durPct + '%;height:100%;background:' + durColor + '"></div>' +
+      '<div class="telemetry-bar-bg">' +
+      '<div class="telemetry-bar-fill" style="width:' + durPct + '%;background:' + durColor + ';box-shadow:0 0 6px ' + durColor + '80"></div>' +
       '</div>' +
       '</div>' +
-      '<div style="margin:3px 0 4px;padding:3px 8px;background:rgba(15,23,42,0.6);border:1px solid ' + meterColor + '40;border-radius:3px">' +
-      '<div style="display:flex;justify-content:space-between;font-size:9.5px;font-weight:700;margin-bottom:2px">' +
-      '<span style="color:#94a3b8">' + meterLabel + '</span>' +
+      '<div class="telemetry-card" style="border-color:' + meterColor + '40">' +
+      '<div class="telemetry-hdr">' +
+      '<span>' + meterLabel + '</span>' +
       '<span style="color:' + meterColor + '">' + meterVal + '</span>' +
       '</div>' +
-      '<div style="width:100%;height:4px;background:#1e293b;border-radius:2px;overflow:hidden">' +
-      '<div style="width:' + meterPct + '%;height:100%;background:' + meterColor + '"></div>' +
+      '<div class="telemetry-bar-bg">' +
+      '<div class="telemetry-bar-fill" style="width:' + meterPct + '%;background:' + meterColor + ';box-shadow:0 0 6px ' + meterColor + '80"></div>' +
       '</div>' +
       '</div>' +
       '<div class="tower-actions">' + actionBtns + dismantleBtn + '</div>' +
@@ -1042,12 +1042,21 @@ function refreshUI() {
   }
   if ($('vCores')) $('vCores').textContent = String((SAVE && SAVE.cores) || 0);
   const gp = typeof getGridPowerStatus === 'function' ? getGridPowerStatus() : { used: 0, capacity: 60, isBrownout: false };
-  setText('vPower', gp.used + ' / ' + gp.capacity + ' MW');
+  const hzStr = (G && G.gridFreq !== undefined) ? ' · ' + G.gridFreq.toFixed(1) + 'Hz' : '';
+  const boStr = (G && G.blackoutT > 0) ? ' [BLACKOUT]' : '';
+  setText('vPower', gp.used + ' / ' + gp.capacity + ' MW' + hzStr + boStr);
   const chipP = $('chipPower');
   if (chipP) {
-    chipP.classList.toggle('warn', gp.isBrownout);
+    const isCrisis = gp.isBrownout || (G && G.blackoutT > 0) || (G && G.gridFreq < 48.5);
+    chipP.classList.toggle('warn', isCrisis);
     const bEl = chipP.querySelector('b');
-    if (bEl) bEl.style.color = gp.isBrownout ? '#f43f5e' : (gp.pct > 0.85 ? '#facc15' : '#10b981');
+    if (bEl) bEl.style.color = isCrisis ? '#f43f5e' : (gp.pct > 0.85 ? '#facc15' : '#10b981');
+  }
+  if ($('vLogisticsBadge') && G && G.logistics) {
+    $('vLogisticsBadge').textContent = (G.logistics.policy || 'STD').toUpperCase().slice(0, 3);
+  }
+  if ($('vBondsBadge') && G && G.syndicateDebt) {
+    $('vBondsBadge').textContent = G.syndicateDebt.balance > 0 ? (G.syndicateDebt.balance + 'G') : '0G';
   }
   const curSecId = (G && G.sector) || (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
   const curSecObj = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : null;
@@ -1760,6 +1769,74 @@ function showOverlay(kind) {
       '<div style="display:flex;justify-content:center">' +
       '<button class="ghost" data-ov="close_heat">Close Heat Pacts</button>' +
       '</div></div>';
+  } else if (kind === 'logistics') {
+    const l = (G && G.logistics) || { kinetic: 1000, maxKinetic: 1000, plasma: 150, maxPlasma: 150, cryo: 80, maxCryo: 80, policy: 'standard' };
+    const conf = typeof MUNITIONS_LOGISTICS_CONFIG !== 'undefined' ? MUNITIONS_LOGISTICS_CONFIG : { types: {}, policies: {} };
+    const curPol = l.policy || 'standard';
+
+    const kPct = Math.round((l.kinetic / l.maxKinetic) * 100);
+    const pPct = Math.round((l.plasma / l.maxPlasma) * 100);
+    const cPct = Math.round((l.cryo / l.maxCryo) * 100);
+
+    const polButtons = Object.keys(conf.policies || {}).map(pk => {
+      const p = conf.policies[pk];
+      const isCur = curPol === pk;
+      return '<div class="policy-card' + (isCur ? ' active' : '') + '" style="border-left:3px solid ' + p.color + ';padding:6px 8px;background:' + (isCur ? 'rgba(5,150,105,0.12)' : '#0b1118') + ';border-radius:3px;margin:3px 0">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<b style="color:' + p.color + ';font-size:11px">' + p.name.toUpperCase() + '</b>' +
+        '<button class="primary" data-ov="set_policy" data-policy="' + pk + '" style="padding:3px 8px;font-size:9.5px;' + (isCur ? 'background:#059669;color:#fff;' : '') + '">' + (isCur ? 'ACTIVE POLICY' : 'ENACT') + '</button>' +
+        '</div>' +
+        '<div style="font-size:9.5px;color:#94a3b8;margin-top:2px">' + p.desc + '</div>' +
+        '</div>';
+    }).join('');
+
+    const debt = (G && G.syndicateDebt) || { balance: 0, wavesLeft: 4 };
+    const debtHtml = debt.balance > 0 ?
+      '<div style="padding:8px;background:rgba(239,68,68,0.12);border:1px solid #ef4444;border-radius:4px;margin-top:8px">' +
+      '<div style="color:#ef4444;font-weight:800;font-size:11px">⚠️ SYNDICATE WAR BOND ACTIVE</div>' +
+      '<div style="font-size:10px;color:#cbd5e1;margin:2px 0">Outstanding Debt: <b style="color:#fbbf24">' + debt.balance + ' Gold</b> · Repayment Deadline: <b style="color:#f87171">' + debt.wavesLeft + ' Waves</b></div>' +
+      '<div style="font-size:9px;color:#94a3b8">25% deducted from all enemy bounties until settled. Defaulting summons Syndicate Enforcer dropships!</div>' +
+      '</div>' :
+      '<div style="padding:8px;background:rgba(15,23,42,0.8);border:1px solid #334155;border-radius:4px;margin-top:8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<div><b style="color:#fbbf24;font-size:11px">SYNDICATE WAR BOND (+600G LOAN)</b><div style="font-size:9px;color:#94a3b8">Borrow 600 Gold immediately. Repay 850G via 25% bounty deduction over 4 waves.</div></div>' +
+      '<button class="primary" data-ov="syndicate_loan" style="padding:4px 10px;font-size:10px;background:#f59e0b;color:#0f172a;font-weight:800">TAKE BOND</button>' +
+      '</div>' +
+      '</div>';
+
+    h = '<div class="ov-box" style="max-width:540px"><div class="ov-head"><h3>MUNITIONS LOGISTICS & SUPPLY LINES</h3>' +
+      '<button class="close-btn" data-ov="close" tabindex="-1">✕</button></div>' +
+      '<div style="font-size:11px;color:#cbd5e1;margin-bottom:8px">Manage ammunition stockpiles, tactical fire policies, and wartime credit bonds. When ammo depletes, weapons drop into Emergency Degraded Mode (-75% Fire Rate).</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">' +
+      '<div class="telemetry-card" style="border-color:#f59e0b50"><div class="telemetry-hdr"><span style="color:#f59e0b">SOLID KINETIC SHELLS (Gatling & Rail)</span><span>' + Math.floor(l.kinetic) + ' / ' + l.maxKinetic + ' (' + kPct + '%)</span></div>' +
+      '<div class="telemetry-bar-bg"><div class="telemetry-bar-fill" style="width:' + kPct + '%;background:#f59e0b"></div></div></div>' +
+      '<div class="telemetry-card" style="border-color:#38bdf850"><div class="telemetry-hdr"><span style="color:#38bdf8">COMPRESSED PLASMA CELLS (Plasma, Ion Uplink, Apex)</span><span>' + Math.floor(l.plasma) + ' / ' + l.maxPlasma + ' (' + pPct + '%)</span></div>' +
+      '<div class="telemetry-bar-bg"><div class="telemetry-bar-fill" style="width:' + pPct + '%;background:#38bdf8"></div></div></div>' +
+      '<div class="telemetry-card" style="border-color:#06b6d450"><div class="telemetry-hdr"><span style="color:#06b6d4">LIQUID CRYO COOLANT (Cryo & Zero-Core)</span><span>' + Math.floor(l.cryo) + ' / ' + l.maxCryo + ' (' + cPct + '%)</span></div>' +
+      '<div class="telemetry-bar-bg"><div class="telemetry-bar-fill" style="width:' + cPct + '%;background:#06b6d4"></div></div></div>' +
+      '</div>' +
+      '<div style="font-size:10px;font-weight:800;color:#f8fafc;letter-spacing:0.5px;margin-bottom:4px">TACTICAL MUNITIONS POLICY:</div>' +
+      '<div style="display:flex;flex-direction:column;gap:5px">' + polButtons + '</div>' +
+      debtHtml +
+      '<div class="ov-btns" style="margin-top:10px"><button class="ghost" data-ov="close">Return to Battle</button></div></div>';
+  } else if (kind === 'edicts') {
+    const avail = (G && G.edictModal && G.edictModal.available) || [];
+    const cards = avail.map(id => {
+      const e = typeof SOVEREIGN_EDICTS !== 'undefined' ? SOVEREIGN_EDICTS[id] : null;
+      if (!e) return '';
+      return '<div class="draft-card" data-ov="sign_edict" data-edict="' + id + '" style="border-color:' + e.color + ';cursor:pointer;padding:10px;background:#0d131c;border-radius:4px">' +
+        '<div style="font-size:9px;font-weight:800;color:' + e.color + ';letter-spacing:1px">SOVEREIGN EDICT (IRREVERSIBLE)</div>' +
+        '<div class="dh" style="color:' + e.color + ';font-size:13px;font-weight:800;margin:4px 0 6px">' + e.name + '</div>' +
+        '<div style="font-size:10px;color:#34d399;margin-bottom:3px">★ ' + e.buff + '</div>' +
+        '<div style="font-size:10px;color:#f87171;margin-bottom:6px">⚠️ ' + e.penalty + '</div>' +
+        '<div style="font-size:9px;color:#94a3b8;font-style:italic">' + e.lore + '</div>' +
+        '<button class="primary" data-ov="sign_edict" data-edict="' + id + '" style="width:100%;margin-top:8px;background:' + e.color + ';color:#0f172a;font-weight:800">RATIFY DECREE</button>' +
+        '</div>';
+    }).join('');
+
+    h = '<div class="ov-box" style="max-width:720px"><div class="ov-head"><h3>SOVEREIGN EDICTS RATIFICATION CHAMBER</h3></div>' +
+      '<div style="font-size:11px;color:#cbd5e1;margin-bottom:10px">The High Command demands a binding military doctrine. Ratifying an edict permanently modifies your defense grid for the remainder of the campaign. Choose wisely.</div>' +
+      '<div class="draft-grid">' + cards + '</div></div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
     const secLabel = sec ? ('SECTOR ' + sec.num + ': ' + sec.name) : 'BASTION';

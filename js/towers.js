@@ -58,6 +58,9 @@ function getTowerCost(type) {
   if (typeof G !== 'undefined' && G && G.wartimeMarket && G.wartimeMarket[type]) {
     mult *= G.wartimeMarket[type];
   }
+  if (type === 'cryo' && typeof hasEdict === 'function' && hasEdict('edict_steel')) {
+    mult *= 1.35;
+  }
   return Math.round(def.cost * mult);
 }
 
@@ -223,11 +226,94 @@ function addTowerHeat(t, baseHeat) {
   t.heat = Math.min(maxH, (t.heat || 0) + baseHeat * mult);
 }
 
+function getTowerAmmoType(type) {
+  if (type === 'gatling' || type === 'rail') return 'kinetic';
+  if (type === 'plasma' || type === 'ion_uplink' || type === 'fusion_hellfire' || type === 'fusion_deathray') return 'plasma';
+  if (type === 'cryo' || type === 'fusion_zero') return 'cryo';
+  return null;
+}
+
+function consumeTowerAmmo(t) {
+  if (!G || !G.logistics) return;
+  t.shotsFired = (t.shotsFired || 0) + 1;
+  const aType = getTowerAmmoType(t.type);
+  if (aType && G.logistics[aType] !== undefined) {
+    const policy = G.logistics.policy || 'standard';
+    const burn = policy === 'barrage' ? 2 : (policy === 'ration' ? 0.5 : 1);
+    G.logistics[aType] = Math.max(0, G.logistics[aType] - burn);
+  }
+  // Inrush Current & Grid Frequency Dips on heavy energy discharges
+  if (G.gridFreq !== undefined) {
+    if (t.type === 'ion_uplink') G.gridFreq = Math.max(45.0, G.gridFreq - 0.45);
+    else if (t.type === 'plasma' || t.type === 'fusion_hellfire') G.gridFreq = Math.max(45.0, G.gridFreq - 0.20);
+    else if (t.type === 'tesla' || t.type === 'fusion_deathray') G.gridFreq = Math.max(45.0, G.gridFreq - 0.15);
+  }
+}
+
+function pointInTriangle(px, py, ax, ay, bx, by, cx, cy) {
+  const v0x = cx - ax, v0y = cy - ay;
+  const v1x = bx - ax, v1y = by - ay;
+  const v2x = px - ax, v2y = py - ay;
+  const dot00 = v0x * v0x + v0y * v0y;
+  const dot01 = v0x * v1x + v0y * v1y;
+  const dot02 = v0x * v2x + v0y * v2y;
+  const dot11 = v1x * v1x + v1y * v1y;
+  const dot12 = v1x * v2x + v1y * v2y;
+  const invDenom = 1 / (dot00 * dot11 - dot01 * dot01 || 1);
+  const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+  const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+  return (u >= 0) && (v >= 0) && (u + v < 1);
+}
+
+function updateHarmonicLattices() {
+  if (!G) return;
+  G.harmonicLattices = [];
+  if (!G.towers || G.towers.length < 3) return;
+  const towers = G.towers;
+  for (let i = 0; i < towers.length - 2; i++) {
+    for (let j = i + 1; j < towers.length - 1; j++) {
+      for (let k = j + 1; k < towers.length; k++) {
+        const t1 = towers[i], t2 = towers[j], t3 = towers[k];
+        const types = [t1.type, t2.type, t3.type];
+        if (types.includes('tesla') && types.includes('cryo') && types.includes('plasma')) {
+          G.harmonicLattices.push({
+            id: 'singularity',
+            name: 'Singularity Crucible',
+            color: '#818cf8',
+            p1: { x: t1.x, y: t1.y },
+            p2: { x: t2.x, y: t2.y },
+            p3: { x: t3.x, y: t3.y }
+          });
+        }
+        if (types.includes('rail') && types.includes('gatling') && types.includes('relay')) {
+          G.harmonicLattices.push({
+            id: 'kinetic_grid',
+            name: 'Hyper-Velocity Kinetic Grid',
+            color: '#f59e0b',
+            p1: { x: t1.x, y: t1.y },
+            p2: { x: t2.x, y: t2.y },
+            p3: { x: t3.x, y: t3.y }
+          });
+        }
+      }
+    }
+  }
+}
+
 function placeTower(col, row, type) {
   const def = TD[type];
   if (col < 0 || row < 0 || col >= COLS || row >= ROWS || pathTile[row][col] || G.grid[row][col]) return false;
   if (G.fuelCells && G.fuelCells.some(fc => !fc.dead && fc.c === col && fc.row === row)) return false;
-  const cost = getTowerCost(type);
+  // 12.0 Terra-Scars Check
+  if (G.terraScars && G.terraScars[col + ',' + row] && G.terraScars[col + ',' + row].wavesLeft > 0) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    if (typeof addText === 'function') addText(col * TILE + TILE / 2, row * TILE + TILE / 2, 'TERRA-SCAR FRACTURE', '#ef4444', 12);
+    return false;
+  }
+  let cost = getTowerCost(type);
+  if (typeof hasEdict === 'function' && hasEdict('edict_steel') && type === 'cryo') {
+    cost = Math.ceil(cost * 1.35);
+  }
   if (G.gold < cost) { Sfx.play('error'); return false; }
   G.gold -= cost;
   const leyline = typeof getLeylineAt === 'function' ? getLeylineAt(col, row) : null;
@@ -274,10 +360,15 @@ function upgradeTower(t, branch) {
 }
 function sellTower(t) {
   if (!t) return;
-  const v = Math.floor(t.invested * 0.75);
+  const v = (typeof hasEdict === 'function' && hasEdict('edict_automation')) ? 0 : Math.floor(t.invested * 0.75);
   // Refund socketed modular chips back to inventory
   if (t.chips && t.chips.length > 0 && typeof addChip === 'function') {
     for (const chipId of t.chips) addChip(chipId, 1);
+  }
+  // 12.0 Terra-Scars
+  if (G && G.terraScars && ((t.shotsFired || 0) >= 8 || t.tier >= 1)) {
+    G.terraScars[t.c + ',' + t.r] = { wavesLeft: 4, type: 'scorched', c: t.c, r: t.r };
+    if (typeof addText === 'function') addText(t.x, t.y - 12, 'TERRA-SCAR (4 WAVES)', '#ef4444', 12);
   }
   G.gold += v; G.grid[t.r][t.c] = null;
   G.towers.splice(G.towers.indexOf(t), 1);
@@ -332,6 +423,33 @@ function updateTower(t, dt) {
   }
 
   let rateMult = 1, rangeMult = 1;
+
+  // 12.0 Strategic Logistics & Grid Frequency Throttles
+  if (G && G.blackoutT && G.blackoutT > 0) {
+    if (t.type !== 'gatling' && t.type !== 'rail') {
+      rateMult = 0;
+    }
+  }
+
+  const aType = getTowerAmmoType(t.type);
+  if (aType && G && G.logistics) {
+    if (G.logistics[aType] <= 0) {
+      t.isAmmoDepleted = true;
+      rateMult *= 0.25; // Degraded Emergency Mode (-75% Fire Rate)
+    } else {
+      t.isAmmoDepleted = false;
+    }
+    if (G.logistics.policy === 'barrage') rateMult *= 1.25;
+    else if (G.logistics.policy === 'ration') rateMult *= 0.85;
+  }
+
+  if (typeof hasEdict === 'function') {
+    if (hasEdict('edict_steel') && (t.type === 'gatling' || t.type === 'rail')) rateMult *= 1.15;
+  }
+
+  if (G && G.harmonicLattices && G.harmonicLattices.some(l => l.id === 'kinetic_grid' && pointInTriangle(t.x, t.y, l.p1.x, l.p1.y, l.p2.x, l.p2.y, l.p3.x, l.p3.y))) {
+    rateMult *= 1.20;
+  }
   if (t.overchargeT > 0) rateMult *= 2.0;
   // Core Overload & Meltdown Hangover (4.0)
   if (G && G.overloadT > 0) rateMult *= 3.5;
@@ -513,6 +631,7 @@ function updateTower(t, dt) {
 }
 function fireGatling(t, st, e) {
   addTowerHeat(t, 1.2);
+  consumeTowerAmmo(t);
   const mx = t.x + Math.cos(t.angle) * (28 + t.tier * 3), my = t.y + Math.sin(t.angle) * (28 + t.tier * 3);
   t.recoil = 1; t.flash = 1;
   const isFlak = t.branch === 'B';
@@ -552,6 +671,7 @@ function fireGatling(t, st, e) {
 const PLASMA_SPD = 430;
 function firePlasma(t, st, e) {
   addTowerHeat(t, 6.0);
+  consumeTowerAmmo(t);
   const mx = t.x + Math.cos(t.angle) * 30, my = t.y + Math.sin(t.angle) * 30;
   const dist = Math.hypot(e.x - mx, e.y - my), tt = dist / PLASMA_SPD;
   let tx = e.x, ty = e.y;
@@ -655,6 +775,7 @@ function explode(p) {
 }
 function cryoPulse(t, st, rangePx, effRate) {
   addTowerHeat(t, 2.5);
+  consumeTowerAmmo(t);
   // 9.0 Reactive Dynamic Soil: Frost Slick Ice Slide on tower and covered road tiles
   if (typeof addSoilTile === 'function') {
     addSoilTile(t.c, t.r, 'frost_slick', 12.0);
@@ -716,6 +837,7 @@ function cryoPulse(t, st, rangePx, effRate) {
 const BOUNCE = 1.8;
 function fireTesla(t, st, e) {
   addTowerHeat(t, 4.0);
+  consumeTowerAmmo(t);
   const hit = [e];
   // Hive Mutation: Grounding Rubber Hulls restricts chain bounce to 1
   const bonusTargets = (G && G.sector === 'abyssal') ? 2 : 0; // Sektor 07: Water conductivity (+2 targets)
@@ -777,6 +899,7 @@ function fireTesla(t, st, e) {
 }
 function fireRail(t, st, e) {
   addTowerHeat(t, 14.0);
+  consumeTowerAmmo(t);
   const a = t.angle, dx = Math.cos(a), dy = Math.sin(a);
   const len = st.range * TILE + 30, mx = t.x + dx * (34 + t.tier * 4), my = t.y + dy * (34 + t.tier * 4);
   let crit = Math.random() < (st.crit + (hasPerk('targeting_matrix') ? 0.10 : 0));
@@ -854,6 +977,7 @@ function fireRail(t, st, e) {
    ============================================================ */
 function fireHellfire(t, st, e) {
   addTowerHeat(t, 5.0);
+  consumeTowerAmmo(t);
   const a = t.angle;
   const mx1 = t.x + Math.cos(a - 0.22) * 32, my1 = t.y + Math.sin(a - 0.22) * 32;
   const mx2 = t.x + Math.cos(a + 0.22) * 32, my2 = t.y + Math.sin(a + 0.22) * 32;
@@ -873,6 +997,7 @@ function fireHellfire(t, st, e) {
 
 function fireDeathRay(t, st, e) {
   addTowerHeat(t, 10.0);
+  consumeTowerAmmo(t);
   const a = t.angle, dx = Math.cos(a), dy = Math.sin(a);
   const ex = t.x + dx * (st.range * TILE), ey = t.y + dy * (st.range * TILE);
   t.flash = 1; t.recoil = 1;
@@ -931,6 +1056,7 @@ function updateZeroCore(t, st, dt) {
 
 function fireAntimatter(t, st, e) {
   addTowerHeat(t, 8.0);
+  consumeTowerAmmo(t);
   const mx = t.x + Math.cos(t.angle) * 32, my = t.y + Math.sin(t.angle) * 32;
   t.recoil = 1; t.flash = 1;
   G.proj.push({
