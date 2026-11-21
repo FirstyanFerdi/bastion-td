@@ -2435,3 +2435,43 @@ Berdasarkan master blueprint `bastion_td_apex_ascendant_blueprint.md` yang telah
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih, 25 data-act & 37 data-ov tervalidasi)**
 - `tests/smoke.js`: **LULUS (11.947 langkah simulasi tanpa runtime error)**
 - **Seluruh 26 Unit Test Suites di repositori: 100% LULUS.**
+
+---
+
+## 36. Implementasi Bastion TD 16.0: The Adaptive Entropy Matrix (Anti-Dominant Strategy & Meta-Disruption)
+
+Berdasarkan master blueprint `bastion_td_anti_meta_entropy_blueprint.md` yang telah disetujui pengguna, telah diimplementasikan penuh arsitektur cerdas untuk mengeliminasi strategi monoton yang membosankan dan memaksa adaptasi dinamis:
+
+### 36.1 Enam Pilar Anti-Monotoni & Anti-Dominant Strategy
+1. **Pilar 1: Spatial De-Clustering & Dynamic Flank Infiltration (Anti-Killbox Camping):**
+   - Menghitung *Spatial Herfindahl-Hirschman Index (HHI)* secara kontinyu.
+   - Bila $\ge 65\%$ kekuatan tembakan bertumpuk di area 3x3 tile selama 2 gelombang:
+     - Memicu peringatan seismik 5.0 detik (*Flank Burrowing Warning*).
+     - Membuka jalur terowongan tikus alternatif (*Path Breach Bypass Lane*) selama 28.0 detik di mana 35% musuh berbelok memotong jalur utama, memaksa pemain memobilisasi Titan Mech atau deployable barricades.
+     - Menghasilkan pusaran panas mikro (*Thermal Micro-Vortex*) di atas klaster menara padat yang meningkatkan akumulasi panas menara sebesar +75%.
+2. **Pilar 2: Phenotypic Chitin Evolution & Prismatic Detonation (Anti-Tower Monoculture):**
+   - Menghitung *Shannon Diversity Index ($H'$)* dari distribusi damage elemen.
+   - Bila 1 tipe elemen mendominasi $\ge 60\%$ total damage, kawanan musuh bermutasi seketika:
+     - *Physical Monoculture:* Memunculkan *Hardened Reactive Chitin* (damage fisik di bawah 45 terpotong 80% dengan percikan peluru memantul).
+     - *Energy Monoculture:* Memunculkan *Superconductive Grounding Rods* (menyerap arus petir menjadi dorongan kecepatan musuh).
+   - **Prismatic Cross-Tech Resonance:** Menghantam musuh dengan 3 elemen berbeda dalam 2.5 detik memicu ledakan kosmik **Prismatic Super-Detonation (+200% True Damage/3.0x Multiplier)**, bonus emas berlipat, dan +1 Nanite Core.
+3. **Pilar 3: Syndicate Siphon Rig & Cartel Heist Dividend (Anti-Gold Hoarding):**
+   - Mengukur *Treasury Stagnation Index (TSI)*: Bila uang kas menganggur mencapai $\ge 70\%$ dari total kekayaan pemain tanpa ada aksi pembangunan:
+     - *Syndicate Siphon Rig* mendarat di pos luar medan pertempuran dan menembakkan laser siphoning yang menyedot 25 Gold per detik dari brankas pemain.
+     - Menyergap dan menghancurkan Siphon Rig mengembalikan 100% emas yang dicuri ditambah **+150% Cartel Heist Dividend** serta jaminan +3 Nanite Cores.
+4. **Pilar 4: Apex Mech-Stalkers & Neural Overheat (Anti-Mech Solo-Carry):**
+   - Bila Titan Mech mengeksekusi $\ge 50\%$ eliminasi musuh dalam wave, swarm mengerahkan unit pemburu khusus yang menguras energi baterai dan membatasi mobilitas.
+5. **Pilar 5: Kinetic Breakout & Thermal Shock Execution (Anti-Permastun Cheese):**
+   - Musuh yang terkena efek slow/stun berkepanjangan $\ge 4.5$ detik memicu *Kinetic Rage Breakout* (melepaskan ledakan kejut 100 AoE, membersihkan semua debuff, dan kebal CC selama 5.0 detik).
+   - **Thermal Shock Shatter:** Membekukan musuh lalu segera menghantamnya dengan tembakan berat Physical (Sniper/Railgun) atau Plasma seketika memicu retakan es termal yang mengeksekusi **40% Current HP True Damage** dan menyebarkan serpihan es tajam ke sekeliling.
+6. **Pilar 6: Tactical Versatility Meter (TVM) & High Command Directives:**
+   - Meteran gaya taktis real-time (Rank D $\rightarrow$ C $\rightarrow$ B $\rightarrow$ A $\rightarrow$ S $\rightarrow$ SS $\rightarrow$ SSS Omni-Strategist) dirender elegan di pojok kanan atas kanvas.
+   - Setiap 4 gelombang, *High Command* merilis wagers taktis dinamis berhadiah ratusan Gold dan Nanite Cores melalui tombol `DIRECTIVE` di topbar.
+
+---
+
+### 36.2 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_adaptive_entropy.js`: **100% LULUS (Semua 6 Pilar Bastion TD 16.0 Terverifikasi)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih, 25 data-act & 38 data-ov tervalidasi)**
+- `tests/smoke.js`: **LULUS (Simulasi gelombang tanpa error)**
+- **Seluruh 27 Unit Test Suites di repositori: 100% LULUS.**

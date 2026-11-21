@@ -1064,6 +1064,10 @@ function refreshUI() {
   if ($('vEngramsBadge') && G) {
     $('vEngramsBadge').textContent = String((G.cyberEngramsInventory || []).length);
   }
+  if ($('vDirectiveBadge') && G && G.entropy) {
+    const d = G.entropy.directive;
+    $('vDirectiveBadge').textContent = d ? (d.progress + '/' + d.targetCount) : 'RDY';
+  }
   const curSecId = (G && G.sector) || (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
   const curSecObj = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : null;
   if ($('vSector') && curSecObj) {
@@ -1927,6 +1931,29 @@ function showOverlay(kind) {
       '<div style="font-size:10.5px;color:#cbd5e1;margin-bottom:8px">Mythic cybernetic matrices forged from conquered Bosses. Socket these dual-affix engrams into defenses for apocalyptic power amplification.</div>' +
       cardsHtml +
       '<div class="ov-btns" style="margin-top:10px"><button class="ghost" data-ov="close">Return to Battle</button></div></div>';
+  } else if (kind === 'directive') {
+    const dir = (G && G.entropy && G.entropy.directive) || null;
+    let contentHtml = '';
+    if (!dir) {
+      contentHtml = '<div style="color:#94a3b8;font-size:12px;padding:20px;text-align:center">No active High Command Directive at this time.<br><span style="font-size:10px;color:#64748b">New directives are issued every 4 waves based on your tactical playstyle.</span></div>';
+    } else {
+      contentHtml = '<div style="background:rgba(15,23,42,0.85);border:1px solid #38bdf8;border-radius:6px;padding:12px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+          '<b style="color:#38bdf8;font-size:13px">' + dir.title + '</b>' +
+          '<span style="font-size:10px;color:#fbbf24;font-weight:800;border:1px solid #fbbf24;padding:2px 6px;border-radius:3px">PROGRESS: ' + (dir.progress || 0) + ' / ' + dir.targetCount + '</span>' +
+        '</div>' +
+        '<div style="font-size:11px;color:#e2e8f0;margin-top:8px;line-height:1.4">' + dir.desc + '</div>' +
+        '<div style="margin-top:12px;padding:8px;background:rgba(56,189,248,0.1);border-radius:4px;display:flex;justify-content:space-between;align-items:center">' +
+          '<div style="font-size:10px;color:#38bdf8;font-weight:700">COMPLETION BOUNTY:</div>' +
+          '<div style="font-size:11px;font-weight:800;color:#fbbf24">+' + dir.rewardGold + 'G · +' + dir.rewardCores + ' NANITE CORES</div>' +
+        '</div>' +
+      '</div>';
+    }
+    h = '<div class="ov-box" style="max-width:620px;border-top-color:#38bdf8">' +
+      '<div class="ov-head"><h3 style="color:#38bdf8">HIGH COMMAND TACTICAL DIRECTIVE</h3></div>' +
+      '<div style="font-size:10.5px;color:#cbd5e1;margin-bottom:10px">Adaptive battlefield wagers dispatched to disrupt repetitive combat routines and reward versatile tactical mastery.</div>' +
+      contentHtml +
+      '<div class="ov-btns" style="margin-top:12px"><button class="ghost" data-ov="close">Return to Battle</button></div></div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
     const secLabel = sec ? ('SECTOR ' + sec.num + ': ' + sec.name) : 'BASTION';

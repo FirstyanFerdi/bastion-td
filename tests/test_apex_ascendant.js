@@ -287,6 +287,8 @@ assert.strictEqual(G.finisherPrompt, null, 'Finisher prompt cleared after execut
 
 // Adrenaline Heat Streak Scaling
 G.adrenalineHeat = 5;
+G.killStreak = 0;
+G.killStreakTimer = 0;
 const fodder = {
   id: 9977,
   type: 'scout',

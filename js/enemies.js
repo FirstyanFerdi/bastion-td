@@ -16,7 +16,10 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
   const isChamp = !!(affix && CHAMPION_AFFIXES[affix]);
   const finalHp = isChamp ? Math.round(hp * 1.4) : hp;
   const finalReward = isChamp ? Math.round(d.reward * 1.4 * (1 + 0.03 * (n - 1))) : Math.max(1, Math.round(d.reward * (1 + 0.03 * (n - 1))));
-  const pId = pathId || 0;
+  let pId = pathId || 0;
+  if (!pathId && G && G.entropy && G.entropy.flankBreachActiveT > 0 && Math.random() < 0.35 && typeof PATH_BREACH !== 'undefined' && PATH_BREACH.length > 0) {
+    pId = 1;
+  }
   const startPt = (pId === 1 && PATH_BREACH.length > 0) ? PATH_BREACH[0] : PATH[0];
   const e = {
     type, id: ++eid, hp: finalHp, maxHp: finalHp, dispHp: finalHp, shield: 0, maxShield: 0, speed: spd, curSpeed: spd, r: isChamp ? Math.round(d.r * 1.15) : d.r,
@@ -688,6 +691,24 @@ function updateEnemy(e, dt) {
   // 9.0 Symbiotic Parasite absorbs slow & stun for host
   if (e.hasParasite) {
     e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
+  }
+
+  // 16.0 Continuous CC Lockout Tracking (Anti-Permastun)
+  if (e.rageImmune > 0) {
+    e.rageImmune -= dt;
+    e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
+  } else if (e.slowT > 0 || e.stunT > 0) {
+    e.continuousCcT = (e.continuousCcT || 0) + dt;
+    if (e.continuousCcT >= 4.5 && typeof triggerKineticBreakout === 'function') {
+      triggerKineticBreakout(e);
+    }
+  } else {
+    e.continuousCcT = Math.max(0, (e.continuousCcT || 0) - dt * 2.0);
+  }
+
+  // 16.0 Syndicate Siphon Rig: Stationary Outpost
+  if (e.type === 'siphon_rig') {
+    sp = 0;
   }
 
   if (e.stunT > 0) sp = 0; else if (e.slowT > 0) sp *= 1 - e.slowAmt;

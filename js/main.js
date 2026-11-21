@@ -401,6 +401,12 @@ function init() {
       if (typeof dropChronoAnchor === 'function') dropChronoAnchor();
     });
   }
+  if ($('btnDirective')) {
+    $('btnDirective').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('directive');
+    });
+  }
   if ($('btnExosuit')) {
     $('btnExosuit').addEventListener('click', () => {
       Sfx.init(); Sfx.resume(); Sfx.play('click');
@@ -621,5 +627,8 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   // 15.0 Apex Ascendant Exports
   CHRONO_NEXUS_CONFIG, DNTM_CONFIG, GEOMORPHIC_CONFIG, CYBER_ENGRAMS_DATABASE, ADRENALINE_GAMBLE_CONFIG,
   dropChronoAnchor, triggerChronoReverberation, recordChronoEvent, createGeomorphicFissure, deployZeroGravityField, socketCyberEngram, triggerTitanFinisher, updateDNTMProfiler, updateApexAscendantSystems,
+  // 16.0 Adaptive Entropy Matrix Exports
+  ENTROPY_CONFIG, PHENOTYPIC_MUTATIONS, TACTICAL_DIRECTIVES,
+  triggerPrismaticDetonation, triggerThermalShockShatter, triggerKineticBreakout, triggerFlankBreach, spawnSyndicateHeistRig, resolveSyndicateHeistBounty, generateHighCommandDirective, resolveDirectiveReward, updateEntropyProfiler, updateAdaptiveEntropySystems,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
 };

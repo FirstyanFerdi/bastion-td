@@ -384,6 +384,10 @@ button {
 .cbtn-engrams:hover:not(:disabled) { border-color: #e879f9; box-shadow: 0 0 10px rgba(232, 121, 249, 0.35); }
 .cbtn-engrams .cbtn-badge { background: #86198f; color: #fae8ff; }
 
+.cbtn-directive { color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
+.cbtn-directive:hover:not(:disabled) { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.35); }
+.cbtn-directive .cbtn-badge { background: #0369a1; color: #e0f2fe; }
+
 .cbtn-exosuit { color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
 .cbtn-exosuit:hover:not(:disabled) { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.35); }
 

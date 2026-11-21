@@ -251,7 +251,28 @@ function newGame(keepSpeed) {
     zeroGravityFields: [],
     cyberEngramsInventory: [],
     adrenalineHeat: 1,
-    finisherPrompt: null
+    finisherPrompt: null,
+    // 16.0 The Adaptive Entropy Matrix Systems
+    entropy: {
+      timer: 0,
+      hhi: 0,
+      shannonH: 1.0,
+      tsi: 0,
+      mechKillPct: 0,
+      waveKillsTotal: 0,
+      waveMechKills: 0,
+      tvmScore: 65,
+      tvmRank: 'B',
+      flankBreachWarningT: 0,
+      flankBreachActiveT: 0,
+      siphonRig: null,
+      directive: null,
+      directivesCompleted: 0,
+      clusterOverheated: false,
+      activeMutations: [],
+      killboxConsecutiveWaves: 0
+    },
+    elementHitsThisInterval: { phys: 0, energy: 0, plasma: 0, cryo: 0 }
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -1522,6 +1543,41 @@ function dealDamage(e, amount, type, src, opts) {
     }
   }
 
+  // 16.0 Adaptive Entropy: Phenotypic Armor Reductions
+  if (G && G.entropy && G.entropy.activeMutations) {
+    if (G.entropy.activeMutations.includes('phys') && (type === 'phys' || type === 'kinetic') && a < 45) {
+      a *= 0.20;
+      if (Math.random() < 0.3) burst(e.x, e.y, 4, '#94a3b8', 50, 0.2, 1.5, true);
+    } else if (G.entropy.activeMutations.includes('energy') && (type === 'energy' || type === 'tesla')) {
+      e.speedBoostT = 2.0;
+      a *= 0.60;
+    }
+  }
+
+  // 16.0 Prismatic Cross-Tech 3-Element Detonation
+  if (G && G.time !== undefined) {
+    e.recentElements = e.recentElements || {};
+    const baseType = (type === 'phys' || type === 'kinetic') ? 'phys' : (type === 'laser' || type === 'tesla') ? 'energy' : type;
+    e.recentElements[baseType] = G.time;
+    let distinctCount = 0;
+    for (const elemKey in e.recentElements) {
+      if (G.time - e.recentElements[elemKey] <= 2.5) distinctCount++;
+    }
+    if (distinctCount >= 3 && (!e.prismaticCd || G.time - e.prismaticCd > 1.5)) {
+      e.prismaticCd = G.time;
+      if (typeof triggerPrismaticDetonation === 'function') {
+        a = triggerPrismaticDetonation(e, a);
+      }
+    }
+  }
+
+  // 16.0 Thermal Shock Shatter (Cryo + heavy Phys kinetic strike)
+  if (e.slowT > 0 && (type === 'phys' || type === 'kinetic') && a >= 50 && (!e.thermalShockCd || e.thermalShockCd <= 0)) {
+    if (typeof triggerThermalShockShatter === 'function') {
+      a = triggerThermalShockShatter(e, a, type);
+    }
+  }
+
   // 12.0 Harmonic Lattice Singularity Stasis
   if (G && G.harmonicLattices && G.harmonicLattices.length > 0 && typeof pointInTriangle === 'function') {
     for (const lat of G.harmonicLattices) {
@@ -1913,6 +1969,12 @@ function dealDamage(e, amount, type, src, opts) {
           dealDamage(o, a * 0.4, 'plasma', src, { isReaction: true, noReaction: true });
         }
       }
+      if (G && G.entropy && G.entropy.directive && G.entropy.directive.id === 'directive_thermal_shock') {
+        G.entropy.directive.progress = (G.entropy.directive.progress || 0) + 1;
+        if (G.entropy.directive.progress >= G.entropy.directive.targetCount) {
+          resolveDirectiveReward();
+        }
+      }
     }
 
     // 2. Electrolytic Detonation (Acid + Tesla)
@@ -2149,6 +2211,25 @@ function killEnemy(e, src) {
   }
   G.score += finalScore; G.kills++;
   if (src) src.kills++;
+
+  // 16.0 The Adaptive Entropy Matrix: Tracking & Heist Resolution
+  if (G && G.entropy) {
+    G.entropy.waveKillsTotal = (G.entropy.waveKillsTotal || 0) + 1;
+    if (src === 'mech' || (src && src.isMech)) {
+      G.entropy.waveMechKills = (G.entropy.waveMechKills || 0) + 1;
+    }
+    if (e.wasPrismatic) {
+      G.gold += 35;
+      if (typeof addCores === 'function') addCores(1);
+      addText(e.x, e.y - 45, '+1 CORE (PRISMATIC)', '#38bdf8', 13);
+    }
+    if (e.type === 'siphon_rig') {
+      if (typeof resolveSyndicateHeistBounty === 'function') {
+        resolveSyndicateHeistBounty(e);
+      }
+    }
+    G.entropy.tvmScore = Math.min(100, (G.entropy.tvmScore || 50) + 0.6);
+  }
 
   // 15.0 Ancient Cyber-Engram On-Kill Affixes
   if (src && src.engramSuffix === 'supernova') {
@@ -4871,4 +4952,352 @@ function updateApexAscendantSystems(dt) {
 
   // 6. DNTM Tactical Profiler Update
   updateDNTMProfiler(dt);
+
+  // 7. 16.0 Adaptive Entropy Matrix Systems Update
+  updateAdaptiveEntropySystems(dt);
+}
+
+/* ============================================================
+   BASTION TD 16.0: ADAPTIVE ENTROPY MATRIX STATE ENGINE
+   ============================================================ */
+
+function triggerPrismaticDetonation(e, baseDmg) {
+  if (!e || e.dead) return baseDmg;
+  e.wasPrismatic = true;
+  const cfg = typeof ENTROPY_CONFIG !== 'undefined' ? ENTROPY_CONFIG : { prismaticDamageMult: 3.0 };
+  const mult = cfg.prismaticDamageMult || 3.0;
+  const finalDmg = Math.round(baseDmg * mult);
+
+  if (typeof shake === 'function') shake(10.0);
+  if (typeof addRing === 'function') {
+    addRing(e.x, e.y, 15, 120, 0.6, '#ec4899', 5);
+    addRing(e.x, e.y, 10, 80, 0.5, '#38bdf8', 4);
+    addRing(e.x, e.y, 5, 50, 0.4, '#fbbf24', 3);
+  }
+  if (typeof burst === 'function') {
+    burst(e.x, e.y, 30, '#ec4899', 180, 0.6, 4, true);
+    burst(e.x, e.y, 20, '#38bdf8', 140, 0.5, 3, true);
+  }
+  if (typeof addText === 'function') {
+    addText(e.x, e.y - 30, '★ PRISMATIC DETONATION! (3.0x TRUE DMG) ★', '#ec4899', 17);
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('reaction');
+
+  if (G && G.entropy && G.entropy.directive && G.entropy.directive.id === 'directive_prismatic') {
+    G.entropy.directive.progress = (G.entropy.directive.progress || 0) + 1;
+    if (G.entropy.directive.progress >= G.entropy.directive.targetCount) {
+      resolveDirectiveReward();
+    }
+  }
+  return finalDmg;
+}
+
+function triggerThermalShockShatter(e, baseDmg, type) {
+  if (!e || e.dead) return baseDmg;
+  e.thermalShockCd = 2.0;
+  e.slowT = 0; e.slowAmt = 0;
+
+  const cfg = typeof ENTROPY_CONFIG !== 'undefined' ? ENTROPY_CONFIG : { thermalShockPct: 0.40 };
+  const shatterBonus = Math.round(e.maxHp * (cfg.thermalShockPct || 0.40));
+  const finalDmg = baseDmg + shatterBonus;
+
+  if (typeof shake === 'function') shake(8.0);
+  if (typeof burst === 'function') {
+    burst(e.x, e.y, 25, '#38bdf8', 160, 0.5, 4, true);
+    burst(e.x, e.y, 15, '#fff', 120, 0.4, 2.5, false);
+  }
+  if (typeof addRing === 'function') addRing(e.x, e.y, 10, 90, 0.5, '#38bdf8', 4);
+  if (typeof addText === 'function') {
+    addText(e.x, e.y - 32, '❄️💥 THERMAL SHOCK SHATTER (+' + shatterBonus + ')!', '#38bdf8', 16);
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shatter');
+
+  for (const other of (G.enemies || [])) {
+    if (other !== e && !other.dead && Math.hypot(other.x - e.x, other.y - e.y) <= 85) {
+      dealDamage(other, Math.round(shatterBonus * 0.35), 'phys', null, { noReaction: true });
+    }
+  }
+
+  if (G && G.entropy && G.entropy.directive && G.entropy.directive.id === 'directive_thermal_shock') {
+    G.entropy.directive.progress = (G.entropy.directive.progress || 0) + 1;
+    if (G.entropy.directive.progress >= G.entropy.directive.targetCount) {
+      resolveDirectiveReward();
+    }
+  }
+  return finalDmg;
+}
+
+function triggerKineticBreakout(e) {
+  if (!e || e.dead) return;
+  e.continuousCcT = 0;
+  e.slowT = 0; e.slowAmt = 0; e.stunT = 0;
+  e.rageImmune = 5.0;
+  e.speedBoostT = 5.0;
+
+  if (typeof shake === 'function') shake(10.0);
+  if (typeof burst === 'function') burst(e.x, e.y, 25, '#f43f5e', 150, 0.6, 4, true);
+  if (typeof addRing === 'function') addRing(e.x, e.y, 15, 110, 0.5, '#f43f5e', 4);
+  if (typeof addText === 'function') {
+    addText(e.x, e.y - 25, '⚡ KINETIC RAGE BREAKOUT (IMMUNE)!', '#f43f5e', 15);
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('alpha_roar');
+
+  if (G && G.mech && G.mech.active) {
+    const dm = Math.hypot(G.mech.x - e.x, G.mech.y - e.y);
+    if (dm <= 100) {
+      const ang = Math.atan2(G.mech.y - e.y, G.mech.x - e.x);
+      G.mech.x += Math.cos(ang) * 45;
+      G.mech.y += Math.sin(ang) * 45;
+    }
+  }
+}
+
+function triggerFlankBreach() {
+  if (!G || !G.entropy) return false;
+  if (G.entropy.flankBreachActiveT > 0 || G.entropy.flankBreachWarningT > 0) return false;
+  G.entropy.flankBreachWarningT = 5.0;
+  if (typeof shake === 'function') shake(12.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('dreadnought_horn');
+  G.banner = {
+    text: '⚠️ SEISMIC ANOMALY: TECTONIC BURROWERS INBOUND! ⚠️',
+    color: '#f97316',
+    sub: 'Choke point bypassed in 5 seconds! Reposition Mech or deploy Barricades!',
+    t: 4.0
+  };
+  G.uiDirty = true;
+  return true;
+}
+
+function spawnSyndicateHeistRig() {
+  if (!G || !G.entropy) return false;
+  if (G.entropy.siphonRig) return false;
+
+  const rig = {
+    id: ++eid,
+    type: 'siphon_rig',
+    name: 'Syndicate Siphon Rig',
+    x: W - 140,
+    y: 90,
+    r: 28,
+    hp: 1200,
+    maxHp: 1200,
+    armor: 0.35,
+    dead: false,
+    siphonedGold: 0,
+    color: '#c084fc'
+  };
+  G.entropy.siphonRig = rig;
+  if (!G.enemies) G.enemies = [];
+  G.enemies.push(rig);
+
+  if (typeof shake === 'function') shake(14.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('vault_open');
+  G.banner = {
+    text: '🚨 SYNDICATE HEIST EXTRACTION DETECTED! 🚨',
+    color: '#c084fc',
+    sub: 'Siphon Rig deployed at outpost! Draining 25G/sec. Intercept for +150% Heist Bounty!',
+    t: 4.5
+  };
+  G.uiDirty = true;
+  return true;
+}
+
+function resolveSyndicateHeistBounty(rig) {
+  if (!G || !rig) return false;
+  const stolen = rig.siphonedGold || 0;
+  const cfg = typeof ENTROPY_CONFIG !== 'undefined' ? ENTROPY_CONFIG : { heistBountyMult: 1.50 };
+  const bonus = Math.round(stolen * (cfg.heistBountyMult || 1.50)) + 300;
+  const totalPayout = stolen + bonus;
+
+  G.gold = (G.gold || 0) + totalPayout;
+  if (typeof addCores === 'function') addCores(3);
+
+  if (typeof shake === 'function') shake(18.0);
+  if (typeof burst === 'function') {
+    burst(rig.x, rig.y, 40, '#fbbf24', 220, 0.7, 5, true);
+    burst(rig.x, rig.y, 30, '#c084fc', 180, 0.6, 4, true);
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('victory');
+
+  G.banner = {
+    text: '💰 CARTEL HEIST INTERCEPTED! (+' + totalPayout + 'G) 💰',
+    color: '#fbbf24',
+    sub: 'Recovered 100% stolen funds + 150% Heist Dividend & +3 Nanite Cores awarded!',
+    t: 4.0
+  };
+  if (G.entropy) G.entropy.siphonRig = null;
+  G.uiDirty = true;
+  return true;
+}
+
+function generateHighCommandDirective() {
+  if (!G || !G.entropy || typeof TACTICAL_DIRECTIVES === 'undefined') return;
+  const list = TACTICAL_DIRECTIVES;
+  const item = list[Math.floor(Math.random() * list.length)];
+  G.entropy.directive = {
+    id: item.id,
+    title: item.title,
+    desc: item.desc,
+    targetCount: item.targetCount,
+    progress: 0,
+    rewardGold: item.rewardGold,
+    rewardCores: item.rewardCores,
+    active: true
+  };
+  G.banner = {
+    text: '🎖️ HIGH COMMAND DIRECTIVE ISSUED 🎖️',
+    color: '#38bdf8',
+    sub: item.title + ': ' + item.desc + ' (+' + item.rewardGold + 'G, +' + item.rewardCores + ' Cores)',
+    t: 4.5
+  };
+  G.uiDirty = true;
+}
+
+function resolveDirectiveReward() {
+  if (!G || !G.entropy || !G.entropy.directive) return;
+  const d = G.entropy.directive;
+  G.gold = (G.gold || 0) + (d.rewardGold || 500);
+  if (typeof addCores === 'function') addCores(d.rewardCores || 3);
+  G.entropy.directivesCompleted = (G.entropy.directivesCompleted || 0) + 1;
+
+  if (typeof shake === 'function') shake(12.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('levelup');
+  G.banner = {
+    text: '★ DIRECTIVE COMPLETED: ' + d.title + ' ★',
+    color: '#4ade80',
+    sub: 'Mission accomplished! +' + d.rewardGold + ' Gold & +' + d.rewardCores + ' Nanite Cores claimed!',
+    t: 4.0
+  };
+  G.entropy.directive = null;
+  G.uiDirty = true;
+}
+
+function updateEntropyProfiler(dt) {
+  if (!G || G.state !== 'active') return;
+  if (!G.entropy) {
+    G.entropy = { timer: 0, hhi: 0, shannonH: 1.0, tsi: 0, mechKillPct: 0, tvmScore: 65, tvmRank: 'B', activeMutations: [] };
+  }
+
+  G.entropy.timer = (G.entropy.timer || 0) + dt;
+  if (G.entropy.timer >= 3.5) {
+    G.entropy.timer = 0;
+
+    // 1. Compute Spatial HHI (Clustering)
+    const towers = G.towers || [];
+    let maxCluster = 0;
+    if (towers.length > 0) {
+      for (const t1 of towers) {
+        let cluster = 0;
+        for (const t2 of towers) {
+          if (Math.hypot(t1.x - t2.x, t1.y - t2.y) <= 3.2 * TILE) cluster++;
+        }
+        if (cluster > maxCluster) maxCluster = cluster;
+      }
+      G.entropy.hhi = maxCluster / towers.length;
+      G.entropy.clusterOverheated = maxCluster >= 6;
+      if (G.entropy.hhi >= 0.65 && towers.length >= 6) {
+        G.entropy.killboxConsecutiveWaves = (G.entropy.killboxConsecutiveWaves || 0) + 1;
+        if (G.entropy.killboxConsecutiveWaves >= 1 && G.entropy.flankBreachActiveT <= 0 && G.entropy.flankBreachWarningT <= 0) {
+          triggerFlankBreach();
+        }
+      } else {
+        G.entropy.killboxConsecutiveWaves = 0;
+      }
+    }
+
+    // 2. Compute Shannon Diversity Index (H')
+    const eb = (G.dntm && G.dntm.elementBias) || { phys: 100, plasma: 100, cryo: 100, energy: 100 };
+    const totalElemDmg = Math.max(1, eb.phys + eb.plasma + eb.cryo + eb.energy);
+    let shannon = 0;
+    let dominantElem = 'phys', maxElemVal = 0;
+    for (const k in eb) {
+      const p = Math.max(0.01, eb[k] / totalElemDmg);
+      shannon -= p * Math.log(p);
+      if (eb[k] > maxElemVal) { maxElemVal = eb[k]; dominantElem = k; }
+    }
+    G.entropy.shannonH = shannon;
+    if (maxElemVal / totalElemDmg >= 0.60 && totalElemDmg > 600) {
+      if (!G.entropy.activeMutations.includes(dominantElem)) {
+        G.entropy.activeMutations = [dominantElem];
+        const mut = (typeof PHENOTYPIC_MUTATIONS !== 'undefined' && PHENOTYPIC_MUTATIONS[dominantElem]) || null;
+        if (mut && typeof addText === 'function') {
+          addText(W / 2, 80, '⚠️ SWARM MUTATION: ' + mut.name.toUpperCase(), mut.color, 15);
+        }
+      }
+    } else {
+      G.entropy.activeMutations = [];
+    }
+
+    // 3. Compute Treasury Stagnation Index (TSI)
+    let investedInTowers = 0;
+    for (const t of towers) investedInTowers += (t.invested || 100);
+    const netWorth = Math.max(1, G.gold + investedInTowers);
+    G.entropy.tsi = G.gold / netWorth;
+    if (G.entropy.tsi >= 0.70 && G.gold >= 2000 && !G.entropy.siphonRig && G.wave >= 4) {
+      spawnSyndicateHeistRig();
+    }
+
+    // 4. Compute Mech Kill Ratio
+    const waveTotal = G.entropy.waveKillsTotal || 0;
+    const mechKills = G.entropy.waveMechKills || 0;
+    G.entropy.mechKillPct = waveTotal > 0 ? (mechKills / waveTotal) : 0;
+
+    // 5. Compute TVM Score & Rank
+    let tvmRaw = (shannon / 1.38) * 50 + (1 - Math.min(1, G.entropy.hhi)) * 30 + ((G.killStreak || 0) > 3 ? 20 : 10);
+    tvmRaw = clamp(Math.round(tvmRaw), 20, 100);
+    G.entropy.tvmScore = Math.round((G.entropy.tvmScore * 0.7) + (tvmRaw * 0.3));
+
+    const score = G.entropy.tvmScore;
+    let rank = 'D';
+    if (score >= 97) rank = 'SSS';
+    else if (score >= 92) rank = 'SS';
+    else if (score >= 85) rank = 'S';
+    else if (score >= 75) rank = 'A';
+    else if (score >= 60) rank = 'B';
+    else if (score >= 40) rank = 'C';
+    G.entropy.tvmRank = rank;
+  }
+}
+
+function updateAdaptiveEntropySystems(dt) {
+  if (!G || !G.entropy) return;
+
+  // 1. Flank Breach Timers
+  if (G.entropy.flankBreachWarningT > 0) {
+    G.entropy.flankBreachWarningT -= dt;
+    if (G.entropy.flankBreachWarningT <= 0) {
+      G.entropy.flankBreachActiveT = (typeof ENTROPY_CONFIG !== 'undefined' ? ENTROPY_CONFIG.flankDuration : 28.0);
+      G.banner = {
+        text: '🚨 FLANK PERIMETER BREACHED! 🚨',
+        color: '#f43f5e',
+        sub: 'Burrower tunnel active for 28 seconds! Swarm bypassing main choke point!',
+        t: 3.5
+      };
+      if (typeof shake === 'function') shake(16.0);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+    }
+  }
+  if (G.entropy.flankBreachActiveT > 0) {
+    G.entropy.flankBreachActiveT -= dt;
+  }
+
+  // 2. Syndicate Siphon Rig Drain
+  if (G.entropy.siphonRig && !G.entropy.siphonRig.dead) {
+    const rig = G.entropy.siphonRig;
+    const drain = (typeof ENTROPY_CONFIG !== 'undefined' ? ENTROPY_CONFIG.siphonRate : 25) * dt;
+    if (G.gold > 0) {
+      const actualDrain = Math.min(G.gold, drain);
+      G.gold -= actualDrain;
+      rig.siphonedGold = (rig.siphonedGold || 0) + actualDrain;
+    }
+  }
+
+  // 3. High Command Directives: Periodic Wave Trigger
+  if (G.wave > 0 && G.wave % 4 === 0 && !G.entropy.directive && (!G.entropy.lastDirectiveWave || G.entropy.lastDirectiveWave !== G.wave)) {
+    G.entropy.lastDirectiveWave = G.wave;
+    generateHighCommandDirective();
+  }
+
+  // 4. Entropy Profiler Evaluation
+  updateEntropyProfiler(dt);
 }

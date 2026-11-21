@@ -2736,5 +2736,115 @@ const ADRENALINE_GAMBLE_CONFIG = {
   hostileSpeedBuffs: [0, 0.12, 0.25, 0.40, 0.60]
 };
 
+/* ============================================================
+   BASTION TD 16.0: ADAPTIVE ENTROPY MATRIX CONFIGURATIONS
+   ============================================================ */
+
+const ENTROPY_CONFIG = {
+  // Spatial Clumping (Anti-Killbox)
+  hhiThreshold: 0.65,
+  flankWarningDuration: 5.0,
+  flankDuration: 28.0,
+  clusterOverheatThreshold: 6,
+
+  // Shannon Diversity (Anti-Monoculture)
+  shannonMonoThreshold: 0.65,
+  prismaticWindow: 2.5,
+  prismaticDamageMult: 3.0,
+  supplyStrainThreshold: 6,
+
+  // Treasury Stagnation (Anti-Gold Hoarding)
+  tsiThreshold: 0.70,
+  siphonRate: 25,
+  heistBountyMult: 1.50,
+
+  // Mech Over-Reliance
+  mechKillRatioThreshold: 0.50,
+  stalkerSpawnRate: 15.0,
+
+  // CC Lockout (Anti-Permastun)
+  ccLockoutThreshold: 4.5,
+  frenzyDuration: 5.0,
+  thermalShockPct: 0.40,
+
+  // Tactical Versatility Ledger (TVM)
+  ranks: {
+    D: { minScore: 0, mult: 0.8, color: '#94a3b8', name: 'Stale' },
+    C: { minScore: 40, mult: 1.0, color: '#38bdf8', name: 'Adequate' },
+    B: { minScore: 60, mult: 1.25, color: '#4ade80', name: 'Tactician' },
+    A: { minScore: 75, mult: 1.50, color: '#fbbf24', name: 'Strategist' },
+    S: { minScore: 85, mult: 1.80, color: '#f97316', name: 'Mastermind' },
+    SS: { minScore: 92, mult: 2.10, color: '#c084fc', name: 'Ascendant' },
+    SSS: { minScore: 97, mult: 2.50, color: '#f43f5e', name: 'Omni-Strategist' }
+  }
+};
+
+const PHENOTYPIC_MUTATIONS = {
+  phys: {
+    id: 'phenotypic_chitin',
+    name: 'Hardened Reactive Chitin',
+    color: '#94a3b8',
+    desc: 'Bullet damage under 45 is reduced by 80% with sparks ricochet.',
+    flatDamageCap: 45,
+    reductionRatio: 0.80
+  },
+  energy: {
+    id: 'phenotypic_grounding',
+    name: 'Superconductive Grounding Rods',
+    color: '#38bdf8',
+    desc: 'Absorbs electric arcs, turning energy into +35% speed surge.',
+    speedBuff: 0.35
+  },
+  plasma: {
+    id: 'phenotypic_dispersal',
+    name: 'Ablative Thermal Dispersers',
+    color: '#f97316',
+    desc: 'AoE splash blast radius halved with thermal reflection.',
+    splashRadiusMult: 0.50
+  },
+  cryo: {
+    id: 'phenotypic_adrenaline',
+    name: 'Cryo-Adrenaline Endocrine',
+    color: '#06b6d4',
+    desc: 'Chilling hostiles grants immune rage and +50% movement haste.',
+    speedBuff: 0.50
+  }
+};
+
+const TACTICAL_DIRECTIVES = [
+  {
+    id: 'directive_prismatic',
+    title: 'Directive #301: Prismatic Resonance',
+    desc: 'Trigger at least 3 Prismatic Super-Detonations using 3-element combinations.',
+    targetCount: 3,
+    rewardGold: 450,
+    rewardCores: 3
+  },
+  {
+    id: 'directive_diversify',
+    title: 'Directive #402: Technical Diversification',
+    desc: 'Field at least 4 distinct tower families on the grid simultaneously.',
+    targetCount: 4,
+    rewardGold: 500,
+    rewardCores: 4
+  },
+  {
+    id: 'directive_thermal_shock',
+    title: 'Directive #503: Thermal Shock Shatter',
+    desc: 'Execute 4 chilled or frozen hostiles using heavy kinetic or plasma strikes.',
+    targetCount: 4,
+    rewardGold: 550,
+    rewardCores: 4
+  },
+  {
+    id: 'directive_heist_intercept',
+    title: 'Directive #604: Cartel Heist Intercept',
+    desc: 'Intercept and destroy a Syndicate Siphon Rig before it siphons 300 Gold.',
+    targetCount: 1,
+    rewardGold: 600,
+    rewardCores: 5
+  }
+];
+
 
 

@@ -510,6 +510,10 @@ function render() {
   drawChronoEchoes(c, time);
   drawGeomorphicFissures(c, time);
   drawZeroGravityFields(c, time);
+  // 16.0 Adaptive Entropy Ground & Infiltration Systems
+  drawFlankBreachIndicator(c, time);
+  drawSyndicateSiphonRig(c, time);
+  drawThermalMicroVortex(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -687,6 +691,8 @@ function render() {
   drawKillStreakHUD(c, time);
   // 15.0 Apex Adrenaline Overdrive HUD
   drawAdrenalineHeatBorder(c, time);
+  // 16.0 Tactical Versatility Meter (TVM) HUD
+  drawTacticalVersatilityMeter(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -3086,5 +3092,138 @@ function drawAdrenalineHeatBorder(c, time) {
   c.fillStyle = '#f43f5e';
   c.textAlign = 'center';
   c.fillText('🔥 HEAT STREAK ' + heat + 'x (' + ((heat - 1) * 100) + '% BOUNTY) 🔥', W / 2, 19);
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 16.0: ADAPTIVE ENTROPY RENDERING ROUTINES
+   ============================================================ */
+
+function drawTacticalVersatilityMeter(c, time) {
+  if (!G || !G.entropy) return;
+  const rank = G.entropy.tvmRank || 'B';
+  const cfg = (typeof ENTROPY_CONFIG !== 'undefined' && ENTROPY_CONFIG.ranks && ENTROPY_CONFIG.ranks[rank]) ? ENTROPY_CONFIG.ranks[rank] : { color: '#fbbf24', mult: 1.25, name: 'Tactician' };
+  
+  c.save();
+  const bx = W - 230, by = 10, bw = 215, bh = 22;
+  c.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = cfg.color;
+  c.lineWidth = 1.5;
+  c.strokeRect(bx, by, bw, bh);
+
+  c.fillStyle = cfg.color;
+  c.fillRect(bx, by, 32, bh);
+  c.font = '900 12px ' + FONT;
+  c.fillStyle = '#0f172a';
+  c.textAlign = 'center';
+  c.fillText(rank, bx + 16, by + 16);
+
+  c.font = '800 10px ' + FONT;
+  c.fillStyle = cfg.color;
+  c.textAlign = 'left';
+  c.fillText('STYLE: ' + cfg.name.toUpperCase(), bx + 38, by + 15);
+
+  c.font = '700 9.5px ' + FONT;
+  c.fillStyle = '#cbd5e1';
+  c.textAlign = 'right';
+  c.fillText(cfg.mult + 'x SCORE', bx + bw - 6, by + 15);
+  c.restore();
+}
+
+function drawFlankBreachIndicator(c, time) {
+  if (!G || !G.entropy) return;
+  if (G.entropy.flankBreachWarningT > 0) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 12);
+    c.save();
+    c.fillStyle = 'rgba(249, 115, 22, ' + (0.2 + 0.25 * pulse) + ')';
+    const startPt = (typeof PATH_BREACH !== 'undefined' && PATH_BREACH.length > 0) ? PATH_BREACH[0] : { x: 100, y: 100 };
+    c.beginPath();
+    c.arc(startPt.x, startPt.y, 40 + pulse * 10, 0, TAU);
+    c.fill();
+    c.strokeStyle = '#f97316';
+    c.lineWidth = 2;
+    c.stroke();
+
+    c.font = '800 10px ' + FONT;
+    c.fillStyle = '#f97316';
+    c.textAlign = 'center';
+    c.fillText('⚠️ FLANK BURROWING (' + G.entropy.flankBreachWarningT.toFixed(1) + 's)', startPt.x, startPt.y - 25);
+    c.restore();
+  }
+
+  if (G.entropy.flankBreachActiveT > 0 && typeof PATH_BREACH !== 'undefined' && PATH_BREACH.length > 1) {
+    c.save();
+    c.strokeStyle = 'rgba(244, 63, 94, 0.7)';
+    c.lineWidth = 4;
+    c.setLineDash([8, 6]);
+    c.beginPath();
+    c.moveTo(PATH_BREACH[0].x, PATH_BREACH[0].y);
+    for (let i = 1; i < PATH_BREACH.length; i++) {
+      c.lineTo(PATH_BREACH[i].x, PATH_BREACH[i].y);
+    }
+    c.stroke();
+    c.setLineDash([]);
+    c.restore();
+  }
+}
+
+function drawSyndicateSiphonRig(c, time) {
+  if (!G || !G.entropy || !G.entropy.siphonRig || G.entropy.siphonRig.dead) return;
+  const rig = G.entropy.siphonRig;
+  c.save();
+
+  const bx = typeof BASE_PT !== 'undefined' ? BASE_PT.x : (W - 80);
+  const by = typeof BASE_PT !== 'undefined' ? BASE_PT.y : (H / 2);
+  c.strokeStyle = 'rgba(192, 132, 252, 0.6)';
+  c.lineWidth = 2.5;
+  c.beginPath();
+  c.moveTo(rig.x, rig.y);
+  c.lineTo(bx, by);
+  c.stroke();
+
+  c.fillStyle = 'rgba(15, 23, 42, 0.9)';
+  c.fillRect(rig.x - 22, rig.y - 22, 44, 44);
+  c.strokeStyle = '#c084fc';
+  c.lineWidth = 2;
+  c.strokeRect(rig.x - 22, rig.y - 22, 44, 44);
+
+  c.strokeStyle = '#e879f9';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(rig.x, rig.y);
+  c.lineTo(rig.x + Math.cos(time * 4) * 16, rig.y + Math.sin(time * 4) * 16);
+  c.stroke();
+
+  c.font = '800 9px ' + FONT;
+  c.fillStyle = '#e879f9';
+  c.textAlign = 'center';
+  c.fillText('SIPHON RIG', rig.x, rig.y - 28);
+  c.fillText('-' + Math.round(rig.siphonedGold || 0) + 'G DRAINED', rig.x, rig.y + 35);
+  c.restore();
+}
+
+function drawThermalMicroVortex(c, time) {
+  if (!G || !G.entropy || !G.entropy.clusterOverheated) return;
+  c.save();
+  let cx = 0, cy = 0, count = 0;
+  for (const t of (G.towers || [])) {
+    cx += t.x; cy += t.y; count++;
+  }
+  if (count > 0) {
+    cx /= count; cy /= count;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 5);
+    c.strokeStyle = 'rgba(249, 115, 22, ' + (0.2 + 0.15 * pulse) + ')';
+    c.lineWidth = 3;
+    c.setLineDash([6, 6]);
+    c.beginPath();
+    c.arc(cx, cy, 70 + pulse * 10, 0, TAU);
+    c.stroke();
+    c.setLineDash([]);
+    c.font = '800 8.5px ' + FONT;
+    c.fillStyle = '#f97316';
+    c.textAlign = 'center';
+    c.fillText('THERMAL MICRO-VORTEX (+75% HEAT)', cx, cy - 80);
+  }
   c.restore();
 }
