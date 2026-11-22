@@ -88,6 +88,10 @@ function getGridPowerStatus() {
   if (G && G.cursedProtocols && G.cursedProtocols.includes('entropy_conduit')) {
     capacity = 9999;
   }
+  // 18.0 The Cataclysmic Convergence: Ion Surge Grid Surplus
+  if (G && G.cataclysm && G.cataclysm.ionSurgeActive) {
+    capacity += (typeof CATACLYSM_CONFIG !== 'undefined' ? CATACLYSM_CONFIG.ionSurgePowerSupply : 150);
+  }
   for (const t of G.towers) {
     if (t.type === 'relay') {
       if (t.shutdownT > 0) continue; // In thermal shutdown, provides 0 MW
@@ -243,6 +247,8 @@ function getTowerAmmoType(type) {
 function consumeTowerAmmo(t) {
   if (!G || !G.logistics) return;
   if (G.aegisOverchargeT > 0 || G.harmonicCadenceT > 0) return;
+  // 18.0 Ion Surge: Zero ammo burn for energy towers
+  if (G && G.cataclysm && G.cataclysm.ionSurgeActive && (t.type === 'tesla' || t.type === 'beam' || t.type === 'plasma')) return;
   t.shotsFired = (t.shotsFired || 0) + 1;
   const aType = getTowerAmmoType(t.type);
   if (aType && G.logistics[aType] !== undefined) {
@@ -471,6 +477,15 @@ function updateTower(t, dt) {
     rateMult *= 1.20;
   }
   if (t.overchargeT > 0) rateMult *= 2.0;
+  // 18.0 Cataclysmic Convergence: Ion Surge & Flash Blizzard Fire Rate Modifiers
+  if (G && G.cataclysm) {
+    if (G.cataclysm.ionSurgeActive && (t.type === 'tesla' || t.type === 'beam' || t.type === 'plasma')) {
+      rateMult *= (typeof CATACLYSM_CONFIG !== 'undefined' ? CATACLYSM_CONFIG.ionSurgeRateMult : 2.0);
+    }
+    if (G.cataclysm.blizzardActive && (t.type === 'gatling' || t.type === 'mortar' || t.type === 'flak')) {
+      rateMult *= (1.0 - (typeof CATACLYSM_CONFIG !== 'undefined' ? CATACLYSM_CONFIG.blizzardBallisticRatePenalty : 0.40));
+    }
+  }
   // Core Overload & Meltdown Hangover (4.0)
   if (G && G.overloadT > 0) rateMult *= 3.5;
   if (G && G.meltdownT > 0) rateMult *= 0.5;

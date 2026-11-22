@@ -929,7 +929,9 @@ const ED = {
   chaff_skimmer: { name: 'Chaff Cloud Skimmer', hp: 240, speed: 68, r: 15, armor: 0.30, reward: 20, leak: 2, skimmer: true },
   harpoon_leecher: { name: 'Harpoon Leecher', hp: 280, speed: 58, r: 16, armor: 0.35, reward: 24, leak: 2, leecher: true },
   phase_burrower: { name: 'Phase Burrower', hp: 280, speed: 75, r: 14, armor: 0.35, reward: 22, leak: 2, burrower: true },
-  temporal_aberration: { name: 'Temporal Aberration', hp: 420, speed: 65, r: 16, armor: 0.40, reward: 50, leak: 3, isAberration: true }
+  temporal_aberration: { name: 'Temporal Aberration', hp: 420, speed: 65, r: 16, armor: 0.40, reward: 50, leak: 3, isAberration: true },
+  nemesis_dread_colossus: { name: 'Nemesis Dread-Colossus', hp: 1600, speed: 38, r: 24, armor: 0.55, reward: 80, leak: 4, isColossus: true },
+  kamikaze_raptor: { name: 'Kamikaze Phase-Raptor', hp: 95, speed: 135, r: 10, armor: 0.10, reward: 12, leak: 1, isRaptor: true }
 };
 const hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
@@ -2890,6 +2892,41 @@ const PARADOX_CONFIG = {
   aberrationRewardCores: 2,
   aberrationTvmScore: 2500
 };
+
+/* ============================================================
+   18.0 THE CATACLYSMIC CONVERGENCE & CRISIS ESCALATION CONFIGS
+   ============================================================ */
+const CATACLYSM_CONFIG = {
+  duration: 20.0,
+  magmaDamagePct: 0.08,             // 8% Max HP/sec True Damage
+  magmaArmorShred: 1.0,             // 100% Armor Shred
+  blizzardBallisticRatePenalty: 0.40, // -40% Ballistic Attack Speed
+  blizzardShatterRadius: 110,       // 110px Cryo Shrapnel Radius
+  blizzardShatterDamageMult: 2.50,  // 250% Shatter Damage
+  ionSurgePowerSupply: 150,         // +150 MW Grid Surplus
+  ionSurgeRateMult: 2.0             // 2x Energy Attack Speed
+};
+
+const OMEGA_CRISIS_CONFIG = {
+  harvesterDuration: 25.0,
+  harvesterHp: 3500,
+  harvesterRewardGold: 500,
+  harvesterRewardCores: 10,
+  sporeQueenDuration: 14.0,
+  sporeQueenHp: 2000,
+  sporeQueenRewardGold: 350,
+  reactorMeltdownDuration: 18.0,
+  reactorValveCount: 3,
+  reactorBuffDuration: 15.0,
+  reactorBuffDmgMult: 2.0           // +100% Damage on success
+};
+
+const PREDATOR_SCALING_CONFIG = {
+  velocityThreshold: 2.2,           // V_tac threshold for Apex Retribution
+  bountyGoldMult: 2.0,              // 2x Gold
+  bountyScoreMult: 3.0              // 3x Score
+};
+
 
 
 

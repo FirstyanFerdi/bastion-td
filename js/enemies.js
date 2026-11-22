@@ -41,7 +41,12 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     isDecoy: false,
     dispersionCocoon: false,
     cocoonElement: null,
-    burrowed: type === 'phase_burrower'
+    burrowed: type === 'phase_burrower',
+    // 18.0 The Cataclysmic Convergence Properties
+    isColossus: type === 'nemesis_dread_colossus',
+    isRaptor: type === 'kamikaze_raptor',
+    adaptedElement: null,
+    adaptTimer: 3.0
   };
 
   // 17.0 Decoy Swarm & Dispersion Cocoon Adaptation
@@ -52,7 +57,7 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
       e.maxHp = e.dispHp = e.hp;
       e.reward = 0;
     }
-    if (type !== 'swarm' && type !== 'boss' && !e.isAberration && !e.isDecoy && G.nemesis.dominantElement && Math.random() < 0.35) {
+    if (type !== 'swarm' && type !== 'boss' && !e.isAberration && !e.isDecoy && G.wave >= 4 && G.nemesis.dominantElement && Math.random() < 0.35) {
       e.dispersionCocoon = true;
       e.cocoonElement = G.nemesis.dominantElement;
     }
@@ -533,8 +538,47 @@ function updateEnemy(e, dt) {
     }
   }
 
+  // 18.0 Nemesis Dread-Colossus Mid-Fight Elemental Adaptation
+  if (e.isColossus && !e.dead) {
+    e.adaptTimer = (e.adaptTimer || 3.0) - dt;
+    if (e.adaptTimer <= 0 && e.damageTracker) {
+      e.adaptTimer = 3.5;
+      let highestElem = null, maxAccum = 0;
+      for (const el in e.damageTracker) {
+        if (e.damageTracker[el] > maxAccum) {
+          maxAccum = e.damageTracker[el];
+          highestElem = el;
+        }
+      }
+      if (highestElem && e.adaptedElement !== highestElem && maxAccum >= 60) {
+        e.adaptedElement = highestElem;
+        if (typeof addRing === 'function') addRing(e.x, e.y, 14, 85, 0.5, '#a855f7', 4);
+        if (typeof burst === 'function') burst(e.x, e.y, 18, '#a855f7', 120, 0.45, 3, true);
+        if (typeof addText === 'function') addText(e.x, e.y - e.r - 20, 'ADAPTED: ' + highestElem.toUpperCase(), '#a855f7', 14);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('reaction');
+      }
+    }
+  }
+
+  // 18.0 Kamikaze Phase-Raptor Detonation on Barricades
+  if (e.isRaptor && !e.dead && G && G.barricades && G.barricades.length > 0) {
+    for (let bIdx = G.barricades.length - 1; bIdx >= 0; bIdx--) {
+      const bar = G.barricades[bIdx];
+      if (bar.hp > 0 && Math.hypot(bar.x - e.x, bar.y - e.y) <= 30) {
+        bar.hp = 0;
+        e.dead = true;
+        if (typeof burst === 'function') burst(e.x, e.y, 25, '#f43f5e', 140, 0.5, 3.5, true);
+        if (typeof addText === 'function') addText(bar.x, bar.y - 15, 'RAPTOR DETONATION!', '#f43f5e', 14);
+        if (typeof shake === 'function') shake(6);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+        G.barricades.splice(bIdx, 1);
+        break;
+      }
+    }
+  }
+
   // 9.0 Deployable Road Barricades Blockage & Hostile Clearing
-  if (G && G.barricades && G.barricades.length > 0) {
+  if (!e.isRaptor && G && G.barricades && G.barricades.length > 0) {
     for (let bIdx = G.barricades.length - 1; bIdx >= 0; bIdx--) {
       const bar = G.barricades[bIdx];
       if (bar.hp > 0 && Math.hypot(bar.x - e.x, bar.y - e.y) <= 32) {

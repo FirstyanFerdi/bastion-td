@@ -104,6 +104,21 @@ function startWave() {
   if (n >= 7 && (n % 4 === 3 || (G.threatIndex && G.threatIndex >= 40))) {
     if (typeof spawnDropPod === 'function') spawnDropPod(n);
   }
+
+  // 18.0 Planetary Cataclysms & Omega Crises Wave Triggers
+  if (n === 5 && typeof triggerCataclysmEvent === 'function') {
+    triggerCataclysmEvent('magma_fissure');
+  } else if (n === 9 && typeof triggerOmegaCrisis === 'function') {
+    triggerOmegaCrisis('rogue_harvester');
+  } else if (n === 11 && typeof triggerCataclysmEvent === 'function') {
+    triggerCataclysmEvent('flash_blizzard');
+  } else if (n === 13 && typeof triggerOmegaCrisis === 'function') {
+    triggerOmegaCrisis('spore_queen');
+  } else if (n === 16 && typeof triggerCataclysmEvent === 'function') {
+    triggerCataclysmEvent('ion_surge');
+  } else if (n === 17 && typeof triggerOmegaCrisis === 'function') {
+    triggerOmegaCrisis('reactor_meltdown');
+  }
   let sub = boss ? 'Heavy hostile signature detected' : '';
   if (G.mutator) sub = (sub ? sub + ' · ' : '') + 'MUTATOR: ' + G.mutator.name;
   if (G.hiveMutation && typeof HIVE_MUTATIONS !== 'undefined' && HIVE_MUTATIONS[G.hiveMutation]) {

@@ -519,6 +519,10 @@ function render() {
   drawLootParticles(c, time);
   drawHarmonicBeams(c, time);
   drawGhostEntities(c, time);
+  // 18.0 The Cataclysmic Convergence Battlefield Systems
+  drawMagmaFissures(c, time);
+  drawCataclysmEffects(c, time);
+  drawOmegaCrisisEntities(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -700,6 +704,9 @@ function render() {
   drawTacticalVersatilityMeter(c, time);
   // 17.0 Temporal Paradox Continuum HUD
   drawTemporalParadoxHUD(c, time);
+  // 18.0 Omega Crisis HUD & Triumph Overdrive Overlay
+  drawOmegaCrisisHUD(c, time);
+  drawCrisisTriumph(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -3377,5 +3384,222 @@ function drawTemporalParadoxHUD(c, time) {
   c.fillStyle = '#38bdf8';
   c.textAlign = 'center';
   c.fillText('⏳ TEMPORAL PARADOX: ' + p.timer.toFixed(1) + 's (GHOST FLEET ONLINE)', W / 2, by + 18);
+  c.restore();
+}
+
+/* ============================================================
+   18.0 THE CATACLYSMIC CONVERGENCE & OMEGA CRISIS RENDERING
+   ============================================================ */
+
+function drawMagmaFissures(c, time) {
+  if (!G || !G.cataclysm || !G.cataclysm.fissures || G.cataclysm.fissures.length === 0) return;
+  c.save();
+  for (const f of G.cataclysm.fissures) {
+    if (f.warningT > 0) {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 14);
+      c.strokeStyle = 'rgba(239, 68, 68, ' + (0.4 + 0.5 * pulse) + ')';
+      c.lineWidth = 3;
+      c.setLineDash([12, 8]);
+      c.beginPath();
+      c.moveTo(f.x1, f.y1);
+      c.lineTo(f.x2, f.y2);
+      c.stroke();
+      c.setLineDash([]);
+
+      const mx = (f.x1 + f.x2) / 2, my = (f.y1 + f.y2) / 2;
+      c.font = '800 11px ' + FONT;
+      c.fillStyle = '#ef4444';
+      c.textAlign = 'center';
+      c.fillText('⚠ FAULT LINE WARNING: ' + f.warningT.toFixed(1) + 's', mx, my - 10);
+    } else if (f.activeT > 0) {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 8 + f.x1);
+      c.strokeStyle = 'rgba(234, 88, 12, ' + (0.5 + 0.4 * pulse) + ')';
+      c.lineWidth = 14;
+      c.beginPath();
+      c.moveTo(f.x1, f.y1);
+      c.lineTo(f.x2, f.y2);
+      c.stroke();
+
+      c.strokeStyle = '#fef08a';
+      c.lineWidth = 4;
+      c.beginPath();
+      c.moveTo(f.x1, f.y1);
+      c.lineTo(f.x2, f.y2);
+      c.stroke();
+    }
+  }
+  c.restore();
+}
+
+function drawCataclysmEffects(c, time) {
+  if (!G || !G.cataclysm) return;
+  c.save();
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const sH = typeof H !== 'undefined' ? H : 600;
+
+  if (G.cataclysm.blizzardActive) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 3);
+    c.strokeStyle = 'rgba(56, 189, 248, ' + (0.25 + 0.15 * pulse) + ')';
+    c.lineWidth = 16;
+    c.strokeRect(8, 8, sW - 16, sH - 16);
+
+    c.fillStyle = 'rgba(224, 242, 254, 0.6)';
+    for (let i = 0; i < 20; i++) {
+      const sx = (i * 49 + time * 35) % sW;
+      const sy = (i * 31 + time * 65) % sH;
+      c.beginPath();
+      c.arc(sx, sy, 1.5 + (i % 3), 0, TAU);
+      c.fill();
+    }
+  }
+
+  if (G.cataclysm.ionSurgeActive) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 9);
+    c.strokeStyle = 'rgba(34, 211, 238, ' + (0.2 + 0.2 * pulse) + ')';
+    c.lineWidth = 8;
+    c.strokeRect(4, 4, sW - 8, sH - 8);
+  }
+  c.restore();
+}
+
+function drawOmegaCrisisEntities(c, time) {
+  if (!G || !G.omegaCrisis) return;
+  c.save();
+  const oc = G.omegaCrisis;
+
+  if (oc.active && oc.type === 'rogue_harvester' && oc.entity) {
+    const ent = oc.entity;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+    glow(c, ent.x, ent.y, 45, '#f59e0b', 0.6);
+    c.fillStyle = '#1e293b';
+    c.beginPath();
+    c.arc(ent.x, ent.y, ent.r || 32, 0, TAU);
+    c.fill();
+    c.strokeStyle = '#f59e0b';
+    c.lineWidth = 3;
+    c.stroke();
+
+    c.fillStyle = '#f59e0b';
+    c.beginPath();
+    c.arc(ent.x, ent.y, 12 + pulse * 4, 0, TAU);
+    c.fill();
+
+    const hpPct = clamp(ent.hp / ent.maxHp, 0, 1);
+    c.fillStyle = 'rgba(15, 23, 42, 0.8)';
+    c.fillRect(ent.x - 30, ent.y - (ent.r || 32) - 16, 60, 6);
+    c.fillStyle = '#ef4444';
+    c.fillRect(ent.x - 30, ent.y - (ent.r || 32) - 16, 60 * hpPct, 6);
+
+    c.font = '800 10px ' + FONT;
+    c.fillStyle = '#f59e0b';
+    c.textAlign = 'center';
+    c.fillText('ROGUE HARVESTER', ent.x, ent.y - (ent.r || 32) - 20);
+  }
+
+  if (oc.active && oc.type === 'spore_queen' && oc.entity) {
+    const ent = oc.entity;
+    glow(c, ent.x, ent.y, 40, '#c084fc', 0.6);
+    c.fillStyle = '#3b0764';
+    c.beginPath();
+    c.arc(ent.x, ent.y, ent.r || 28, 0, TAU);
+    c.fill();
+    c.strokeStyle = '#c084fc';
+    c.lineWidth = 3;
+    c.stroke();
+
+    if (ent.tetheredTower && !ent.tetherSevered) {
+      c.strokeStyle = 'rgba(192, 132, 252, 0.85)';
+      c.lineWidth = 4;
+      c.setLineDash([8, 6]);
+      c.beginPath();
+      c.moveTo(ent.x, ent.y);
+      c.lineTo(ent.tetheredTower.x, ent.tetheredTower.y);
+      c.stroke();
+      c.setLineDash([]);
+
+      c.font = '800 10px ' + FONT;
+      c.fillStyle = '#c084fc';
+      c.textAlign = 'center';
+      c.fillText('MIND CONTROL TETHER', (ent.x + ent.tetheredTower.x) / 2, (ent.y + ent.tetheredTower.y) / 2 - 8);
+    }
+
+    c.font = '800 10px ' + FONT;
+    c.fillStyle = '#c084fc';
+    c.textAlign = 'center';
+    c.fillText('SPORE QUEEN', ent.x, ent.y - (ent.r || 28) - 18);
+  }
+
+  if (oc.active && oc.type === 'reactor_meltdown' && oc.valves) {
+    for (const v of oc.valves) {
+      glow(c, v.x, v.y, 30, v.purged ? '#10b981' : '#ef4444', 0.5);
+      c.fillStyle = v.purged ? '#064e3b' : '#450a0a';
+      c.beginPath();
+      c.arc(v.x, v.y, v.r || 24, 0, TAU);
+      c.fill();
+      c.strokeStyle = v.purged ? '#10b981' : '#ef4444';
+      c.lineWidth = 2.5;
+      c.stroke();
+
+      c.font = '800 10px ' + FONT;
+      c.fillStyle = v.purged ? '#34d399' : '#f87171';
+      c.textAlign = 'center';
+      c.fillText(v.purged ? 'VALVE ONLINE' : 'STOMP PURGE', v.x, v.y - (v.r || 24) - 8);
+    }
+  }
+
+  c.restore();
+}
+
+function drawOmegaCrisisHUD(c, time) {
+  if (!G || !G.omegaCrisis || !G.omegaCrisis.active) return;
+  c.save();
+  const oc = G.omegaCrisis;
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const pulse = 0.5 + 0.5 * Math.sin(time * 10);
+
+  c.strokeStyle = 'rgba(239, 68, 68, ' + (0.5 + 0.4 * pulse) + ')';
+  c.lineWidth = 5;
+  c.strokeRect(4, 4, sW - 8, 48);
+
+  const bw = 400, bh = 34, bx = sW / 2 - bw / 2, by = 12;
+  c.fillStyle = 'rgba(15, 23, 42, 0.95)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = '#ef4444';
+  c.lineWidth = 2;
+  c.strokeRect(bx, by, bw, bh);
+
+  const pct = clamp(oc.timer / oc.maxTimer, 0, 1);
+  c.fillStyle = '#ef4444';
+  c.fillRect(bx + 4, by + bh - 6, (bw - 8) * pct, 3);
+
+  c.font = '900 13px ' + FONT;
+  c.fillStyle = '#ef4444';
+  c.textAlign = 'center';
+  c.fillText('🚨 CLASS-OMEGA CRISIS: ' + (oc.type ? oc.type.replace('_', ' ').toUpperCase() : '') + ' [' + oc.timer.toFixed(1) + 's]', sW / 2, by + 18);
+  c.restore();
+}
+
+function drawCrisisTriumph(c, time) {
+  if (!G || !G.omegaCrisis || G.omegaCrisis.triumphT <= 0) return;
+  c.save();
+  const alpha = clamp(G.omegaCrisis.triumphT / 2.5, 0, 1);
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const sH = typeof H !== 'undefined' ? H : 600;
+
+  const grad = c.createRadialGradient(sW / 2, sH / 2, 80, sW / 2, sH / 2, sW / 1.5);
+  grad.addColorStop(0, 'rgba(251, 191, 36, ' + (0.15 * alpha) + ')');
+  grad.addColorStop(1, 'rgba(245, 158, 11, ' + (0.45 * alpha) + ')');
+  c.fillStyle = grad;
+  c.fillRect(0, 0, sW, sH);
+
+  c.font = '900 24px ' + FONT;
+  c.fillStyle = '#fef08a';
+  c.textAlign = 'center';
+  c.shadowColor = '#f59e0b';
+  c.shadowBlur = 16;
+  c.fillText('★ CRISIS TRIUMPH OVERDRIVE ★', sW / 2, sH / 2 - 40);
+  c.font = '800 14px ' + FONT;
+  c.fillStyle = '#ffffff';
+  c.fillText('+500G · NANITE CORES · TVM SSS OMNI-STRATEGIST', sW / 2, sH / 2 - 16);
   c.restore();
 }

@@ -654,5 +654,8 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   // 17.0 The Chrono-Tactical Singularity Exports
   SINGULARITY_CONFIG, NEMESIS_CONFIG, PARADOX_CONFIG,
   spawnHostileArtillery, triggerKineticParry, triggerCorpseCrush, triggerCorpseSiphon, triggerHarmonicOverdrive, triggerParadoxCollapse, updateNemesisAI, updateSingularityNexusSystems,
+  // 18.0 The Cataclysmic Convergence Exports
+  CATACLYSM_CONFIG, OMEGA_CRISIS_CONFIG, PREDATOR_SCALING_CONFIG,
+  triggerCataclysmEvent, triggerBlizzardShatter, triggerOmegaCrisis, purgeReactorValve, severQueenTether, resolveOmegaCrisis, triggerCrisisTriumph, distToSegment, updateCataclysmSystems, updateOmegaCrisisSystems, updatePredatorScalingSystems,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
 };

@@ -305,6 +305,29 @@ function newGame(keepSpeed) {
       ghostEntities: [],
       aberrationsSpawned: false,
       snapshotTimer: 0
+    },
+    // 18.0 The Cataclysmic Convergence & Dynamic Escalation Systems
+    cataclysm: {
+      activeType: null,
+      timer: 0,
+      maxDuration: 20.0,
+      fissures: [],
+      blizzardActive: false,
+      ionSurgeActive: false
+    },
+    omegaCrisis: {
+      active: false,
+      type: null,
+      timer: 0,
+      maxTimer: 25.0,
+      entity: null,
+      triumphT: 0,
+      reactorBuffT: 0
+    },
+    predatorScaling: {
+      velocity: 1.0,
+      apexRetribution: false,
+      dreadColossiSpawned: 0
     }
   };
   initDoctrineSkills();
@@ -1023,6 +1046,14 @@ function updateMech(dt) {
           }
         }
       }
+      // 18.0 Titan Mech Emergency Cooling Valve Stomp
+      if (G.omegaCrisis && G.omegaCrisis.active && G.omegaCrisis.type === 'reactor_meltdown' && G.omegaCrisis.valves) {
+        for (const v of G.omegaCrisis.valves) {
+          if (!v.purged && Math.hypot(m.x - v.x, m.y - v.y) <= 40) {
+            if (typeof purgeReactorValve === 'function') purgeReactorValve(v.id);
+          }
+        }
+      }
       // Footstep sound tick
       m.stepTimer = (m.stepTimer || 0) + dt;
       if (m.stepTimer >= 0.35) {
@@ -1037,6 +1068,14 @@ function updateMech(dt) {
     // Face mouse cursor
     if (G.mouse && G.mouse.in) {
       m.facing = Math.atan2(G.mouse.y - m.y, G.mouse.x - m.x);
+    }
+
+    // 18.0 Spore Queen Tether Severance via Titan Mech Blade proximity
+    if (m.swingT > 0 && G.omegaCrisis && G.omegaCrisis.active && G.omegaCrisis.type === 'spore_queen' && G.omegaCrisis.entity && !G.omegaCrisis.entity.tetherSevered) {
+      const q = G.omegaCrisis.entity;
+      if (Math.hypot(m.x - q.x, m.y - q.y) <= 65 || (q.tetheredTower && Math.hypot(m.x - q.tetheredTower.x, m.y - q.tetheredTower.y) <= 65)) {
+        if (typeof severQueenTether === 'function') severQueenTether();
+      }
     }
   } else {
     // Passive Docking Recharge near base
@@ -1140,6 +1179,22 @@ function mechSwingBlade() {
     for (const crag of G.destructibleCrags) {
       if (!crag.collapsed && Math.hypot(crag.x - m.x, crag.y - m.y) <= cfg.bladeRadius + 26) {
         damageCrag(crag, cfg.bladeDmg);
+      }
+    }
+  }
+
+  // 18.0 Titan Thermal Blade Cleave against Omega Crisis Entities
+  if (G && G.omegaCrisis && G.omegaCrisis.active && G.omegaCrisis.entity) {
+    const ent = G.omegaCrisis.entity;
+    if (Math.hypot(ent.x - m.x, ent.y - m.y) <= cfg.bladeRadius + (ent.r || 30)) {
+      ent.hp = Math.max(0, ent.hp - cfg.bladeDmg);
+      burst(ent.x, ent.y, 18, '#f59e0b', 140, 0.45, 3.5, true);
+      addText(ent.x, ent.y - 25, 'TITAN BLADE STRIKE! -' + cfg.bladeDmg, '#f59e0b', 15);
+      if (ent.type === 'spore_queen' && typeof severQueenTether === 'function') {
+        severQueenTether();
+      }
+      if (ent.hp <= 0 && typeof resolveOmegaCrisis === 'function') {
+        resolveOmegaCrisis(true);
       }
     }
   }
@@ -1581,6 +1636,35 @@ function dealDamage(e, amount, type, src, opts) {
   if (e.isAberration && opts.isGhost) {
     if (Math.random() < 0.25 && typeof addText === 'function') addText(e.x, e.y - 15, 'PHASE SHIFT (LIVE ONLY)', '#c084fc', 11);
     return 0; // Immune to past timeline ghost fleet!
+  }
+
+  // 18.0 The Cataclysmic Convergence & Crisis Escalation Modifiers
+  if (G && G.cataclysm && G.cataclysm.blizzardActive) {
+    if (type === 'phys' || (src && src.type === 'gatling')) {
+      a *= 0.60; // -40% ballistic dampening in deep blizzard
+    }
+    if (type === 'cryo') {
+      e.freezeT = Math.max(e.freezeT || 0, 5.0); // Permanent deep freeze
+    }
+    if ((e.freezeT > 0 || e.slowT > 0) && (type === 'phys' || type === 'kinetic' || (src && src.type === 'rail')) && a >= 35) {
+      if (typeof triggerBlizzardShatter === 'function') {
+        a = triggerBlizzardShatter(e, a);
+      }
+    }
+  }
+
+  if (G && G.omegaCrisis && G.omegaCrisis.reactorBuffT > 0) {
+    a *= 2.0; // +100% Damage from Reactor Purge Supercharge
+    opts.crit = true;
+  }
+
+  if (e.isColossus) {
+    if (!e.damageTracker) e.damageTracker = {};
+    e.damageTracker[type] = (e.damageTracker[type] || 0) + a;
+    if (e.adaptedElement === type) {
+      a *= 0.30; // -70% damage against adapted element
+      if (Math.random() < 0.25 && typeof addText === 'function') addText(e.x, e.y - 18, 'ADAPTED -70%', '#a855f7', 11);
+    }
   }
   if (e.dispersionCocoon) {
     if (type === e.cocoonElement) {
@@ -2203,6 +2287,11 @@ function killEnemy(e, src) {
     }
   }
 
+  // 18.0 Predator Velocity Rolling Kill Tracker
+  if (G) {
+    G.killCountThisSec = (G.killCountThisSec || 0) + 1;
+  }
+
   // 13.0 Visceral Resonance: Overkill Kinetic Shatter & Arc Discharge
   const overkill = Math.max(0, -e.hp);
   const dmgType = e.lastDmgType || 'phys';
@@ -2241,9 +2330,11 @@ function killEnemy(e, src) {
   const bloodMult = isBloodPact ? 3.0 : 1.0;
   const isBlind = G && G.activeGambit === 'blind_perimeter';
   const blindMult = isBlind ? 2.0 : 1.0;
+  const predatorGoldMult = (G && G.predatorScaling && G.predatorScaling.apexRetribution) ? 2.0 : 1.0;
+  const predatorScoreMult = (G && G.predatorScaling && G.predatorScaling.apexRetribution) ? 3.0 : 1.0;
   const baseReward = e.reward !== undefined ? e.reward : (e.bounty || 0);
-  const finalReward = Math.round(baseReward * streakMult * bloodMult * blindMult);
-  const finalScore = Math.round(baseReward * 10 * scoreStreakMult);
+  const finalReward = Math.round(baseReward * streakMult * bloodMult * blindMult * predatorGoldMult);
+  const finalScore = Math.round(baseReward * 10 * scoreStreakMult * predatorScoreMult);
 
   // 12.0 Tactical Profiler & Chokepoint Tracking
   if (G && G.tacticalProfile) {
@@ -5841,4 +5932,427 @@ function updateSingularityNexusSystems(dt) {
   // 5. Update Nemesis AI & Paradox Continuum
   updateNemesisAI(dt);
   updateParadoxContinuum(dt);
+
+  // 6. 18.0 The Cataclysmic Convergence & Dynamic Escalation Protocols
+  updateCataclysmSystems(dt);
+  updateOmegaCrisisSystems(dt);
+  updatePredatorScalingSystems(dt);
+}
+
+/* ============================================================
+   18.0 THE CATACLYSMIC CONVERGENCE & CRISIS ESCALATION PROTOCOLS
+   ============================================================ */
+
+function triggerCataclysmEvent(type) {
+  if (!G) return false;
+  if (!G.cataclysm) {
+    G.cataclysm = {
+      activeType: null, timer: 0, maxDuration: 20.0,
+      fissures: [], blizzardActive: false, ionSurgeActive: false
+    };
+  }
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const sH = typeof H !== 'undefined' ? H : 600;
+  const cfg = typeof CATACLYSM_CONFIG !== 'undefined' ? CATACLYSM_CONFIG : {
+    duration: 20.0, magmaDamagePct: 0.08, magmaArmorShred: 1.0,
+    blizzardBallisticRatePenalty: 0.40, blizzardShatterRadius: 110, blizzardShatterDamageMult: 2.50,
+    ionSurgePowerSupply: 150, ionSurgeRateMult: 2.0
+  };
+
+  G.cataclysm.activeType = type;
+  G.cataclysm.timer = cfg.duration;
+  G.cataclysm.maxDuration = cfg.duration;
+
+  if (type === 'magma_fissure') {
+    G.cataclysm.fissures = [
+      { x1: 80, y1: 180, x2: sW - 80, y2: 240, warningT: 6.0, activeT: 14.0 },
+      { x1: 280, y1: 60, x2: 440, y2: sH - 60, warningT: 6.0, activeT: 14.0 }
+    ];
+    if (typeof shake === 'function') shake(14.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('rockslide');
+    if (typeof addText === 'function') addText(sW / 2, 70, 'TECTONIC MAGMA FISSURES OPENING!', '#ef4444', 18);
+    G.banner = { text: 'PLANETARY CATACLYSM: MAGMA FISSURES!', sub: 'Ground splitting along fault lines! Relocate/reinforce towers in 6s!', t: 0, max: 4.5, color: '#ef4444' };
+  } else if (type === 'flash_blizzard') {
+    G.cataclysm.blizzardActive = true;
+    if (typeof shake === 'function') shake(8.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('freeze');
+    if (typeof addText === 'function') addText(sW / 2, 70, 'SUB-ZERO FLASH BLIZZARD (-80°C)!', '#38bdf8', 18);
+    G.banner = { text: 'PLANETARY CATACLYSM: FLASH BLIZZARD!', sub: 'Ballistics dampened (-40%), Cryo permanently freezes & heavy strikes SHATTER!', t: 0, max: 4.5, color: '#38bdf8' };
+  } else if (type === 'ion_surge') {
+    G.cataclysm.ionSurgeActive = true;
+    if (typeof shake === 'function') shake(10.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overload');
+    if (typeof addText === 'function') addText(sW / 2, 70, 'ION SURGE CASCADE (+150 MW SURPLUS)!', '#22d3ee', 18);
+    G.banner = { text: 'PLANETARY CATACLYSM: ION SURGE CASCADE!', sub: '+150 MW grid surplus! Energy towers fire 2x faster with zero ammo burn!', t: 0, max: 4.5, color: '#22d3ee' };
+  }
+  return true;
+}
+
+function triggerBlizzardShatter(e, damage) {
+  if (!G || !e) return damage;
+  const cfg = typeof CATACLYSM_CONFIG !== 'undefined' ? CATACLYSM_CONFIG : {
+    blizzardShatterRadius: 110, blizzardShatterDamageMult: 2.50
+  };
+  const shatterDmg = Math.round(damage * cfg.blizzardShatterDamageMult);
+  const radius = cfg.blizzardShatterRadius;
+
+  if (typeof burst === 'function') burst(e.x, e.y, 24, '#38bdf8', 150, 0.5, 3.5, true);
+  if (typeof addRing === 'function') addRing(e.x, e.y, 8, radius, 0.45, '#38bdf8', 4);
+  if (typeof addText === 'function') addText(e.x, e.y - 25, 'CRYO SHRAPNEL SHATTER! ' + shatterDmg, '#38bdf8', 15);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shatter');
+
+  if (G.enemies) {
+    for (const other of G.enemies) {
+      if (other !== e && !other.dead && Math.hypot(other.x - e.x, other.y - e.y) <= radius) {
+        dealDamage(other, shatterDmg, 'cryo', 'blizzard_shatter', { isShatter: true });
+      }
+    }
+  }
+  return shatterDmg;
+}
+
+function triggerOmegaCrisis(type) {
+  if (!G) return false;
+  if (!G.omegaCrisis) {
+    G.omegaCrisis = {
+      active: false, type: null, timer: 0, maxTimer: 25.0,
+      entity: null, valves: null, triumphT: 0, reactorBuffT: 0
+    };
+  }
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const sH = typeof H !== 'undefined' ? H : 600;
+  const cfg = typeof OMEGA_CRISIS_CONFIG !== 'undefined' ? OMEGA_CRISIS_CONFIG : {
+    harvesterDuration: 25.0, harvesterHp: 3500, harvesterRewardGold: 500, harvesterRewardCores: 10,
+    sporeQueenDuration: 14.0, sporeQueenHp: 2000, sporeQueenRewardGold: 350,
+    reactorMeltdownDuration: 18.0, reactorValveCount: 3, reactorBuffDuration: 15.0, reactorBuffDmgMult: 2.0
+  };
+
+  G.omegaCrisis.active = true;
+  G.omegaCrisis.type = type;
+
+  if (type === 'rogue_harvester') {
+    G.omegaCrisis.timer = cfg.harvesterDuration;
+    G.omegaCrisis.maxTimer = cfg.harvesterDuration;
+    G.omegaCrisis.entity = {
+      type: 'rogue_harvester',
+      x: sW / 2, y: sH * 0.35,
+      hp: cfg.harvesterHp, maxHp: cfg.harvesterHp,
+      r: 32, empTimer: 4.0
+    };
+    if (typeof shake === 'function') shake(12.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boss');
+    G.banner = { text: 'CLASS-OMEGA CRISIS: ROGUE HARVESTER!', sub: 'Heavy rogue core dropped! 25s to destroy before catastrophic failure!', t: 0, max: 4.5, color: '#f59e0b' };
+  } else if (type === 'spore_queen') {
+    G.omegaCrisis.timer = cfg.sporeQueenDuration;
+    G.omegaCrisis.maxTimer = cfg.sporeQueenDuration;
+    let bestTower = null;
+    if (G.towers && G.towers.length > 0) {
+      bestTower = G.towers.reduce((maxT, t) => (t.invested || t.cost || 0) > (maxT.invested || maxT.cost || 0) ? t : maxT, G.towers[0]);
+    }
+    G.omegaCrisis.entity = {
+      type: 'spore_queen',
+      x: sW * 0.72, y: sH * 0.38,
+      hp: cfg.sporeQueenHp, maxHp: cfg.sporeQueenHp,
+      r: 28, tetheredTower: bestTower,
+      tetherSevered: false
+    };
+    if (bestTower) bestTower.corrupted = true;
+    if (typeof shake === 'function') shake(10.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('harpoon_tether');
+    G.banner = { text: 'CLASS-OMEGA CRISIS: NEURAL SPORE QUEEN!', sub: 'Mind-control tether active! Sever with Titan Mech blade strike in 14s!', t: 0, max: 4.5, color: '#c084fc' };
+  } else if (type === 'reactor_meltdown') {
+    G.omegaCrisis.timer = cfg.reactorMeltdownDuration;
+    G.omegaCrisis.maxTimer = cfg.reactorMeltdownDuration;
+    G.omegaCrisis.valves = [
+      { id: 1, x: 200, y: 160, r: 24, purged: false },
+      { id: 2, x: 760, y: 220, r: 24, purged: false },
+      { id: 3, x: 480, y: 440, r: 24, purged: false }
+    ];
+    if (typeof shake === 'function') shake(14.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+    G.banner = { text: 'CLASS-OMEGA CRISIS: SUB-REACTOR MELTDOWN!', sub: 'Thermal runaway! Stomp all 3 emergency purge valves with Titan Mech in 18s!', t: 0, max: 4.5, color: '#ef4444' };
+  }
+  return true;
+}
+
+function purgeReactorValve(valveId) {
+  if (!G || !G.omegaCrisis || !G.omegaCrisis.active || G.omegaCrisis.type !== 'reactor_meltdown' || !G.omegaCrisis.valves) return false;
+  const valve = G.omegaCrisis.valves.find(v => v.id === valveId);
+  if (!valve || valve.purged) return false;
+
+  valve.purged = true;
+  if (typeof burst === 'function') burst(valve.x, valve.y, 25, '#38bdf8', 130, 0.5, 3.5, true);
+  if (typeof addRing === 'function') addRing(valve.x, valve.y, 8, 55, 0.4, '#38bdf8', 4);
+  if (typeof addText === 'function') addText(valve.x, valve.y - 25, 'VALVE #' + valveId + ' PURGED!', '#38bdf8', 15);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('steam_purge');
+
+  const allPurged = G.omegaCrisis.valves.every(v => v.purged);
+  if (allPurged) {
+    resolveOmegaCrisis(true);
+  }
+  return true;
+}
+
+function severQueenTether() {
+  if (!G || !G.omegaCrisis || !G.omegaCrisis.active || G.omegaCrisis.type !== 'spore_queen' || !G.omegaCrisis.entity) return false;
+  const q = G.omegaCrisis.entity;
+  if (q.tetherSevered) return false;
+
+  q.tetherSevered = true;
+  if (q.tetheredTower) q.tetheredTower.corrupted = false;
+  if (typeof burst === 'function') burst(q.x, q.y, 25, '#c084fc', 150, 0.5, 4, true);
+  if (typeof addText === 'function') addText(q.x, q.y - 30, 'TETHER SEVERED!', '#c084fc', 16);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('strike');
+
+  resolveOmegaCrisis(true);
+  return true;
+}
+
+function resolveOmegaCrisis(success) {
+  if (!G || !G.omegaCrisis || !G.omegaCrisis.active) return false;
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const sH = typeof H !== 'undefined' ? H : 600;
+  const type = G.omegaCrisis.type;
+  const cfg = typeof OMEGA_CRISIS_CONFIG !== 'undefined' ? OMEGA_CRISIS_CONFIG : {
+    harvesterRewardGold: 500, harvesterRewardCores: 10,
+    sporeQueenRewardGold: 350, reactorBuffDuration: 15.0
+  };
+
+  if (success) {
+    if (type === 'rogue_harvester') {
+      if (G.enemies) {
+        for (const e of G.enemies) {
+          if (!e.dead && e.type !== 'boss') {
+            e.hp = 0;
+            e.dead = true;
+            if (typeof burst === 'function') burst(e.x, e.y, 10, '#f59e0b', 90, 0.35, 2, false);
+          }
+        }
+      }
+      G.gold = (G.gold || 0) + cfg.harvesterRewardGold;
+      G.naniteCores = (G.naniteCores || 0) + cfg.harvesterRewardCores;
+      if (typeof addText === 'function') addText(sW / 2, sH / 2, 'HARVESTER CRUSHED! +' + cfg.harvesterRewardGold + 'G +' + cfg.harvesterRewardCores + ' CORES', '#fbbf24', 18);
+    } else if (type === 'spore_queen') {
+      G.gold = (G.gold || 0) + cfg.sporeQueenRewardGold;
+      if (typeof CYBER_ENGRAMS_DATABASE !== 'undefined') {
+        const pKeys = Object.keys(CYBER_ENGRAMS_DATABASE.prefixes);
+        const sKeys = Object.keys(CYBER_ENGRAMS_DATABASE.suffixes);
+        const pId = pKeys[Math.floor(Math.random() * pKeys.length)];
+        const sId = sKeys[Math.floor(Math.random() * sKeys.length)];
+        const eng = {
+          id: 'engram_' + (++eid),
+          prefix: pId,
+          suffix: sId,
+          name: CYBER_ENGRAMS_DATABASE.prefixes[pId].name + ' ' + CYBER_ENGRAMS_DATABASE.suffixes[sId].name.replace('...of the ', '').replace('...of ', ''),
+          color: CYBER_ENGRAMS_DATABASE.prefixes[pId].color,
+          tier: 'Mythic'
+        };
+        if (!G.cyberEngramsInventory) G.cyberEngramsInventory = [];
+        G.cyberEngramsInventory.push(eng);
+        if (typeof addText === 'function') addText(sW / 2, sH / 2, 'SPORE QUEEN NEUTRALIZED! MYTHIC ENGRAM ACQUIRED', '#c084fc', 18);
+      }
+    } else if (type === 'reactor_meltdown') {
+      G.omegaCrisis.reactorBuffT = cfg.reactorBuffDuration;
+      if (typeof addText === 'function') addText(sW / 2, sH / 2, 'REACTOR PURGE SUCCESS! +100% TOWER DAMAGE OVERDRIVE!', '#10b981', 18);
+    }
+    triggerCrisisTriumph();
+  } else {
+    if (type === 'rogue_harvester') {
+      G.lives = Math.max(1, Math.floor((G.lives || 20) * 0.5));
+      if (G.towers && G.towers.length > 0) {
+        for (let i = 0; i < Math.min(3, G.towers.length); i++) {
+          G.towers[i].empT = 5.0;
+        }
+      }
+    } else if (type === 'spore_queen') {
+      G.lives = Math.max(1, (G.lives || 20) - 5);
+    } else if (type === 'reactor_meltdown') {
+      G.lives = Math.max(1, (G.lives || 20) - 5);
+    }
+    if (typeof shake === 'function') shake(16.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('gameover');
+    G.banner = { text: 'CLASS-OMEGA CRISIS FAILED!', sub: 'Defensive integrity compromised! Severe losses suffered!', t: 0, max: 4.0, color: '#ef4444' };
+  }
+
+  G.omegaCrisis.active = false;
+  G.omegaCrisis.entity = null;
+  G.omegaCrisis.valves = null;
+  return true;
+}
+
+function triggerCrisisTriumph() {
+  if (!G) return;
+  if (!G.omegaCrisis) G.omegaCrisis = {};
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const sH = typeof H !== 'undefined' ? H : 600;
+  G.omegaCrisis.triumphT = 2.5;
+  G.timeDilation = 2.5;
+
+  if (typeof shake === 'function') shake(10.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('victory');
+
+  if (G.nemesis) {
+    G.nemesis.tvmScore = (G.nemesis.tvmScore || 0) + 3000;
+  }
+
+  if (!G.lootParticles) G.lootParticles = [];
+  const cx = sW / 2, cy = sH / 2;
+  const targetX = (G.mech && G.mech.active) ? G.mech.x : cx;
+  const targetY = (G.mech && G.mech.active) ? G.mech.y : cy;
+  for (let i = 0; i < 15; i++) {
+    const ang = Math.random() * TAU;
+    const dist = 30 + Math.random() * 80;
+    G.lootParticles.push({
+      x: cx + Math.cos(ang) * dist,
+      y: cy + Math.sin(ang) * dist,
+      tx: targetX,
+      ty: targetY,
+      val: 10,
+      life: 1.5 + Math.random() * 0.8
+    });
+  }
+
+  G.banner = { text: '★ CRISIS TRIUMPH OVERDRIVE! ★', sub: 'Tactical Mastery Achieved! TVM SSS Omni-Strategist Boost!', t: 0, max: 3.5, color: '#fbbf24' };
+}
+
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+  if (l2 === 0) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+  t = clamp(t, 0, 1);
+  return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+}
+
+function updateCataclysmSystems(dt) {
+  if (!G || !G.cataclysm) return;
+  const c = G.cataclysm;
+  const sW = typeof W !== 'undefined' ? W : 960;
+  if (c.timer > 0) {
+    c.timer -= dt;
+
+    if (c.activeType === 'magma_fissure' && c.fissures && c.fissures.length > 0) {
+      const cfg = typeof CATACLYSM_CONFIG !== 'undefined' ? CATACLYSM_CONFIG : { magmaDamagePct: 0.08, magmaArmorShred: 1.0 };
+      for (const f of c.fissures) {
+        if (f.warningT > 0) {
+          f.warningT = Math.max(0, f.warningT - dt);
+        } else if (f.activeT > 0) {
+          f.activeT = Math.max(0, f.activeT - dt);
+          if (G.enemies) {
+            for (const e of G.enemies) {
+              if (e.dead) continue;
+              const dist = distToSegment(e.x, e.y, f.x1, f.y1, f.x2, f.y2);
+              if (dist <= 35) {
+                e.shred = cfg.magmaArmorShred;
+                const dmg = (e.maxHp * cfg.magmaDamagePct) * dt;
+                dealDamage(e, dmg, 'true', 'magma_fissure', { noReaction: true });
+                if (Math.random() < 0.2 && typeof burst === 'function') burst(e.x, e.y, 2, '#ea580c', 40, 0.25, 2, false);
+              }
+            }
+          }
+          if (G.towers) {
+            for (const t of G.towers) {
+              const dist = distToSegment(t.x, t.y, f.x1, f.y1, f.x2, f.y2);
+              if (dist <= 40 && (!t.tier || t.tier < 1)) {
+                t.empT = Math.max(t.empT || 0, 1.0);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (c.timer <= 0) {
+      c.activeType = null;
+      c.blizzardActive = false;
+      c.ionSurgeActive = false;
+      c.fissures = [];
+      if (typeof addText === 'function') addText(sW / 2, 70, 'PLANETARY CATACLYSM SUBSIDED', '#94a3b8', 16);
+    }
+  }
+}
+
+function updateOmegaCrisisSystems(dt) {
+  if (!G || !G.omegaCrisis) return;
+  const oc = G.omegaCrisis;
+
+  if (oc.reactorBuffT > 0) oc.reactorBuffT = Math.max(0, oc.reactorBuffT - dt);
+  if (oc.triumphT > 0) oc.triumphT = Math.max(0, oc.triumphT - dt);
+
+  if (oc.active) {
+    oc.timer -= dt;
+
+    if (oc.type === 'rogue_harvester' && oc.entity) {
+      oc.entity.empTimer = (oc.entity.empTimer || 4.0) - dt;
+      if (oc.entity.empTimer <= 0) {
+        oc.entity.empTimer = 5.0;
+        if (typeof addRing === 'function') addRing(oc.entity.x, oc.entity.y, 10, 160, 0.5, '#ef4444', 4);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+        if (G.towers) {
+          for (const t of G.towers) {
+            if (Math.hypot(t.x - oc.entity.x, t.y - oc.entity.y) <= 160) {
+              t.empT = Math.max(t.empT || 0, 2.0);
+            }
+          }
+        }
+      }
+      if (oc.entity.hp <= 0) {
+        resolveOmegaCrisis(true);
+        return;
+      }
+    }
+
+    if (oc.type === 'spore_queen' && oc.entity) {
+      if (oc.entity.hp <= 0) {
+        resolveOmegaCrisis(true);
+        return;
+      }
+    }
+
+    if (oc.timer <= 0) {
+      resolveOmegaCrisis(false);
+    }
+  }
+}
+
+function updatePredatorScalingSystems(dt) {
+  if (!G || !G.predatorScaling) return;
+  const ps = G.predatorScaling;
+  const cfg = typeof PREDATOR_SCALING_CONFIG !== 'undefined' ? PREDATOR_SCALING_CONFIG : { velocityThreshold: 2.2 };
+
+  // Live rolling kills/s update
+  G.killSecTimer = (G.killSecTimer || 0) + dt;
+  if (G.killSecTimer >= 1.0) {
+    G.recentKillsPerSec = G.killCountThisSec !== undefined ? G.killCountThisSec : 0;
+    G.killCountThisSec = 0;
+    G.killSecTimer = 0;
+  }
+
+  if (G.state !== 'active' || !G.wave || G.wave < 3) {
+    if (G.recentKillsPerSec === undefined) G.recentKillsPerSec = 0;
+    ps.velocity = 1.0;
+    return;
+  }
+
+  const killsPerSec = G.recentKillsPerSec !== undefined ? G.recentKillsPerSec : 0;
+  const killVelocity = killsPerSec / 1.5;
+  const liveRatio = Math.max(0.1, (G.lives || 20) / 20);
+  const goldFactor = 1 + (G.gold || 0) / 1000;
+  ps.velocity = parseFloat((killVelocity * liveRatio * goldFactor).toFixed(2));
+
+  if (ps.velocity >= cfg.velocityThreshold && !ps.apexRetribution) {
+    ps.apexRetribution = true;
+    if (typeof shake === 'function') shake(15.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('alpha_roar');
+    G.banner = {
+      text: 'PREDATOR SCALING: APEX RETRIBUTION!',
+      sub: 'Tactical Velocity ≥ 2.2! Nemesis Dread-Colossus & Kamikaze Raptors deployed! 2x Gold/3x Score!',
+      t: 0, max: 5.0, color: '#f43f5e'
+    };
+    if (typeof spawnEnemy === 'function') {
+      spawnEnemy('nemesis_dread_colossus', G.wave || 1);
+      spawnEnemy('kamikaze_raptor', G.wave || 1);
+      spawnEnemy('kamikaze_raptor', G.wave || 1);
+      spawnEnemy('kamikaze_raptor', G.wave || 1);
+    }
+  }
 }
