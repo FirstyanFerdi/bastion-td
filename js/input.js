@@ -396,13 +396,31 @@ function onPointerDown(e) {
     }
   }
 
-  // Interactive Alien Corpse Reclaiming (6.0)
+  // 17.0 Interactive Kinetic Projectile Deflection Clicking
+  if (G.hostileProjectiles && G.hostileProjectiles.length > 0 && !G.casting) {
+    const p = canvasPos(e);
+    for (const hp of G.hostileProjectiles) {
+      if (!hp.deflected && Math.hypot(p.x - hp.x, p.y - hp.y) <= 32) {
+        if (typeof triggerKineticParry === 'function') {
+          triggerKineticParry(hp);
+          G.uiDirty = true;
+          return;
+        }
+      }
+    }
+  }
+
+  // Interactive Alien Corpse Siphoning & Reclaiming (17.0 & 6.0)
   if (G.corpses && G.corpses.length > 0 && !G.casting && !G.placing) {
     const p = canvasPos(e);
     for (let i = G.corpses.length - 1; i >= 0; i--) {
       const cp = G.corpses[i];
-      if (Math.hypot(p.x - cp.x, p.y - cp.y) <= 22) {
-        reclaimCorpse(i);
+      if (Math.hypot(p.x - cp.x, p.y - cp.y) <= 24) {
+        if (typeof triggerCorpseSiphon === 'function') {
+          triggerCorpseSiphon(cp, i);
+        } else {
+          reclaimCorpse(i);
+        }
         G.uiDirty = true;
         return;
       }
@@ -539,10 +557,17 @@ function onKey(e) {
     return;
   }
 
-  // 7.0 Titan Mech Thermal Blade / 10.0 Bullet-Time Matrix [Shift + Space]
+  // 17.0 Kinetic Parrying & Projectile Deflection [Space]
   if (e.code === 'Space') {
     e.preventDefault();
     if (e.repeat) return;
+    if (G.hostileProjectiles && G.hostileProjectiles.length > 0) {
+      const parryable = G.hostileProjectiles.find(hp => hp.parryWindow && !hp.deflected);
+      if (parryable && typeof triggerKineticParry === 'function') {
+        triggerKineticParry(parryable);
+        return;
+      }
+    }
     if (e.shiftKey) {
       if (typeof triggerBulletTime === 'function') triggerBulletTime();
       return;
@@ -556,6 +581,14 @@ function onKey(e) {
     else if (G.state === 'prep') callWave();
     else togglePause();
     return;
+  }
+
+  // 17.0 Temporal Paradox Engine Collapse [T]
+  if (k === 't' || k === 'T') {
+    if (G.paradox && typeof triggerParadoxCollapse === 'function') {
+      const didCollapse = triggerParadoxCollapse();
+      if (didCollapse) return;
+    }
   }
 
   // 7.0 Titan Mech WASD Movement Keys

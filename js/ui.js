@@ -1068,6 +1068,16 @@ function refreshUI() {
     const d = G.entropy.directive;
     $('vDirectiveBadge').textContent = d ? (d.progress + '/' + d.targetCount) : 'RDY';
   }
+  if ($('vForensicsBadge') && G && G.nemesis) {
+    $('vForensicsBadge').textContent = G.nemesis.scannedThisWave ? 'LOCK' : 'SCAN';
+  }
+  if ($('vParadoxCharge') && G && G.paradox) {
+    const p = G.paradox;
+    $('vParadoxCharge').textContent = p.active ? (Math.ceil(p.timer) + 's') : (Math.floor(p.charge) + '%');
+    if ($('btnParadox')) {
+      $('btnParadox').style.borderColor = p.active ? '#22d3ee' : (p.charge >= 100 ? '#38bdf8' : 'rgba(6, 182, 212, 0.5)');
+    }
+  }
   const curSecId = (G && G.sector) || (typeof SAVE !== 'undefined' && SAVE.currentSector) || 'foundry';
   const curSecObj = (typeof MAP_SECTORS !== 'undefined' && MAP_SECTORS[curSecId]) ? MAP_SECTORS[curSecId] : null;
   if ($('vSector') && curSecObj) {
@@ -1954,6 +1964,37 @@ function showOverlay(kind) {
       '<div style="font-size:10.5px;color:#cbd5e1;margin-bottom:10px">Adaptive battlefield wagers dispatched to disrupt repetitive combat routines and reward versatile tactical mastery.</div>' +
       contentHtml +
       '<div class="ov-btns" style="margin-top:12px"><button class="ghost" data-ov="close">Return to Battle</button></div></div>';
+  } else if (kind === 'forensics') {
+    const nem = (G && G.nemesis) || { aggressionIndex: 0.5, overkillReliance: 0, spatialVuln: 0, dominantElement: 'phys', predictedTactic: 'Frontal Swarm', counterMeasureHint: 'Prepare versatile defenses.' };
+    const aggPct = Math.round((nem.aggressionIndex || 0.5) * 100);
+    const okPct = Math.round((nem.overkillReliance || 0) * 100);
+    const vulnPct = Math.round((nem.spatialVuln || 0) * 100);
+    h = '<div class="ov-box" style="max-width:640px;border-top-color:#a855f7">' +
+      '<div class="ov-head"><h3 style="color:#a855f7">SWARM TELEMETRY FORENSICS & NEMESIS PROFILER</h3></div>' +
+      '<div style="font-size:10.5px;color:#cbd5e1;margin-bottom:10px">Cognitive adversary neural scans: Markov behavior predictions tracking your tactical habits and deploying counter-strategies.</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;margin-bottom:12px">' +
+        '<div style="background:#0f172a;border:1px solid #334155;padding:8px;border-radius:4px;text-align:center">' +
+          '<div style="font-size:9.5px;color:#94a3b8">AGRESSION INDEX (α)</div>' +
+          '<b style="color:#f97316;font-size:15px">' + aggPct + '% Frontline</b>' +
+        '</div>' +
+        '<div style="background:#0f172a;border:1px solid #334155;padding:8px;border-radius:4px;text-align:center">' +
+          '<div style="font-size:9.5px;color:#94a3b8">OVERKILL RELIANCE (β)</div>' +
+          '<b style="color:#c084fc;font-size:15px">' + okPct + '% Superweapons</b>' +
+        '</div>' +
+        '<div style="background:#0f172a;border:1px solid #334155;padding:8px;border-radius:4px;text-align:center">' +
+          '<div style="font-size:9.5px;color:#94a3b8">REAR VULNERABILITY</div>' +
+          '<b style="color:#38bdf8;font-size:15px">' + vulnPct + '% Backline</b>' +
+        '</div>' +
+      '</div>' +
+      '<div style="background:rgba(168,85,247,0.1);border:1px solid #a855f7;border-radius:6px;padding:10px;margin-bottom:12px">' +
+        '<div style="font-size:11px;font-weight:800;color:#e9d5ff">PREDICTED ADVERSARY COUNTER-TACTIC:</div>' +
+        '<div style="font-size:12px;color:#f3e8ff;margin-top:4px;font-weight:700">⚠ ' + nem.predictedTactic + '</div>' +
+        '<div style="font-size:10.5px;color:#cbd5e1;margin-top:6px"><b>High Command Intel:</b> ' + nem.counterMeasureHint + '</div>' +
+      '</div>' +
+      '<div class="ov-btns" style="margin-top:12px">' +
+        '<button class="primary" data-ov="scan_forensics" style="background:#7e22ce;border-color:#a855f7">Decode Swarm Frequencies</button>' +
+        '<button class="ghost" data-ov="close">Return to Battle</button>' +
+      '</div></div>';
   } else if (kind === 'over') {
     const sec = (typeof MAP_SECTORS !== 'undefined' && G && G.sector && MAP_SECTORS[G.sector]) ? MAP_SECTORS[G.sector] : null;
     const secLabel = sec ? ('SECTOR ' + sec.num + ': ' + sec.name) : 'BASTION';

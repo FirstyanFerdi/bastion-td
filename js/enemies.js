@@ -35,8 +35,28 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     pathId: pId, titanId: titanId || null,
     chitinHits: 0, insulation: false, grounded: false, speedBoostT: 0,
     counterTrait: null,
-    hijackedT: 0, hijackFireCd: 0, reversed: 0
+    hijackedT: 0, hijackFireCd: 0, reversed: 0,
+    // 17.0 The Chrono-Tactical Singularity Properties
+    isAberration: type === 'temporal_aberration',
+    isDecoy: false,
+    dispersionCocoon: false,
+    cocoonElement: null,
+    burrowed: type === 'phase_burrower'
   };
+
+  // 17.0 Decoy Swarm & Dispersion Cocoon Adaptation
+  if (G && G.nemesis) {
+    if (G.nemesis.activeDecoyWave) {
+      e.isDecoy = true;
+      e.hp = Math.round(e.hp * 0.20);
+      e.maxHp = e.dispHp = e.hp;
+      e.reward = 0;
+    }
+    if (type !== 'swarm' && type !== 'boss' && !e.isAberration && !e.isDecoy && G.nemesis.dominantElement && Math.random() < 0.35) {
+      e.dispersionCocoon = true;
+      e.cocoonElement = G.nemesis.dominantElement;
+    }
+  }
 
   // Reactive Hivemind Counter-Traits (4.0)
   if (G && G.hiveCounterTrait && type !== 'boss' && Math.random() < 0.65) {
@@ -218,16 +238,20 @@ function updateEnemy(e, dt) {
         if (cnt > bestCount) { bestCount = cnt; bestT = t1; }
       }
       if (bestT) {
-        for (const t of G.towers) {
-          if ((t.x - bestT.x) ** 2 + (t.y - bestT.y) ** 2 <= (2.2 * TILE) ** 2) {
-            t.empT = 2.4;
-            burst(t.x, t.y, 10, '#f87171', 90, 0.4, 2.5, false);
-            addText(t.x, t.y - 18, 'EMP DISRUPTED', '#f87171', 12);
+        if (typeof spawnHostileArtillery === 'function') {
+          spawnHostileArtillery(e, bestT, 140);
+        } else {
+          for (const t of G.towers) {
+            if ((t.x - bestT.x) ** 2 + (t.y - bestT.y) ** 2 <= (2.2 * TILE) ** 2) {
+              t.empT = 2.4;
+              burst(t.x, t.y, 10, '#f87171', 90, 0.4, 2.5, false);
+              addText(t.x, t.y - 18, 'EMP DISRUPTED', '#f87171', 12);
+            }
           }
+          addFx('tracer', e.x, e.y, bestT.x, bestT.y, 0.45, '#f87171', 3.5);
+          addRing(bestT.x, bestT.y, 10, 2.2 * TILE, 0.6, '#f87171', 4);
+          shake(5); Sfx.play('boom');
         }
-        addFx('tracer', e.x, e.y, bestT.x, bestT.y, 0.45, '#f87171', 3.5);
-        addRing(bestT.x, bestT.y, 10, 2.2 * TILE, 0.6, '#f87171', 4);
-        shake(5); Sfx.play('boom');
       }
     }
   }
@@ -266,11 +290,15 @@ function updateEnemy(e, dt) {
       if (e.mortarCd <= 0 && G.towers.length > 0 && e.d > 0) {
         e.mortarCd = 7.5;
         const targetTower = G.towers[Math.floor(Math.random() * G.towers.length)];
-        targetTower.empT = 2.8;
-        addFx('tracer', e.x, e.y, targetTower.x, targetTower.y, 0.4, '#f87171', 3);
-        burst(targetTower.x, targetTower.y, 16, '#f87171', 120, 0.45, 3, false);
-        addText(targetTower.x, targetTower.y - 20, 'DISRUPTED', '#f87171', 13);
-        Sfx.play('boom');
+        if (typeof spawnHostileArtillery === 'function') {
+          spawnHostileArtillery(e, targetTower, 180);
+        } else {
+          targetTower.empT = 2.8;
+          addFx('tracer', e.x, e.y, targetTower.x, targetTower.y, 0.4, '#f87171', 3);
+          burst(targetTower.x, targetTower.y, 16, '#f87171', 120, 0.45, 3, false);
+          addText(targetTower.x, targetTower.y - 20, 'DISRUPTED', '#f87171', 13);
+          Sfx.play('boom');
+        }
       }
     }
     if (e.shieldT > 0) {
@@ -609,6 +637,30 @@ function updateEnemy(e, dt) {
       }
     } else {
       e.isTetheringMech = false;
+    }
+  }
+
+  // 17.0 Phase Burrower: Subterranean target acquisition and Stasis Web
+  if (e.type === 'phase_burrower' && !e.dead && !(e.stunT > 0)) {
+    if (e.burrowed) {
+      let bestTower = null, maxInv = -1;
+      if (G && G.towers) {
+        for (const t of G.towers) {
+          const inv = t.invested || 100;
+          if (inv > maxInv) { maxInv = inv; bestTower = t; }
+        }
+      }
+      if (bestTower) {
+        const d = Math.hypot(bestTower.x - e.x, bestTower.y - e.y);
+        if (d <= 45) {
+          e.burrowed = false;
+          bestTower.empT = 6.0;
+          bestTower.stasisWeb = 6.0;
+          burst(bestTower.x, bestTower.y, 20, '#a855f7', 120, 0.5, 3.5, true);
+          addText(bestTower.x, bestTower.y - 25, 'STASIS WEB!', '#a855f7', 15);
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+        }
+      }
     }
   }
 

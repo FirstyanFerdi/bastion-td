@@ -927,7 +927,9 @@ const ED = {
   alpha_gorgon: { name: 'Alpha Gorgon Apex', hp: 900, speed: 48, r: 26, armor: 0.50, reward: 50, leak: 4 },
   sapper: { name: 'Subterranean Sapper', hp: 210, speed: 72, r: 13, armor: 0.20, reward: 16, leak: 2, sapper: true },
   chaff_skimmer: { name: 'Chaff Cloud Skimmer', hp: 240, speed: 68, r: 15, armor: 0.30, reward: 20, leak: 2, skimmer: true },
-  harpoon_leecher: { name: 'Harpoon Leecher', hp: 280, speed: 58, r: 16, armor: 0.35, reward: 24, leak: 2, leecher: true }
+  harpoon_leecher: { name: 'Harpoon Leecher', hp: 280, speed: 58, r: 16, armor: 0.35, reward: 24, leak: 2, leecher: true },
+  phase_burrower: { name: 'Phase Burrower', hp: 280, speed: 75, r: 14, armor: 0.35, reward: 22, leak: 2, burrower: true },
+  temporal_aberration: { name: 'Temporal Aberration', hp: 420, speed: 65, r: 16, armor: 0.40, reward: 50, leak: 3, isAberration: true }
 };
 const hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
@@ -1012,6 +1014,7 @@ function buildSpawns(n) {
   if (n >= 7) { const st = 1 + Math.floor((n - 7) / 3); for (let i = 0; i < st; i++) add(4 + i * 2.2, 'stealth'); }
   if (n >= 7) { const cs = 1 + Math.floor((n - 7) / 4); for (let i = 0; i < cs; i++) add(2.8 + i * 3.8, 'chaff_skimmer'); }
   if (n >= 8) { const hl = 1 + Math.floor((n - 8) / 4); for (let i = 0; i < hl; i++) add(5.0 + i * 4.5, 'harpoon_leecher'); }
+  if (n >= 8 && typeof G !== 'undefined' && G && G.nemesis && G.nemesis.spatialVuln >= 0.35) { add(4.2, 'phase_burrower'); }
   if (n >= 9) { const cr = 1 + Math.floor((n - 9) / 5); for (let i = 0; i < cr; i++) add(5 + i * 4.5, 'carrier'); }
   if (n >= 11) { const br = 1 + Math.floor((n - 11) / 4); for (let i = 0; i < br; i++) add(2 + i * 3.2, 'breacher'); }
   if (n % 5 === 0) {
@@ -2845,6 +2848,49 @@ const TACTICAL_DIRECTIVES = [
     rewardCores: 5
   }
 ];
+
+/* ============================================================
+   17.0 THE CHRONO-TACTICAL SINGULARITY & NEURAL SWARM CONFIGS
+   ============================================================ */
+const SINGULARITY_CONFIG = {
+  // Level 1: Visceral Micro-Tactics & Juice
+  parryWindowDuration: 0.25,     // 250ms window before impact
+  deflectionCritMult: 3.0,       // 300% Crit True Damage
+  mechBatteryRecharge: 25,       // +25% Mech Battery on perfect parry
+  timeDilation: 0.35,            // 0.35s slow-motion bullet-time
+  corpseDuration: 8.0,           // Corpse remains 8 seconds
+  corpseShrapnelPct: 0.20,       // 20% max HP shrapnel AoE damage
+  harmonicChainWindow: 1.2,      // 1.2s cadence to chain overcharge
+  harmonicBuffDuration: 8.0,     // 8s buff duration
+  harmonicFireRateBonus: 0.40,   // +40% Fire Rate
+  harmonicRangeBonus: 0.25       // +25% Attack Range
+};
+
+const NEMESIS_CONFIG = {
+  // Level 2: Cognitive Adversarial Adaptation
+  overkillRelianceThreshold: 0.45, // Trigger Decoy Bait Waves
+  spatialVulnThreshold: 0.35,      // Trigger Phase Burrowers targeting rear
+  dominantElementThreshold: 0.50,  // Trigger Dispersion Cocoon
+  decoyHpRatio: 0.20,              // Decoys have 20% normal HP
+  cocoonAbsorbRatio: 0.70,         // Absorbs 70% of dominant damage
+  cocoonShieldRadius: 85,          // Grants Overshield to allies within 85px
+  cocoonOppositeVulnMult: 1.50     // Takes 150% damage from opposite element
+};
+
+const PARADOX_CONFIG = {
+  // Level 3: Temporal Paradox Continuum & Ghost Army Co-op
+  duration: 15.0,                  // 15 seconds rewound playback
+  historyInterval: 0.1,            // Snapshot every 100ms
+  maxHistoryFrames: 150,           // 15 seconds ring buffer
+  chargeFromParry: 10,             // +10% Paradox Charge
+  chargeFromSiphon: 5,             // +5% Paradox Charge
+  chargeFromHarmonic: 15,          // +15% Paradox Charge
+  aberrationCount: 3,              // Aberrations spawned on temporal breach
+  aberrationRewardGold: 50,
+  aberrationRewardCores: 2,
+  aberrationTvmScore: 2500
+};
+
 
 
 

@@ -272,7 +272,40 @@ function newGame(keepSpeed) {
       activeMutations: [],
       killboxConsecutiveWaves: 0
     },
-    elementHitsThisInterval: { phys: 0, energy: 0, plasma: 0, cryo: 0 }
+    elementHitsThisInterval: { phys: 0, energy: 0, plasma: 0, cryo: 0 },
+    // 17.0 The Chrono-Tactical Singularity & Neural Swarm Systems
+    hostileProjectiles: [],
+    lootParticles: [],
+    harmonicBeams: [],
+    harmonicOverdriveChain: 0,
+    harmonicChainTowers: [],
+    lastOverdriveTime: 0,
+    timeDilation: 0,
+    nemesis: {
+      aggressionIndex: 0.5,
+      overkillReliance: 0,
+      spatialVuln: 0,
+      dominantElement: 'phys',
+      superweaponKills: 0,
+      frontlineKills: 0,
+      totalTrackedKills: 0,
+      activeDecoyWave: false,
+      decoyTimer: 0,
+      predictedTactic: 'Frontal Swarm Incursion',
+      counterMeasureHint: 'Prepare versatile hybrid defenses.',
+      scannedThisWave: false
+    },
+    paradox: {
+      charge: 0,
+      maxCharge: 100,
+      active: false,
+      timer: 0,
+      maxDuration: 15.0,
+      historyBuffer: [],
+      ghostEntities: [],
+      aberrationsSpawned: false,
+      snapshotTimer: 0
+    }
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -980,6 +1013,16 @@ function updateMech(dt) {
       m.vy = dy * cfg.speed;
       m.x = clamp(m.x + m.vx * dt, 24, W - 24);
       m.y = clamp(m.y + m.vy * dt, 24, H - 24);
+
+      // 17.0 Kinetic Corpse Crushing by Titan Mech
+      if (G.corpses && G.corpses.length > 0) {
+        for (let ci = G.corpses.length - 1; ci >= 0; ci--) {
+          const cp = G.corpses[ci];
+          if (!cp.crushed && Math.hypot(m.x - cp.x, m.y - cp.y) <= 34) {
+            if (typeof triggerCorpseCrush === 'function') triggerCorpseCrush(cp, ci);
+          }
+        }
+      }
       // Footstep sound tick
       m.stepTimer = (m.stepTimer || 0) + dt;
       if (m.stepTimer >= 0.35) {
@@ -1532,6 +1575,36 @@ function dealDamage(e, amount, type, src, opts) {
         chainedCount++;
       }
     }
+  }
+
+  // 17.0 The Chrono-Tactical Singularity: Ghost Immunity & Dispersion Cocoon
+  if (e.isAberration && opts.isGhost) {
+    if (Math.random() < 0.25 && typeof addText === 'function') addText(e.x, e.y - 15, 'PHASE SHIFT (LIVE ONLY)', '#c084fc', 11);
+    return 0; // Immune to past timeline ghost fleet!
+  }
+  if (e.dispersionCocoon) {
+    if (type === e.cocoonElement) {
+      const absorbed = a * 0.70;
+      a *= 0.30;
+      if (G && G.enemies) {
+        for (const ally of G.enemies) {
+          if (ally !== e && !ally.dead && Math.hypot(ally.x - e.x, ally.y - e.y) <= 85) {
+            ally.shield = Math.min((ally.maxHp || 300) * 0.5, (ally.shield || 0) + Math.round(absorbed * 0.5));
+          }
+        }
+      }
+      if (Math.random() < 0.3 && typeof burst === 'function') burst(e.x, e.y, 6, '#38bdf8', 60, 0.25, 2, false);
+      if (Math.random() < 0.25 && typeof addText === 'function') addText(e.x, e.y - 18, 'COCOON ABSORB!', '#38bdf8', 11);
+    } else if (type === 'phys' || type === 'kinetic' || (e.cocoonElement === 'plasma' && type === 'cryo') || (e.cocoonElement === 'cryo' && type === 'plasma')) {
+      a *= 1.50;
+      e.dispersionCocoon = false;
+      if (typeof burst === 'function') burst(e.x, e.y, 16, '#fbbf24', 120, 0.45, 3, true);
+      if (typeof addText === 'function') addText(e.x, e.y - 20, 'COCOON SHATTERED!', '#fbbf24', 13);
+    }
+  }
+  if (src && src.harmonicBuff > 0) {
+    a *= 1.30;
+    opts.crit = true;
   }
 
   // 15.0 DNTM Chameleon Carapace Reflection
@@ -2093,7 +2166,7 @@ function dealDamage(e, amount, type, src, opts) {
     }
   }
   else e.dmgAcc += a;
-  if (src) src.dmg += a;
+  if (src && typeof src === 'object' && typeof src.dmg === 'number') src.dmg += a;
   Sfx.play('hit');
   if (e.hp <= 0) killEnemy(e, src);
   return a;
@@ -2210,7 +2283,7 @@ function killEnemy(e, src) {
     G.gold += rewardToGive;
   }
   G.score += finalScore; G.kills++;
-  if (src) src.kills++;
+  if (src && typeof src === 'object' && typeof src.kills === 'number') src.kills++;
 
   // 16.0 The Adaptive Entropy Matrix: Tracking & Heist Resolution
   if (G && G.entropy) {
@@ -2229,6 +2302,31 @@ function killEnemy(e, src) {
       }
     }
     G.entropy.tvmScore = Math.min(100, (G.entropy.tvmScore || 50) + 0.6);
+  }
+
+  // 17.0 The Chrono-Tactical Singularity: Aberrations, Corpses & Nemesis Tracking
+  if (e.isAberration) {
+    G.gold += (typeof PARADOX_CONFIG !== 'undefined' ? PARADOX_CONFIG.aberrationRewardGold : 50);
+    if (typeof addCores === 'function') addCores(typeof PARADOX_CONFIG !== 'undefined' ? PARADOX_CONFIG.aberrationRewardCores : 2);
+    G.score += (typeof PARADOX_CONFIG !== 'undefined' ? PARADOX_CONFIG.aberrationTvmScore : 2500);
+    if (typeof addText === 'function') addText(e.x, e.y - 35, '★ TIMELINE STABILIZED! +50G +2 CORES ★', '#38bdf8', 15);
+    if (typeof burst === 'function') burst(e.x, e.y, 30, '#38bdf8', 160, 0.6, 4, true);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('victory');
+  }
+
+  if (G && G.nemesis) {
+    G.nemesis.totalTrackedKills = (G.nemesis.totalTrackedKills || 0) + 1;
+    if (e.x < W * 0.45) G.nemesis.frontlineKills = (G.nemesis.frontlineKills || 0) + 1;
+    if (src === 'mech' || (src && src.isMech) || (src && src.isSuperweapon) || G.overloadT > 0) {
+      G.nemesis.superweaponKills = (G.nemesis.superweaponKills || 0) + 1;
+    }
+    G.nemesis.aggressionIndex = G.nemesis.totalTrackedKills > 0 ? (G.nemesis.frontlineKills / G.nemesis.totalTrackedKills) : 0.5;
+    G.nemesis.overkillReliance = G.nemesis.totalTrackedKills > 0 ? (G.nemesis.superweaponKills / G.nemesis.totalTrackedKills) : 0;
+  }
+
+  // Passive Paradox Engine charging on kills
+  if (G && G.paradox && !G.paradox.active) {
+    G.paradox.charge = Math.min(100, (G.paradox.charge || 0) + 1.2);
   }
 
   // 15.0 Ancient Cyber-Engram On-Kill Affixes
@@ -2409,12 +2507,22 @@ function killEnemy(e, src) {
     Sfx.play('kill');
   }
 
-  // 6.0 Corpse Persistence for Nanite Necromancy & 9.0 Gorger Cannibalism
+  // 6.0 Corpse Persistence & 17.0 Corpse Crushing / Siphoning
   if (e.type !== 'swarm' && G && G.corpses) {
     if (G.corpses.length < 16) {
+      const corpseDur = (typeof SINGULARITY_CONFIG !== 'undefined' ? SINGULARITY_CONFIG.corpseDuration : 8.0);
       G.corpses.push({
-        type: e.type, x: e.x, y: e.y, r: e.r || 14,
-        life: 16.0
+        id: Math.random(),
+        type: e.type,
+        kind: e.type,
+        x: e.x,
+        y: e.y,
+        r: e.r || 14,
+        maxHp: e.maxHp || e.hpMax || 300,
+        hp: e.maxHp || e.hpMax || 300,
+        life: corpseDur,
+        maxLife: corpseDur,
+        crushed: false
       });
     }
   }
@@ -5300,4 +5408,437 @@ function updateAdaptiveEntropySystems(dt) {
 
   // 4. Entropy Profiler Evaluation
   updateEntropyProfiler(dt);
+
+  // 5. 17.0 The Chrono-Tactical Singularity & Neural Swarm Ecosystem
+  updateSingularityNexusSystems(dt);
+}
+
+/* ============================================================
+   17.0 THE CHRONO-TACTICAL SINGULARITY & NEURAL SWARM SYSTEMS
+   ============================================================ */
+
+function spawnHostileArtillery(sourceEnemy, targetTower, damage) {
+  if (!G) return null;
+  if (!G.hostileProjectiles) G.hostileProjectiles = [];
+  const sx = sourceEnemy ? sourceEnemy.x : 0;
+  const sy = sourceEnemy ? sourceEnemy.y : 0;
+  const tx = targetTower ? targetTower.x : (BASE_PT ? BASE_PT.x : W / 2);
+  const ty = targetTower ? targetTower.y : (BASE_PT ? BASE_PT.y : H / 2);
+  const proj = {
+    id: Math.random(),
+    sx, sy, x: sx, y: sy,
+    tx, ty,
+    progress: 0,
+    speed: 0.85,
+    life: 1.5,
+    maxLife: 1.5,
+    damage: damage || 140,
+    sourceEnemy: sourceEnemy || null,
+    targetTower: targetTower || null,
+    parryWindow: false,
+    deflected: false
+  };
+  G.hostileProjectiles.push(proj);
+  return proj;
+}
+
+function triggerKineticParry(proj) {
+  if (!G) return false;
+  if (!proj) {
+    if (G.hostileProjectiles && G.hostileProjectiles.length > 0) {
+      proj = G.hostileProjectiles.find(p => p.parryWindow && !p.deflected);
+      if (!proj) {
+        const m = G.mech;
+        if (m) proj = G.hostileProjectiles.find(p => !p.deflected && Math.hypot(p.x - m.x, p.y - m.y) <= 100);
+      }
+    }
+  }
+  if (!proj || proj.deflected) return false;
+
+  proj.deflected = true;
+  proj.sx = proj.x;
+  proj.sy = proj.y;
+  if (proj.sourceEnemy && !proj.sourceEnemy.dead) {
+    proj.tx = proj.sourceEnemy.x;
+    proj.ty = proj.sourceEnemy.y;
+  } else if (G.enemies && G.enemies.length > 0) {
+    const f = G.enemies.find(e => !e.dead) || G.enemies[0];
+    proj.tx = f.x;
+    proj.ty = f.y;
+  }
+  proj.progress = 0;
+  proj.speed = 1.6;
+
+  // Mech Battery Recharge +25%
+  if (G.mech) {
+    G.mech.battery = Math.min(100, (G.mech.battery || 0) + 25);
+  }
+
+  // Time Dilation Bullet-Time
+  G.timeDilation = (typeof SINGULARITY_CONFIG !== 'undefined' ? SINGULARITY_CONFIG.timeDilation : 0.35);
+
+  // Paradox Charge +10%
+  if (G.paradox) {
+    G.paradox.charge = Math.min(100, (G.paradox.charge || 0) + 10);
+  }
+
+  // Screen shake & Audio
+  if (typeof shake === 'function') shake(14.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('mech_blade');
+    Sfx.play('shockwave');
+  }
+
+  if (typeof addRing === 'function') addRing(proj.x, proj.y, 10, 85, 0.5, '#38bdf8', 4);
+  if (typeof burst === 'function') burst(proj.x, proj.y, 22, '#fbbf24', 150, 0.5, 3.5, true);
+  if (typeof addText === 'function') addText(proj.x, proj.y - 32, '★ PERFECT DEFLECTION! +300% CRIT ★', '#38bdf8', 16);
+  return true;
+}
+
+function triggerCorpseCrush(corpse, idx) {
+  if (!G || !corpse || corpse.crushed) return false;
+  corpse.crushed = true;
+  const pct = (typeof SINGULARITY_CONFIG !== 'undefined' ? SINGULARITY_CONFIG.corpseShrapnelPct : 0.20);
+  const shrapnelDmg = Math.round((corpse.maxHp || 300) * pct);
+
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (!foe.dead && Math.hypot(foe.x - corpse.x, foe.y - corpse.y) <= 85) {
+        dealDamage(foe, shrapnelDmg, 'phys', 'mech', { crit: true });
+      }
+    }
+  }
+
+  if (typeof shake === 'function') shake(8.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('boom');
+    Sfx.play('corpse_reclaim');
+  }
+  if (typeof burst === 'function') burst(corpse.x, corpse.y, 25, '#f43f5e', 140, 0.6, 3.5, true);
+  if (typeof addText === 'function') addText(corpse.x, corpse.y - 25, 'CORPSE CRUNCH! ' + shrapnelDmg + ' DMG', '#f43f5e', 14);
+
+  if (G.corpses) {
+    if (idx !== undefined && G.corpses[idx] === corpse) G.corpses.splice(idx, 1);
+    else {
+      const i = G.corpses.indexOf(corpse);
+      if (i !== -1) G.corpses.splice(i, 1);
+    }
+  }
+  return true;
+}
+
+function triggerCorpseSiphon(corpse, idx) {
+  if (!G || !corpse) return false;
+  const goldVal = Math.round(18 + Math.random() * 18);
+  G.gold = (G.gold || 0) + goldVal;
+  if (typeof addCores === 'function') addCores(1);
+  if (G.paradox) G.paradox.charge = Math.min(100, (G.paradox.charge || 0) + 5);
+
+  if (!G.lootParticles) G.lootParticles = [];
+  for (let i = 0; i < 6; i++) {
+    G.lootParticles.push({
+      x: corpse.x + (Math.random() - 0.5) * 16,
+      y: corpse.y + (Math.random() - 0.5) * 16,
+      tx: 70, ty: 25,
+      life: 0.8,
+      maxLife: 0.8,
+      val: Math.round(goldVal / 6),
+      color: '#38bdf8'
+    });
+  }
+
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('coin');
+    Sfx.play('matrix_unlock');
+  }
+  if (typeof burst === 'function') burst(corpse.x, corpse.y, 20, '#38bdf8', 120, 0.5, 3, true);
+  if (typeof addText === 'function') addText(corpse.x, corpse.y - 25, '+QUANTUM SHARD & CORE!', '#38bdf8', 14);
+
+  if (G.corpses) {
+    if (idx !== undefined && G.corpses[idx] === corpse) G.corpses.splice(idx, 1);
+    else {
+      const i = G.corpses.indexOf(corpse);
+      if (i !== -1) G.corpses.splice(i, 1);
+    }
+  }
+  return true;
+}
+
+function triggerHarmonicOverdrive(tower) {
+  if (!G || !tower) return false;
+  const now = G.time || 0;
+  const win = (typeof SINGULARITY_CONFIG !== 'undefined' ? SINGULARITY_CONFIG.harmonicChainWindow : 1.2);
+
+  if (now - (G.lastOverdriveTime || 0) <= win) {
+    G.harmonicOverdriveChain = (G.harmonicOverdriveChain || 0) + 1;
+    if (!G.harmonicChainTowers) G.harmonicChainTowers = [];
+    if (!G.harmonicChainTowers.includes(tower)) G.harmonicChainTowers.push(tower);
+  } else {
+    G.harmonicOverdriveChain = 1;
+    G.harmonicChainTowers = [tower];
+  }
+  G.lastOverdriveTime = now;
+  tower.overdriveT = 8.0;
+
+  if (G.harmonicOverdriveChain >= 3) {
+    const chained = G.harmonicChainTowers.slice(-3);
+    for (const t of chained) {
+      t.harmonicBuff = 8.0;
+      t.overdriveT = 8.0;
+      if (typeof addText === 'function') addText(t.x, t.y - 25, 'HARMONIC RESONANCE!', '#38bdf8', 13);
+    }
+    if (!G.harmonicBeams) G.harmonicBeams = [];
+    G.harmonicBeams.push({
+      t1: chained[0], t2: chained[1], t3: chained[2],
+      life: 8.0, maxLife: 8.0
+    });
+    if (G.paradox) G.paradox.charge = Math.min(100, (G.paradox.charge || 0) + 15);
+    if (typeof shake === 'function') shake(10.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) {
+      Sfx.play('overcharge');
+      Sfx.play('laser_beam');
+    }
+    G.banner = {
+      text: '★ 3-CHAIN HARMONIC RESONANCE! ★',
+      color: '#38bdf8',
+      sub: '+40% FIRE RATE · +25% RANGE · PIERCING ROUNDS ACTIVE (8s)',
+      t: 3.0
+    };
+  }
+  return true;
+}
+
+function updateNemesisAI(dt) {
+  if (!G || !G.nemesis) return;
+  const nem = G.nemesis;
+
+  // 1. Spatial Vulnerability: Rear Defense Density Ratio
+  let rearCost = 0, totalCost = 0;
+  if (G.towers) {
+    for (const t of G.towers) {
+      const cost = t.invested || 100;
+      totalCost += cost;
+      if (t.c >= 10 || t.x >= W * 0.65) rearCost += cost;
+    }
+  }
+  nem.spatialVuln = totalCost > 0 ? (rearCost / totalCost) : 0;
+
+  // 2. Dominant Element Tracking
+  let bestElem = 'phys', maxVal = 0;
+  if (G.damageTrack) {
+    for (const k in G.damageTrack) {
+      if (G.damageTrack[k] > maxVal) { maxVal = G.damageTrack[k]; bestElem = k; }
+    }
+  }
+  nem.dominantElement = bestElem;
+
+  // 3. Tactic Prediction & Counter-Measure Hint
+  if (nem.spatialVuln >= 0.35) {
+    nem.predictedTactic = 'Phase Burrower subterranean strike on rear defenses.';
+    nem.counterMeasureHint = 'Deploy physical or frontline interceptors to guard rear Railguns.';
+  } else if (nem.overkillReliance >= 0.45) {
+    nem.predictedTactic = 'Decoy Bait Swarm to bleed high-cooldown skills.';
+    nem.counterMeasureHint = 'Hold Nuke/Orbital Strike until genuine swarm arrives.';
+  } else {
+    nem.predictedTactic = 'Adaptive Dispersion Cocoon absorbing ' + bestElem.toUpperCase() + '.';
+    nem.counterMeasureHint = 'Diversify grid with complementary kinetic or cryogenic towers.';
+  }
+}
+
+function recordParadoxSnapshot() {
+  if (!G || !G.paradox) return;
+  const p = G.paradox;
+  const snapshot = {
+    time: G.time || 0,
+    lives: G.lives || 25,
+    gold: G.gold || 0,
+    mech: G.mech ? { x: G.mech.x, y: G.mech.y, facing: G.mech.facing, active: G.mech.active, swinging: G.mech.swingT > 0 } : null,
+    towers: (G.towers || []).map(t => ({ x: t.x, y: t.y, type: t.type, rate: t.rate, firing: t.flashT > 0 }))
+  };
+  p.historyBuffer.push(snapshot);
+  if (p.historyBuffer.length > 150) p.historyBuffer.shift();
+}
+
+function triggerParadoxCollapse() {
+  if (!G || !G.paradox) return false;
+  const p = G.paradox;
+  if (p.active) return false;
+  if (p.charge < 100 && G.lives > 0) return false;
+
+  p.active = true;
+  p.timer = (typeof PARADOX_CONFIG !== 'undefined' ? PARADOX_CONFIG.duration : 15.0);
+  p.charge = 0;
+
+  // 15-Second Timeline Rewind: Restore Core Lives
+  G.lives = Math.max(12, G.lives);
+
+  // Rewind enemy progression along path
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (!foe.dead) foe.d = Math.max(0, foe.d - (foe.speed || 60) * 12);
+    }
+  }
+
+  // Instantiate Ghost Entities for 2x Firepower Playback
+  p.ghostEntities = [
+    {
+      type: 'ghost_mech',
+      x: G.mech ? G.mech.x : BASE_PT.x,
+      y: G.mech ? G.mech.y : BASE_PT.y,
+      facing: 0,
+      active: true,
+      fireCd: 0.15
+    }
+  ];
+
+  // Spawn Temporal Aberrations (Only vulnerable to live timeline player)
+  for (let i = 0; i < 3; i++) {
+    spawnEnemy('temporal_aberration', G.wave);
+    const ab = G.enemies[G.enemies.length - 1];
+    if (ab) {
+      ab.isAberration = true;
+      ab.d = Math.max(0, 50 + i * 35);
+    }
+  }
+
+  if (typeof shake === 'function') shake(18.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('time_rewind');
+
+  G.banner = {
+    text: '⏳ TEMPORAL PARADOX COLLAPSE! ⏳',
+    color: '#38bdf8',
+    sub: '15S TIMELINE REWOUND · GHOST FLEET DEPLOYED · 2X FIREPOWER ENGAGED',
+    t: 4.0
+  };
+  return true;
+}
+
+function updateParadoxContinuum(dt) {
+  if (!G || !G.paradox) return;
+  const p = G.paradox;
+
+  // Rolling History Buffer Recording (every 0.1s)
+  p.snapshotTimer = (p.snapshotTimer || 0) + dt;
+  if (p.snapshotTimer >= 0.1) {
+    p.snapshotTimer = 0;
+    recordParadoxSnapshot();
+  }
+
+  // Active Paradox Ghost Fleet Playback
+  if (p.active) {
+    p.timer -= dt;
+    if (p.ghostEntities && p.ghostEntities.length > 0) {
+      for (const ge of p.ghostEntities) {
+        if (ge.type === 'ghost_mech') {
+          // Ghost Mech tracks nearby hostiles and fires phantom bursts
+          ge.fireCd = (ge.fireCd || 0.15) - dt;
+          if (ge.fireCd <= 0 && G.enemies && G.enemies.length > 0) {
+            ge.fireCd = 0.20;
+            const target = G.enemies.find(e => !e.dead && Math.hypot(e.x - ge.x, e.y - ge.y) <= 180);
+            if (target) {
+              dealDamage(target, 75, 'energy', 'ghost_mech', { isGhost: true });
+              if (typeof addBolt === 'function') addBolt(ge.x, ge.y, target.x, target.y, '#38bdf8', 2.0);
+            }
+          }
+        }
+      }
+    }
+    if (p.timer <= 0) {
+      p.active = false;
+      p.ghostEntities = [];
+      if (typeof addText === 'function') addText(W / 2, H / 2, 'PARADOX STABILIZED', '#38bdf8', 18);
+    }
+  }
+
+  // Emergency Death-Defying Protocol
+  if (G.lives <= 0 && p.charge >= 100) {
+    triggerParadoxCollapse();
+  }
+}
+
+function updateSingularityNexusSystems(dt) {
+  if (!G) return;
+
+  // 1. Time Dilation Decay
+  if (G.timeDilation > 0) {
+    G.timeDilation = Math.max(0, G.timeDilation - dt);
+  }
+
+  // 2. Hostile Artillery Projectiles
+  if (G.hostileProjectiles && G.hostileProjectiles.length > 0) {
+    for (let i = G.hostileProjectiles.length - 1; i >= 0; i--) {
+      const proj = G.hostileProjectiles[i];
+      proj.progress += dt * proj.speed;
+
+      // Ballistic parabolic trajectory
+      const t = clamp(proj.progress, 0, 1);
+      proj.x = proj.sx + (proj.tx - proj.sx) * t;
+      proj.y = proj.sy + (proj.ty - proj.sy) * t - Math.sin(t * Math.PI) * 65;
+
+      // Parry Window
+      proj.parryWindow = !proj.deflected && t >= 0.70 && t <= 0.98;
+
+      if (t >= 1.0) {
+        if (proj.deflected) {
+          // 300% Crit True Damage on enemy cluster
+          const critDmg = Math.round(proj.damage * 3.0);
+          if (G.enemies) {
+            for (const foe of G.enemies) {
+              if (!foe.dead && Math.hypot(foe.x - proj.tx, foe.y - proj.ty) <= 80) {
+                dealDamage(foe, critDmg, 'true', 'mech', { crit: true });
+              }
+            }
+          }
+          if (typeof shake === 'function') shake(10.0);
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+          if (typeof burst === 'function') burst(proj.tx, proj.ty, 25, '#38bdf8', 160, 0.6, 4, true);
+          if (typeof addText === 'function') addText(proj.tx, proj.ty - 25, 'DEFLECTION BLAST! ' + critDmg, '#38bdf8', 16);
+        } else {
+          // Hits target tower
+          if (proj.targetTower) {
+            proj.targetTower.empT = Math.max(proj.targetTower.empT || 0, 2.5);
+            if (typeof burst === 'function') burst(proj.targetTower.x, proj.targetTower.y, 14, '#ef4444', 90, 0.4, 2.5, false);
+            if (typeof addText === 'function') addText(proj.targetTower.x, proj.targetTower.y - 18, 'DISRUPTED', '#ef4444', 12);
+          }
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+        }
+        G.hostileProjectiles.splice(i, 1);
+      }
+    }
+  }
+
+  // 3. Magnetized Loot Particles
+  if (G.lootParticles && G.lootParticles.length > 0) {
+    for (let i = G.lootParticles.length - 1; i >= 0; i--) {
+      const lp = G.lootParticles[i];
+      lp.life -= dt;
+      const speed = 400 * dt;
+      const dx = lp.tx - lp.x, dy = lp.ty - lp.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 15 || lp.life <= 0) {
+        G.gold = (G.gold || 0) + lp.val;
+        G.lootParticles.splice(i, 1);
+      } else {
+        lp.x += (dx / dist) * speed;
+        lp.y += (dy / dist) * speed;
+      }
+    }
+  }
+
+  // 4. Harmonic Beams & Towers Buff Decay
+  if (G.harmonicBeams && G.harmonicBeams.length > 0) {
+    for (let i = G.harmonicBeams.length - 1; i >= 0; i--) {
+      G.harmonicBeams[i].life -= dt;
+      if (G.harmonicBeams[i].life <= 0) G.harmonicBeams.splice(i, 1);
+    }
+  }
+  if (G.towers) {
+    for (const t of G.towers) {
+      if (t.harmonicBuff > 0) t.harmonicBuff = Math.max(0, t.harmonicBuff - dt);
+    }
+  }
+
+  // 5. Update Nemesis AI & Paradox Continuum
+  updateNemesisAI(dt);
+  updateParadoxContinuum(dt);
 }

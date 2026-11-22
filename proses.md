@@ -2475,3 +2475,51 @@ Berdasarkan master blueprint `bastion_td_anti_meta_entropy_blueprint.md` yang te
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih, 25 data-act & 38 data-ov tervalidasi)**
 - `tests/smoke.js`: **LULUS (Simulasi gelombang tanpa error)**
 - **Seluruh 27 Unit Test Suites di repositori: 100% LULUS.**
+
+---
+
+## 37. Implementasi Bastion TD 17.0: The Chrono-Tactical Singularity & Neural Swarm Ecosystem
+
+Berdasarkan master blueprint `bastion_td_singularity_nexus_blueprint.md` yang telah disetujui pengguna, telah diimplementasikan penuh 3 level evolusi mekanik, sistem kecerdasan swarm adaptif, dan fitur terliar kontinum paradoks waktu:
+
+### 37.1 Rincian 3 Level Evolusi Bastion TD 17.0
+1. **Level 1: Visceral Micro-Tactics & Juice (Clutch Frame-Window & Dopamine Gratification):**
+   - **Kinetic Parrying & Active Projectile Deflection:**
+     - Proyektil artileri berat musuh (meriam Boss dan Artillery Walker) berwujud proyektil balistik fisik di udara.
+     - Jendela tangkisan refleks 250ms (`parryWindow = true`): Menekan `[SPACE]` atau klik proyektil memicu *Perfect Parry*.
+     - Membalikkan lintasan proyektil 180° ke arah gerombolan musuh dengan **300% Critical True Damage** di area impak 80px.
+     - Mengisi seketika +25% Baterai Mech, memicu efek *time-dilation* (slow motion bullet time 0.35s), getaran layar haptik (`shake(14)`), dan audio `mech_blade` + `shockwave`.
+   - **Corpse Crushing & Magnetized Loot Sieve:**
+     - Musuh bertubuh besar (Brute, Goliath, Boss, Abomination, Gorger) meninggalkan karkas fisik selama 8.0 detik.
+     - *Mech Stomp:* Titan Mech menginjak bangkai memicu ledakan *Corpse Shrapnel AoE* setara 20% Max HP bangkai ke musuh sekitarnya.
+     - *Pointer Siphon:* Mengklik bangkai menyedot kristal *Quantum Shards* (+15–35G, +1 Nanite Core, +5% Paradox Charge) dalam semburan partikel magnetis yang melayang ke HUD emas pemain.
+   - **Harmonic Resonant Overdrive (Taktik Geometris Pylon Grid):**
+     - Mengaktifkan Overdrive pada menara yang terhubung jaringan kisi daya dalam jeda irama $\le 1.2$ detik.
+     - Mencapai 3-Chain Harmonic Overdrive menghasilkan sinar laser busur neon penghubung ketiga menara (`harmonicBeams`).
+     - Ketiga menara memperoleh buff Harmonic Resonance selama 8.0 detik: +40% Fire Rate, +25% Attack Range, tembakan menembus armor (*true damage pierce*), dan +15% Paradox Charge.
+
+2. **Level 2: Cognitive Adversarial Adaptation (The Neural Nemesis AI):**
+   - **Markov Strategy Profiler:**
+     - Melacak $\alpha$ (*Aggression Index* / rasio kill garis depan), $\beta$ (*Overkill Reliance* / rasio kill superweapon), dan $\mathbf{V}_{vuln}$ (*Spatial Vulnerability* / rasio nilai investasi menara belakang).
+     - *Decoy Bait Waves:* Bila $\beta \ge 0.45$, gelombang awal memunculkan swarm umpan ber-HP rendah (20% HP) untuk memancing pemain membuang skill besar.
+     - *Phase Burrowers:* Bila $\mathbf{V}_{vuln} \ge 0.35$, musuh menyusup lewat terowongan bawah tanah eterik dan langsung muncul di samping menara termahal di garis belakang untuk menguncinya dengan *Stasis Web* (lumpuh 6.0s).
+     - *Adaptive Dispersion Cocoon:* Menyelubungi musuh elit dengan kepompong yang menyerap 70% damage elemen dominan dan memancarkan *Overshield Aura* ke minion sekitar; dihancurkan instan oleh serangan fisik atau elemen lawan (+150% damage).
+   - **Swarm Telemetry Forensics:**
+     - Modal instrumen taktis intel (`showOverlay('forensics')`) dengan tombol `FORENSICS` di topbar. Menampilkan profil pemain, prediksi taktik musuh, dan tombol dekode frekuensi swarm.
+
+3. **Level 3: The Wildest Game-Changer — The Temporal Paradox Continuum & Ghost Army Co-op:**
+   - **Paradox Engine:** Mengisi daya hingga 100% melalui kombo multi-kill, gaya SSS TVM, perfect parry (+10%), siphon (+5%), dan harmonic overdrive (+15%).
+   - **Paradox Engine Collapse:**
+     - Diaktifkan secara manual via tombol `[TEMPORAL PARADOX / T]` atau otomatis sebagai protokol penyelamat nyawa saat Base Core sekarat (0 Lives).
+     - *15-Second Timeline Rewind:* Waktu ditarik mundur 15 detik ke belakang; nyawa markas dipulihkan (minimal 12 Lives), dan musuh dimundurkan posisinya di lintasan.
+     - *Ghost Fleet Playback (Quantum Holographic Phantoms):* Seluruh rekaman aksi 15 detik masa lalu diwujudkan sebagai Ghost Mech dan Ghost Turrets neon-cyan transparan yang menembak bersamaan dengan pemain masa kini (**2x Firepower Co-Op dengan Diri Sendiri**).
+     - *Temporal Aberrations:* Celah paradoks waktu melahirkan anomali waktu yang kebal terhadap damage Ghost Fleet dan hanya dapat dibasmi oleh pemain timeline masa kini, memberikan hadiah +50G, +2 Cores, dan +2500 TVM Score.
+
+---
+
+### 37.2 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_singularity_nexus.js`: **100% LULUS (Semua 7 Pilar Bastion TD 17.0 Terverifikasi)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 64 SFX sounds, 25 data-act & 38 data-ov, 58 element IDs)**
+- `tests/smoke.js`: **LULUS (Simulasi headless stabil)**
+- **Seluruh 28 Unit Test Suites di repositori: 100% LULUS.**
+

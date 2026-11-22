@@ -514,6 +514,11 @@ function render() {
   drawFlankBreachIndicator(c, time);
   drawSyndicateSiphonRig(c, time);
   drawThermalMicroVortex(c, time);
+  // 17.0 The Chrono-Tactical Singularity Battlefield Systems
+  drawHostileProjectiles(c, time);
+  drawLootParticles(c, time);
+  drawHarmonicBeams(c, time);
+  drawGhostEntities(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -693,6 +698,8 @@ function render() {
   drawAdrenalineHeatBorder(c, time);
   // 16.0 Tactical Versatility Meter (TVM) HUD
   drawTacticalVersatilityMeter(c, time);
+  // 17.0 Temporal Paradox Continuum HUD
+  drawTemporalParadoxHUD(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -956,10 +963,10 @@ function drawCorpses(c, time) {
     c.fill();
 
     // Interactive prompt
-    c.fillStyle = '#4ade80';
+    c.fillStyle = '#38bdf8';
     c.font = '700 8.5px ' + FONT;
     c.textAlign = 'center';
-    c.fillText('RECLAIM [CLICK]', cp.x, cp.y + 16);
+    c.fillText('SIPHON [CLICK] / CRUSH [MECH]', cp.x, cp.y + 16);
   }
   c.restore();
 }
@@ -3225,5 +3232,150 @@ function drawThermalMicroVortex(c, time) {
     c.textAlign = 'center';
     c.fillText('THERMAL MICRO-VORTEX (+75% HEAT)', cx, cy - 80);
   }
+  c.restore();
+}
+
+/* ============================================================
+   17.0 THE CHRONO-TACTICAL SINGULARITY RENDERING SYSTEMS
+   ============================================================ */
+
+function drawHostileProjectiles(c, time) {
+  if (!G || !G.hostileProjectiles || G.hostileProjectiles.length === 0) return;
+  c.save();
+  for (const p of G.hostileProjectiles) {
+    // Ballistic Shadow on Ground
+    const shadowY = p.sy + (p.ty - p.sy) * (p.progress || 0);
+    c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    c.beginPath();
+    c.ellipse(p.x, shadowY, 12, 6, 0, 0, TAU);
+    c.fill();
+
+    // Flight Trail
+    c.strokeStyle = p.deflected ? 'rgba(56, 189, 248, 0.45)' : 'rgba(239, 68, 68, 0.45)';
+    c.lineWidth = 2;
+    c.setLineDash([4, 4]);
+    c.beginPath();
+    c.moveTo(p.sx, p.sy);
+    c.lineTo(p.x, p.y);
+    c.stroke();
+    c.setLineDash([]);
+
+    // Projectile Core
+    c.fillStyle = p.deflected ? '#38bdf8' : '#ef4444';
+    c.beginPath();
+    c.arc(p.x, p.y, p.deflected ? 9 : 7, 0, TAU);
+    c.fill();
+
+    // Parry Window Prompt Ring
+    if (p.parryWindow && !p.deflected) {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 18);
+      c.strokeStyle = '#fbbf24';
+      c.lineWidth = 3;
+      c.beginPath();
+      c.arc(p.x, p.y, 18 + pulse * 6, 0, TAU);
+      c.stroke();
+
+      c.font = '800 11px ' + FONT;
+      c.fillStyle = '#fbbf24';
+      c.textAlign = 'center';
+      c.fillText('[SPACE] PARRY!', p.x, p.y - 20);
+    } else if (p.deflected) {
+      c.font = '800 10px ' + FONT;
+      c.fillStyle = '#38bdf8';
+      c.textAlign = 'center';
+      c.fillText('DEFLECTED 300%', p.x, p.y - 14);
+    }
+  }
+  c.restore();
+}
+
+function drawLootParticles(c, time) {
+  if (!G || !G.lootParticles || G.lootParticles.length === 0) return;
+  c.save();
+  for (const lp of G.lootParticles) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 12 + lp.x);
+    c.fillStyle = lp.color || '#38bdf8';
+    c.beginPath();
+    c.arc(lp.x, lp.y, 3.5 + pulse * 1.5, 0, TAU);
+    c.fill();
+    c.strokeStyle = '#ffffff';
+    c.lineWidth = 1;
+    c.stroke();
+  }
+  c.restore();
+}
+
+function drawHarmonicBeams(c, time) {
+  if (!G || !G.harmonicBeams || G.harmonicBeams.length === 0) return;
+  c.save();
+  for (const hb of G.harmonicBeams) {
+    if (!hb.t1 || !hb.t2 || !hb.t3) continue;
+    const alpha = clamp(hb.life / hb.maxLife, 0, 1);
+    c.strokeStyle = 'rgba(56, 189, 248, ' + (0.75 * alpha) + ')';
+    c.lineWidth = 3.5;
+    c.beginPath();
+    c.moveTo(hb.t1.x, hb.t1.y);
+    c.lineTo(hb.t2.x, hb.t2.y);
+    c.lineTo(hb.t3.x, hb.t3.y);
+    c.closePath();
+    c.stroke();
+
+    c.fillStyle = 'rgba(56, 189, 248, ' + (0.08 * alpha) + ')';
+    c.fill();
+  }
+  c.restore();
+}
+
+function drawGhostEntities(c, time) {
+  if (!G || !G.paradox || !G.paradox.active || !G.paradox.ghostEntities) return;
+  c.save();
+  for (const ge of G.paradox.ghostEntities) {
+    if (ge.type === 'ghost_mech') {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 10);
+      c.fillStyle = 'rgba(56, 189, 248, ' + (0.35 + 0.2 * pulse) + ')';
+      c.strokeStyle = '#38bdf8';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(ge.x, ge.y, 24, 0, TAU);
+      c.fill();
+      c.stroke();
+
+      c.font = '800 9px ' + FONT;
+      c.fillStyle = '#38bdf8';
+      c.textAlign = 'center';
+      c.fillText('GHOST MECH [PAST]', ge.x, ge.y - 28);
+    }
+  }
+  c.restore();
+}
+
+function drawTemporalParadoxHUD(c, time) {
+  if (!G || !G.paradox || !G.paradox.active) return;
+  c.save();
+  const p = G.paradox;
+  const pulse = 0.5 + 0.5 * Math.sin(time * 8);
+
+  // Screen-Edge Chromatic Glitch Border
+  c.strokeStyle = 'rgba(56, 189, 248, ' + (0.4 + 0.3 * pulse) + ')';
+  c.lineWidth = 6;
+  c.strokeRect(3, 3, W - 6, H - 6);
+
+  // Top Center HUD Banner
+  const bw = 360, bh = 32, bx = W / 2 - bw / 2, by = 16;
+  c.fillStyle = 'rgba(15, 23, 42, 0.9)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = '#38bdf8';
+  c.lineWidth = 1.5;
+  c.strokeRect(bx, by, bw, bh);
+
+  // Remaining Paradox Countdown Bar
+  const pct = clamp(p.timer / p.maxDuration, 0, 1);
+  c.fillStyle = 'rgba(56, 189, 248, 0.4)';
+  c.fillRect(bx + 4, by + bh - 6, (bw - 8) * pct, 3);
+
+  c.font = '800 12px ' + FONT;
+  c.fillStyle = '#38bdf8';
+  c.textAlign = 'center';
+  c.fillText('⏳ TEMPORAL PARADOX: ' + p.timer.toFixed(1) + 's (GHOST FLEET ONLINE)', W / 2, by + 18);
   c.restore();
 }

@@ -116,6 +116,9 @@ function triggerOverdrive(relayTower) {
     if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
     return false;
   }
+  if (typeof triggerHarmonicOverdrive === 'function') {
+    triggerHarmonicOverdrive(relayTower);
+  }
   relayTower.overdriveT = 8.0;
   const st = getTierData(relayTower);
   const boost = relayTower.branch === 'B' ? '+100%' : '+75%';

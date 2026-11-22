@@ -407,6 +407,18 @@ function init() {
       showOverlay('directive');
     });
   }
+  if ($('btnForensics')) {
+    $('btnForensics').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume(); Sfx.play('click');
+      showOverlay('forensics');
+    });
+  }
+  if ($('btnParadox')) {
+    $('btnParadox').addEventListener('click', () => {
+      Sfx.init(); Sfx.resume();
+      if (typeof triggerParadoxCollapse === 'function') triggerParadoxCollapse();
+    });
+  }
   if ($('btnExosuit')) {
     $('btnExosuit').addEventListener('click', () => {
       Sfx.init(); Sfx.resume(); Sfx.play('click');
@@ -597,6 +609,15 @@ function init() {
         G.uiDirty = true;
       }
     }
+    else if (a === 'scan_forensics') {
+      if (G && G.nemesis) {
+        G.nemesis.scannedThisWave = true;
+        burst(W / 2, H / 2, 22, '#a855f7', 150, 0.5, 3.5, true);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('matrix_unlock');
+        addText(W / 2, H / 2, 'SWARM FREQUENCIES DECODED!', '#a855f7', 16);
+        showOverlay(null);
+      }
+    }
     else if (a === 'close_smuggler' || a === 'close_codex' || a === 'close') {
       showOverlay(G && G.state === 'menu' ? 'menu' : null);
       Sfx.play('click');
@@ -630,5 +651,8 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   // 16.0 Adaptive Entropy Matrix Exports
   ENTROPY_CONFIG, PHENOTYPIC_MUTATIONS, TACTICAL_DIRECTIVES,
   triggerPrismaticDetonation, triggerThermalShockShatter, triggerKineticBreakout, triggerFlankBreach, spawnSyndicateHeistRig, resolveSyndicateHeistBounty, generateHighCommandDirective, resolveDirectiveReward, updateEntropyProfiler, updateAdaptiveEntropySystems,
+  // 17.0 The Chrono-Tactical Singularity Exports
+  SINGULARITY_CONFIG, NEMESIS_CONFIG, PARADOX_CONFIG,
+  spawnHostileArtillery, triggerKineticParry, triggerCorpseCrush, triggerCorpseSiphon, triggerHarmonicOverdrive, triggerParadoxCollapse, updateNemesisAI, updateSingularityNexusSystems,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
 };
