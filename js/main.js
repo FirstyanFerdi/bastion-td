@@ -657,5 +657,8 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   // 18.0 The Cataclysmic Convergence Exports
   CATACLYSM_CONFIG, OMEGA_CRISIS_CONFIG, PREDATOR_SCALING_CONFIG,
   triggerCataclysmEvent, triggerBlizzardShatter, triggerOmegaCrisis, purgeReactorValve, severQueenTether, resolveOmegaCrisis, triggerCrisisTriumph, distToSegment, updateCataclysmSystems, updateOmegaCrisisSystems, updatePredatorScalingSystems,
+  // 19.0 The Omni-Synthesis Crucible & Evolutionary Phylogeny Matrix Exports
+  OMNI_SYNTHESIS_CONFIG, MODULAR_SUBCORE_DATABASE, ADAPTIVE_PHYLOGENY_CONFIG, PARADIGM_SHIFT_CONFIG,
+  triggerBoseEinsteinSingularity, triggerThermobaricCyclone, triggerTachyonWeb, triggerMagmaGeyser, socketSubCore, createFluxConduit, removeFluxConduit, activateParadigmShift, speciateTaxa, updateOmniSynthesisSystems, updatePhylogenyDirector, updateParadigmShiftSystems,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
 };

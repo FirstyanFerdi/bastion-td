@@ -103,6 +103,10 @@ function getGridPowerStatus() {
       used += getTowerPower(t.type, t.tier);
     }
   }
+  // 19.0 Paradigm Shift: Inverted Entropy (0 MW Power Demand)
+  if (G && G.paradigmShift && G.paradigmShift.active === 'inverted_entropy') {
+    used = 0;
+  }
   if (typeof hasMatrixProtocol === 'function' && hasMatrixProtocol('zero_point_relay')) {
     capacity += 20 * G.towers.filter(t => t.type === 'relay').length;
   }
@@ -485,6 +489,16 @@ function updateTower(t, dt) {
     if (G.cataclysm.blizzardActive && (t.type === 'gatling' || t.type === 'mortar' || t.type === 'flak')) {
       rateMult *= (1.0 - (typeof CATACLYSM_CONFIG !== 'undefined' ? CATACLYSM_CONFIG.blizzardBallisticRatePenalty : 0.40));
     }
+  }
+  // 19.0 Paradigm Shift & Flux Conduit Modifiers
+  if (G && G.paradigmShift && G.paradigmShift.active === 'inverted_entropy') {
+    rateMult *= 2.0;
+  }
+  if (t.subCores && t.subCores[0] === 'penetrating_lance') {
+    rateMult *= 0.75;
+  }
+  if (G && G.fluxConduits && G.fluxConduits.some(fc => (fc.t1 === t || fc.t2 === t) && !fc.disabledT)) {
+    rateMult *= 1.25;
   }
   // Core Overload & Meltdown Hangover (4.0)
   if (G && G.overloadT > 0) rateMult *= 3.5;

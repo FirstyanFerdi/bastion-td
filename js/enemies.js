@@ -46,7 +46,14 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     isColossus: type === 'nemesis_dread_colossus',
     isRaptor: type === 'kamikaze_raptor',
     adaptedElement: null,
-    adaptTimer: 3.0
+    adaptTimer: 3.0,
+    // 19.0 The Omni-Synthesis & Counter-Taxa Properties
+    isCarapace: type === 'chitin_phase_carapace',
+    isDevourer: type === 'thermophilic_devourer',
+    isFaraday: type === 'faraday_behemoth',
+    isWeaver: type === 'resonance_weaver',
+    carapaceHits: 0,
+    weaverCd: 6.0
   };
 
   // 17.0 Decoy Swarm & Dispersion Cocoon Adaptation
@@ -573,6 +580,25 @@ function updateEnemy(e, dt) {
         if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
         G.barricades.splice(bIdx, 1);
         break;
+      }
+    }
+  }
+
+  // 19.0 Sub-Spatial Resonance Weaver Antisonic Pulse
+  if (e.isWeaver && !e.dead) {
+    if (e.weaverCd === undefined) e.weaverCd = 6.0;
+    e.weaverCd -= dt;
+    if (e.weaverCd <= 0) {
+      e.weaverCd = 6.0;
+      if (typeof addRing === 'function') addRing(e.x, e.y, 10, 130, 0.5, '#c084fc', 4);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+      if (typeof addText === 'function') addText(e.x, e.y - 20, 'ANTISONIC DISRUPTION!', '#c084fc', 12);
+      if (G && G.fluxConduits) {
+        for (const fc of G.fluxConduits) {
+          if (Math.hypot(fc.t1.x - e.x, fc.t1.y - e.y) <= 130 || Math.hypot(fc.t2.x - e.x, fc.t2.y - e.y) <= 130) {
+            fc.disabledT = 5.0;
+          }
+        }
       }
     }
   }

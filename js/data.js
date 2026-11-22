@@ -931,7 +931,11 @@ const ED = {
   phase_burrower: { name: 'Phase Burrower', hp: 280, speed: 75, r: 14, armor: 0.35, reward: 22, leak: 2, burrower: true },
   temporal_aberration: { name: 'Temporal Aberration', hp: 420, speed: 65, r: 16, armor: 0.40, reward: 50, leak: 3, isAberration: true },
   nemesis_dread_colossus: { name: 'Nemesis Dread-Colossus', hp: 1600, speed: 38, r: 24, armor: 0.55, reward: 80, leak: 4, isColossus: true },
-  kamikaze_raptor: { name: 'Kamikaze Phase-Raptor', hp: 95, speed: 135, r: 10, armor: 0.10, reward: 12, leak: 1, isRaptor: true }
+  kamikaze_raptor: { name: 'Kamikaze Phase-Raptor', hp: 95, speed: 135, r: 10, armor: 0.10, reward: 12, leak: 1, isRaptor: true },
+  chitin_phase_carapace: { name: 'Chitinous Phase-Carapace', hp: 550, speed: 52, r: 18, armor: 0.50, reward: 35, leak: 2, isCarapace: true },
+  thermophilic_devourer: { name: 'Thermophilic Cryo-Devourer', hp: 480, speed: 64, r: 17, armor: 0.35, reward: 32, leak: 2, isDevourer: true },
+  faraday_behemoth: { name: 'Faraday Bio-Behemoth', hp: 850, speed: 40, r: 22, armor: 0.45, reward: 55, leak: 3, isFaraday: true },
+  resonance_weaver: { name: 'Sub-Spatial Resonance Weaver', hp: 320, speed: 82, r: 15, armor: 0.25, reward: 28, leak: 2, isWeaver: true }
 };
 const hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
@@ -2926,6 +2930,57 @@ const PREDATOR_SCALING_CONFIG = {
   bountyGoldMult: 2.0,              // 2x Gold
   bountyScoreMult: 3.0              // 3x Score
 };
+
+/* ============================================================
+   19.0 THE OMNI-SYNTHESIS CRUCIBLE & EVOLUTIONARY PHYLOGENY CONFIGS
+   ============================================================ */
+
+const OMNI_SYNTHESIS_CONFIG = {
+  boseEinsteinRadius: 140,
+  boseEinsteinDmgMult: 3.50,         // 350% True Damage Supernova
+  thermobaricDuration: 6.0,
+  thermobaricDps: 120,               // 120 DPS True Damage
+  thermobaricRadius: 95,
+  tachyonRicochetMax: 6,
+  tachyonDmgMult: 1.80,
+  magmaGeyserDuration: 5.0,
+  magmaGeyserDps: 45,
+  magmaGeyserSlow: 0.50
+};
+
+const MODULAR_SUBCORE_DATABASE = {
+  emitters: {
+    omni_scatter: { id: 'omni_scatter', name: 'Omni-Scatter Array', pellets: 7, arc: Math.PI * 0.45, desc: 'Cone scatter of 7 micro-pellets' },
+    orbital_drone: { id: 'orbital_drone', name: 'Orbital Decoupled Drone', orbitRadius: 45, orbitSpeed: 2.2, desc: 'Weapon mounted on decoupled orbiting drone' },
+    penetrating_lance: { id: 'penetrating_lance', name: 'Penetrating Lance', pierce: 99, rateMult: 0.75, desc: 'Infinite piercing concentrated beam' }
+  },
+  payloads: {
+    entanglement_nanites: { id: 'entanglement_nanites', name: 'Entanglement Nanites', duplicateDmgPct: 0.50, desc: 'Marks target; 50% damage replicated to all linked hostiles' },
+    thermobaric_cluster: { id: 'thermobaric_cluster', name: 'Thermobaric Micro-Cluster', subBombs: 3, subDmg: 40, desc: 'Spawns 3 micro-bombs on impact' },
+    cryo_leech: { id: 'cryo_leech', name: 'Cryo-Leech Siphon', siphonPct: 0.15, desc: 'Converts 15% damage to Mech Battery or Grid Power' }
+  },
+  logics: {
+    killbox_priority: { id: 'killbox_priority', name: 'Killbox Centroid Focus', desc: 'Focuses fire on centroid of overlapping tower killzone' },
+    high_chitin: { id: 'high_chitin', name: 'High-Chitin Eliminator', armorThreshold: 0.40, desc: 'Prioritizes hostiles with armor >= 40%' },
+    velocity_interceptor: { id: 'velocity_interceptor', name: 'Velocity Interceptor', leadTime: 0.25, desc: 'Predictive leading target lock on fastest runner' }
+  }
+};
+
+const ADAPTIVE_PHYLOGENY_CONFIG = {
+  evalIntervalWaves: 2,
+  minWave: 4,
+  kinThreshold: 0.40,
+  cryoThreshold: 0.30,
+  elecThreshold: 0.35,
+  tetherThreshold: 2
+};
+
+const PARADIGM_SHIFT_CONFIG = {
+  inverted_entropy: { id: 'inverted_entropy', name: 'Law of Inverted Entropy', zeroPower: true, rateMult: 2.0, wispSpeed: 45 },
+  reactor_runaway: { id: 'reactor_runaway', name: 'Super-Critical Reactor Runaway', critBonus: 0.50, critMult: 3.0, meltdownInterval: 15.0 },
+  quantum_duplication: { id: 'quantum_duplication', name: 'Quantum Duplication Paradox', mirrorTowers: true, twinBosses: true }
+};
+
 
 
 

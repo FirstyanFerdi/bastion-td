@@ -328,6 +328,26 @@ function newGame(keepSpeed) {
       velocity: 1.0,
       apexRetribution: false,
       dreadColossiSpawned: 0
+    },
+    // 19.0 The Omni-Synthesis Crucible & Evolutionary Phylogeny Systems
+    omniSynthesis: {
+      cyclones: [],
+      singularities: [],
+      tachyonBeams: [],
+      magmaGeysers: []
+    },
+    fluxConduits: [],
+    phylogeny: {
+      dominantVector: null,
+      activeMutations: [],
+      profile: { kin: 0, cryo: 0, elec: 0, plasma: 0 },
+      lastEvalWave: 0
+    },
+    paradigmShift: {
+      active: null,
+      wisps: [],
+      runawayTimer: 0,
+      mirrorTowers: false
     }
   };
   initDoctrineSkills();
@@ -1054,6 +1074,19 @@ function updateMech(dt) {
           }
         }
       }
+      // 19.0 Titan Mech Plasma Wisp Collection
+      if (G.paradigmShift && G.paradigmShift.active === 'inverted_entropy' && G.paradigmShift.wisps) {
+        for (let wi = G.paradigmShift.wisps.length - 1; wi >= 0; wi--) {
+          const w = G.paradigmShift.wisps[wi];
+          if (Math.hypot(m.x - w.x, m.y - w.y) <= 40) {
+            G.gold = (G.gold || 0) + w.val;
+            if (typeof burst === 'function') burst(w.x, w.y, 8, '#06b6d4', 60, 0.3, 2, false);
+            if (typeof addText === 'function') addText(w.x, w.y - 15, '+' + w.val + 'G WISP', '#06b6d4', 11);
+            if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('coin');
+            G.paradigmShift.wisps.splice(wi, 1);
+          }
+        }
+      }
       // Footstep sound tick
       m.stepTimer = (m.stepTimer || 0) + dt;
       if (m.stepTimer >= 0.35) {
@@ -1689,6 +1722,96 @@ function dealDamage(e, amount, type, src, opts) {
   if (src && src.harmonicBuff > 0) {
     a *= 1.30;
     opts.crit = true;
+  }
+
+  // 19.0 The Omni-Synthesis Crucible: Resonant Syntheses Triggers
+  if (type === 'cryo' && (e.inZeroGravity || (G && G.zeroGravityFields && G.zeroGravityFields.some(zg => Math.hypot(zg.x - e.x, zg.y - e.y) <= (zg.r || 60))))) {
+    if (typeof triggerBoseEinsteinSingularity === 'function') triggerBoseEinsteinSingularity(e.x, e.y);
+  }
+  if ((type === 'plasma' || type === 'energy') && (e.inBioGas || (G && G.bioGasClouds && G.bioGasClouds.some(bg => Math.hypot(bg.x - e.x, bg.y - e.y) <= 80)))) {
+    if (typeof triggerThermobaricCyclone === 'function') triggerThermobaricCyclone(e.x, e.y);
+  }
+  if ((type === 'phys' || type === 'kinetic' || (src && src.type === 'rail')) && G && G.fluxConduits && G.fluxConduits.some(fc => fc.type === 'rail_tesla' && !fc.disabledT)) {
+    if (typeof triggerTachyonWeb === 'function') triggerTachyonWeb(e.x, e.y, src);
+  }
+  if ((type === 'plasma' || src === 'magma_fissure') && (e.slowT > 0 || e.freezeT > 0) && G && G.soilTiles && G.soilTiles[Math.floor(e.x / TILE) + '_' + Math.floor(e.y / TILE)] && G.soilTiles[Math.floor(e.x / TILE) + '_' + Math.floor(e.y / TILE)].type === 'thermal_ash') {
+    if (typeof triggerMagmaGeyser === 'function') triggerMagmaGeyser(e.x, e.y);
+  }
+
+  // 19.0 Modular Sub-Core Payloads
+  if (src && src.subCores && src.subCores[1] === 'entanglement_nanites') {
+    e.naniteEntangled = true;
+  }
+  if (e.naniteEntangled && !opts.isReplicated && G && G.enemies) {
+    for (const other of G.enemies) {
+      if (other !== e && !other.dead && other.naniteEntangled) {
+        dealDamage(other, a * 0.50, type, src, { isReplicated: true, noReaction: true });
+      }
+    }
+  }
+  if (src && src.subCores && src.subCores[1] === 'thermobaric_cluster' && !opts.isCluster && G && G.enemies) {
+    for (let cI = 0; cI < 3; cI++) {
+      const cx = e.x + (Math.random() - 0.5) * 50;
+      const cy = e.y + (Math.random() - 0.5) * 50;
+      if (typeof burst === 'function') burst(cx, cy, 8, '#f97316', 70, 0.3, 2, false);
+      for (const foe of G.enemies) {
+        if (!foe.dead && Math.hypot(foe.x - cx, foe.y - cy) <= 40) {
+          dealDamage(foe, 40, 'plasma', src, { isCluster: true, noReaction: true });
+        }
+      }
+    }
+  }
+  if (src && src.subCores && src.subCores[1] === 'cryo_leech') {
+    if (G && G.mech && G.mech.active) {
+      G.mech.battery = Math.min(100, (G.mech.battery || 0) + a * 0.15 * 0.05);
+    }
+  }
+
+  // 19.0 Paradigm Shift: Super-Critical Reactor Runaway
+  if (G && G.paradigmShift && G.paradigmShift.active === 'reactor_runaway') {
+    a *= 1.5;
+    opts.crit = true;
+  }
+
+  // 19.0 Adaptive Phylogeny Counter-Taxa Defenses
+  if (e.isCarapace && (type === 'phys' || type === 'kinetic')) {
+    e.carapaceHits = (e.carapaceHits || 0) + 1;
+    if (e.carapaceHits >= 5) {
+      e.carapaceHits = 0;
+      e.armor = Math.min(0.85, (e.armor || 0.50) + 0.35);
+      if (typeof burst === 'function') burst(e.x, e.y, 16, '#94a3b8', 110, 0.4, 3, true);
+      if (typeof addRing === 'function') addRing(e.x, e.y, 8, 60, 0.35, '#94a3b8', 3);
+      if (typeof addText === 'function') addText(e.x, e.y - 20, 'KINETIC DEFLECTION +35% ARMOR!', '#94a3b8', 12);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shatter');
+    }
+  }
+  if (e.isDevourer && (type === 'cryo' || e.slowT > 0 || e.freezeT > 0)) {
+    e.slowT = 0; e.slowAmt = 0; e.freezeT = 0;
+    e.speedBoostT = 3.5;
+    if (typeof burst === 'function') burst(e.x, e.y, 18, '#f97316', 100, 0.4, 3, true);
+    if (typeof addText === 'function') addText(e.x, e.y - 22, 'STEAM ERUPTION +60% SPD!', '#f97316', 13);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('steam_purge');
+    if (G && G.enemies) {
+      for (const ally of G.enemies) {
+        if (ally !== e && !ally.dead && Math.hypot(ally.x - e.x, ally.y - e.y) <= 80) {
+          ally.speedBoostT = 3.5;
+        }
+      }
+    }
+  }
+  if (e.isFaraday && (type === 'tesla' || type === 'energy')) {
+    e.shield = Math.min((e.maxHp || 850) * 0.5, (e.shield || 0) + 60);
+    if (typeof burst === 'function') burst(e.x, e.y, 14, '#38bdf8', 90, 0.35, 2.5, true);
+    if (typeof addText === 'function') addText(e.x, e.y - 22, 'GROUNDED ARC -> OVERSHIELD!', '#38bdf8', 12);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+    if (G && G.enemies) {
+      for (const ally of G.enemies) {
+        if (ally !== e && !ally.dead && Math.hypot(ally.x - e.x, ally.y - e.y) <= 100) {
+          ally.shield = Math.min((ally.maxHp || 300) * 0.4, (ally.shield || 0) + 40);
+        }
+      }
+    }
+    return 0; // Completely immune to electricity!
   }
 
   // 15.0 DNTM Chameleon Carapace Reflection
@@ -2370,6 +2493,10 @@ function killEnemy(e, src) {
   const isMidas = G && G.pandoraRelics && G.pandoraRelics.midas_transmutation;
   if (isMidas && typeof spawnMidasCoin === 'function') {
     spawnMidasCoin(e.x, e.y, rewardToGive * 2);
+  } else if (G && G.paradigmShift && G.paradigmShift.active === 'inverted_entropy') {
+    if (!G.paradigmShift.wisps) G.paradigmShift.wisps = [];
+    G.paradigmShift.wisps.push({ x: e.x, y: e.y, val: Math.max(5, rewardToGive), speed: 45, r: 8 });
+    if (typeof addText === 'function') addText(e.x, e.y - 14, 'PLASMA WISP SPAWNED!', '#06b6d4', 12);
   } else {
     G.gold += rewardToGive;
   }
@@ -5937,6 +6064,11 @@ function updateSingularityNexusSystems(dt) {
   updateCataclysmSystems(dt);
   updateOmegaCrisisSystems(dt);
   updatePredatorScalingSystems(dt);
+
+  // 7. 19.0 The Omni-Synthesis Crucible & Evolutionary Phylogeny
+  updateOmniSynthesisSystems(dt);
+  updatePhylogenyDirector(dt);
+  updateParadigmShiftSystems(dt);
 }
 
 /* ============================================================
@@ -6353,6 +6485,314 @@ function updatePredatorScalingSystems(dt) {
       spawnEnemy('kamikaze_raptor', G.wave || 1);
       spawnEnemy('kamikaze_raptor', G.wave || 1);
       spawnEnemy('kamikaze_raptor', G.wave || 1);
+    }
+  }
+}
+
+/* ============================================================
+   19.0 THE OMNI-SYNTHESIS CRUCIBLE & EVOLUTIONARY PHYLOGENY PROTOCOLS
+   ============================================================ */
+
+function triggerBoseEinsteinSingularity(x, y) {
+  if (!G) return false;
+  if (!G.omniSynthesis) G.omniSynthesis = { cyclones: [], singularities: [], tachyonBeams: [], magmaGeysers: [] };
+  const cfg = typeof OMNI_SYNTHESIS_CONFIG !== 'undefined' ? OMNI_SYNTHESIS_CONFIG : { boseEinsteinRadius: 140, boseEinsteinDmgMult: 3.50 };
+
+  G.omniSynthesis.singularities.push({ x, y, r: cfg.boseEinsteinRadius, life: 0.8, maxLife: 0.8 });
+
+  if (typeof shake === 'function') shake(16.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('reaction');
+    Sfx.play('shockwave');
+  }
+  if (typeof addRing === 'function') addRing(x, y, 16, cfg.boseEinsteinRadius, 0.6, '#38bdf8', 6);
+  if (typeof burst === 'function') burst(x, y, 40, '#e0f2fe', 220, 0.7, 4.5, true);
+  if (typeof addText === 'function') addText(x, y - 35, '★ BOSE-EINSTEIN SINGULARITY! ★', '#38bdf8', 18);
+
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (foe.dead) continue;
+      const d = Math.hypot(foe.x - x, foe.y - y);
+      if (d <= cfg.boseEinsteinRadius) {
+        foe.x = x + (foe.x - x) * 0.2;
+        foe.y = y + (foe.y - y) * 0.2;
+        const baseDmg = Math.round(100 * cfg.boseEinsteinDmgMult);
+        dealDamage(foe, baseDmg, 'true', 'bose_einstein', { noReaction: true });
+        foe.freezeT = Math.max(foe.freezeT || 0, 4.0);
+      }
+    }
+  }
+  return true;
+}
+
+function triggerThermobaricCyclone(x, y) {
+  if (!G) return false;
+  if (!G.omniSynthesis) G.omniSynthesis = { cyclones: [], singularities: [], tachyonBeams: [], magmaGeysers: [] };
+  const cfg = typeof OMNI_SYNTHESIS_CONFIG !== 'undefined' ? OMNI_SYNTHESIS_CONFIG : { thermobaricDuration: 6.0, thermobaricDps: 120, thermobaricRadius: 95 };
+
+  G.omniSynthesis.cyclones.push({
+    x, y, r: cfg.thermobaricRadius, life: cfg.thermobaricDuration, maxLife: cfg.thermobaricDuration, dps: cfg.thermobaricDps
+  });
+
+  if (typeof shake === 'function') shake(10.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('reaction');
+    Sfx.play('soil_burn');
+  }
+  if (typeof addRing === 'function') addRing(x, y, 10, cfg.thermobaricRadius, 0.5, '#ea580c', 4);
+  if (typeof burst === 'function') burst(x, y, 30, '#ea580c', 160, 0.6, 4, true);
+  if (typeof addText === 'function') addText(x, y - 28, 'THERMOBARIC CYCLONE (120 DPS)!', '#ea580c', 16);
+  return true;
+}
+
+function triggerTachyonWeb(x, y, srcTower) {
+  if (!G || !G.towers) return false;
+  const cfg = typeof OMNI_SYNTHESIS_CONFIG !== 'undefined' ? OMNI_SYNTHESIS_CONFIG : { tachyonRicochetMax: 6, tachyonDmgMult: 1.80 };
+  const nearby = G.towers.filter(t => t !== srcTower && Math.hypot(t.x - x, t.y - y) <= 240).slice(0, cfg.tachyonRicochetMax);
+  if (nearby.length === 0) return false;
+
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('laser_beam');
+  if (typeof addText === 'function') addText(x, y - 25, 'TACHYON RICOCHET WEB x' + nearby.length, '#22d3ee', 15);
+
+  for (const t of nearby) {
+    if (typeof addFx === 'function') addFx('tracer', x, y, t.x, t.y, 0.35, '#22d3ee', 3.5);
+    if (typeof burst === 'function') burst(t.x, t.y, 10, '#22d3ee', 80, 0.3, 2.5, false);
+
+    if (G.enemies) {
+      for (const foe of G.enemies) {
+        if (!foe.dead && Math.hypot(foe.x - t.x, foe.y - t.y) <= 130) {
+          dealDamage(foe, Math.round(75 * cfg.tachyonDmgMult), 'energy', srcTower, { noReaction: true });
+          if (typeof addFx === 'function') addFx('tracer', t.x, t.y, foe.x, foe.y, 0.25, '#38bdf8', 2.5);
+          break;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+function triggerMagmaGeyser(x, y) {
+  if (!G) return false;
+  if (!G.omniSynthesis) G.omniSynthesis = { cyclones: [], singularities: [], tachyonBeams: [], magmaGeysers: [] };
+  const cfg = typeof OMNI_SYNTHESIS_CONFIG !== 'undefined' ? OMNI_SYNTHESIS_CONFIG : { magmaGeyserDuration: 5.0, magmaGeyserDps: 45, magmaGeyserSlow: 0.50 };
+
+  G.omniSynthesis.magmaGeysers.push({
+    x, y, r: 85, life: cfg.magmaGeyserDuration, maxLife: cfg.magmaGeyserDuration, dps: cfg.magmaGeyserDps, slow: cfg.magmaGeyserSlow
+  });
+
+  if (typeof shake === 'function') shake(12.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('rockslide');
+    Sfx.play('shockwave');
+  }
+  if (typeof burst === 'function') burst(x, y, 28, '#f59e0b', 160, 0.55, 4, true);
+  if (typeof addText === 'function') addText(x, y - 25, 'MAGMA GEYSER INJECTION!', '#f59e0b', 16);
+  return true;
+}
+
+function socketSubCore(tower, slotIndex, moduleId) {
+  if (!tower || slotIndex < 0 || slotIndex > 2 || !moduleId) return false;
+  if (!tower.subCores) tower.subCores = [null, null, null];
+  tower.subCores[slotIndex] = moduleId;
+
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('upgrade');
+    Sfx.play('neural_link');
+  }
+  if (typeof burst === 'function') burst(tower.x, tower.y, 16, '#38bdf8', 90, 0.4, 2.5, true);
+  if (typeof addText === 'function') addText(tower.x, tower.y - 25, 'SUB-CORE: ' + moduleId.toUpperCase(), '#38bdf8', 13);
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function createFluxConduit(t1, t2) {
+  if (!G || !t1 || !t2 || t1 === t2) return null;
+  const dist = Math.hypot(t1.x - t2.x, t1.y - t2.y);
+  if (dist > 180) return null;
+  if (!G.fluxConduits) G.fluxConduits = [];
+
+  let pairType = 'hybrid_resonance';
+  const types = [t1.type, t2.type];
+  if (types.includes('gatling') && types.includes('cryo')) pairType = 'gatling_cryo';
+  else if (types.includes('rail') && types.includes('tesla')) pairType = 'rail_tesla';
+  else if (types.includes('plasma') && types.includes('relay')) pairType = 'plasma_relay';
+
+  const conduit = {
+    id: 'flux_' + (++eid),
+    t1,
+    t2,
+    type: pairType,
+    disabledT: 0
+  };
+  G.fluxConduits.push(conduit);
+
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('laser_beam');
+    Sfx.play('neural_link');
+  }
+  if (typeof burst === 'function') burst((t1.x + t2.x) / 2, (t1.y + t2.y) / 2, 14, '#22d3ee', 80, 0.35, 2, true);
+  if (typeof addText === 'function') addText((t1.x + t2.x) / 2, (t1.y + t2.y) / 2 - 15, 'FLUX CONDUIT: ' + pairType.toUpperCase(), '#22d3ee', 13);
+  return conduit;
+}
+
+function removeFluxConduit(conduitId) {
+  if (!G || !G.fluxConduits) return false;
+  const idx = G.fluxConduits.findIndex(fc => fc.id === conduitId);
+  if (idx === -1) return false;
+  G.fluxConduits.splice(idx, 1);
+  return true;
+}
+
+function activateParadigmShift(id) {
+  if (!G) return false;
+  const cfg = typeof PARADIGM_SHIFT_CONFIG !== 'undefined' ? PARADIGM_SHIFT_CONFIG[id] : null;
+  if (!cfg) return false;
+  if (!G.paradigmShift) G.paradigmShift = { active: null, wisps: [], runawayTimer: 0, mirrorTowers: false };
+
+  G.paradigmShift.active = id;
+  if (id === 'quantum_duplication') G.paradigmShift.mirrorTowers = true;
+
+  if (typeof shake === 'function') shake(12.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overload');
+  G.banner = {
+    text: 'PARADIGM SHIFT: ' + cfg.name.toUpperCase(),
+    sub: 'Reality Modulated! Extreme Risk & Power Activated!',
+    t: 0, max: 4.5, color: '#f43f5e'
+  };
+  return true;
+}
+
+function speciateTaxa(mutationId) {
+  if (!G) return;
+  if (!G.phylogeny) G.phylogeny = { activeMutations: [] };
+  if (!G.phylogeny.activeMutations.includes(mutationId)) {
+    G.phylogeny.activeMutations.push(mutationId);
+    if (typeof shake === 'function') shake(10.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('alpha_roar');
+    const sW = typeof W !== 'undefined' ? W : 960;
+    if (typeof addText === 'function') addText(sW / 2, 80, 'MUTATION SPECIATION: ' + mutationId.toUpperCase(), '#ef4444', 16);
+    G.banner = {
+      text: 'PHYLOGENY SPECIATION: ' + mutationId.toUpperCase(),
+      sub: 'The Swarm has mutated a direct counter to your build!',
+      t: 0, max: 4.0, color: '#ef4444'
+    };
+    if (typeof spawnEnemy === 'function') {
+      spawnEnemy(mutationId, G.wave || 1);
+      spawnEnemy(mutationId, G.wave || 1);
+    }
+  }
+}
+
+function updateOmniSynthesisSystems(dt) {
+  if (!G || !G.omniSynthesis) return;
+  const os = G.omniSynthesis;
+
+  if (os.cyclones && os.cyclones.length > 0) {
+    for (let i = os.cyclones.length - 1; i >= 0; i--) {
+      const cy = os.cyclones[i];
+      cy.life -= dt;
+      if (G.enemies) {
+        for (const foe of G.enemies) {
+          if (!foe.dead && Math.hypot(foe.x - cy.x, foe.y - cy.y) <= cy.r) {
+            dealDamage(foe, cy.dps * dt, 'true', 'thermobaric_cyclone', { noReaction: true });
+            foe.noRegen = true;
+          }
+        }
+      }
+      if (cy.life <= 0) os.cyclones.splice(i, 1);
+    }
+  }
+
+  if (os.singularities && os.singularities.length > 0) {
+    for (let i = os.singularities.length - 1; i >= 0; i--) {
+      os.singularities[i].life -= dt;
+      if (os.singularities[i].life <= 0) os.singularities.splice(i, 1);
+    }
+  }
+
+  if (os.magmaGeysers && os.magmaGeysers.length > 0) {
+    for (let i = os.magmaGeysers.length - 1; i >= 0; i--) {
+      const mg = os.magmaGeysers[i];
+      mg.life -= dt;
+      if (G.enemies) {
+        for (const foe of G.enemies) {
+          if (!foe.dead && Math.hypot(foe.x - mg.x, foe.y - mg.y) <= mg.r) {
+            dealDamage(foe, mg.dps * dt, 'plasma', 'magma_geyser', { noReaction: true });
+            foe.slowT = Math.max(foe.slowT || 0, 1.0);
+            foe.slowAmt = Math.max(foe.slowAmt || 0, mg.slow);
+          }
+        }
+      }
+      if (mg.life <= 0) os.magmaGeysers.splice(i, 1);
+    }
+  }
+
+  if (G.fluxConduits && G.fluxConduits.length > 0) {
+    for (const fc of G.fluxConduits) {
+      if (fc.disabledT > 0) fc.disabledT = Math.max(0, fc.disabledT - dt);
+    }
+  }
+}
+
+function updatePhylogenyDirector(dt) {
+  if (!G || !G.phylogeny) return;
+  const dtTrack = G.damageTrack || {};
+  const total = (dtTrack.phys || 0) + (dtTrack.cryo || 0) + (dtTrack.energy || 0) + (dtTrack.plasma || 0) + 1;
+  const pKin = (dtTrack.phys || 0) / total;
+  const pCryo = (dtTrack.cryo || 0) / total;
+  const pElec = ((dtTrack.energy || 0) + (dtTrack.plasma || 0)) / total;
+  G.phylogeny.profile = { kin: pKin, cryo: pCryo, elec: pElec };
+
+  if (G.state === 'active' && G.wave >= 4 && G.wave % 2 === 0 && G.phylogeny.lastEvalWave !== G.wave) {
+    G.phylogeny.lastEvalWave = G.wave;
+    if (pKin >= 0.40) {
+      speciateTaxa('chitin_phase_carapace');
+    } else if (pCryo >= 0.30) {
+      speciateTaxa('thermophilic_devourer');
+    } else if (pElec >= 0.35) {
+      speciateTaxa('faraday_behemoth');
+    } else if (G.fluxConduits && G.fluxConduits.length >= 2) {
+      speciateTaxa('resonance_weaver');
+    }
+  }
+}
+
+function updateParadigmShiftSystems(dt) {
+  if (!G || !G.paradigmShift || !G.paradigmShift.active) return;
+  const ps = G.paradigmShift;
+  const basePoint = (typeof BASE_PT !== 'undefined') ? BASE_PT : { x: 750, y: 300 };
+
+  if (ps.active === 'inverted_entropy' && ps.wisps && ps.wisps.length > 0) {
+    for (let i = ps.wisps.length - 1; i >= 0; i--) {
+      const w = ps.wisps[i];
+      const dx = basePoint.x - w.x, dy = basePoint.y - w.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= 25) {
+        G.lives = Math.max(0, G.lives - 1);
+        ps.wisps.splice(i, 1);
+        if (typeof shake === 'function') shake(5.0);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('leak');
+      } else {
+        w.x += (dx / dist) * (w.speed || 45) * dt;
+        w.y += (dy / dist) * (w.speed || 45) * dt;
+      }
+    }
+  }
+
+  if (ps.active === 'reactor_runaway') {
+    ps.runawayTimer = (ps.runawayTimer || 0) + dt;
+    if (ps.runawayTimer >= 15.0) {
+      ps.runawayTimer = 0;
+      if (G.towers && G.towers.length > 0) {
+        for (let k = 0; k < Math.min(2, G.towers.length); k++) {
+          const t = G.towers[k];
+          t.empT = Math.max(t.empT || 0, 4.0);
+          if (typeof burst === 'function') burst(t.x, t.y, 14, '#ef4444', 90, 0.4, 2.5, false);
+          if (typeof addText === 'function') addText(t.x, t.y - 18, 'REACTOR SURGE!', '#ef4444', 12);
+        }
+        if (typeof shake === 'function') shake(8.0);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+      }
     }
   }
 }

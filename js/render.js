@@ -523,6 +523,9 @@ function render() {
   drawMagmaFissures(c, time);
   drawCataclysmEffects(c, time);
   drawOmegaCrisisEntities(c, time);
+  // 19.0 The Omni-Synthesis Crucible Battlefield Systems
+  drawFluxConduits(c, time);
+  drawOmniSynthesisVFX(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -707,6 +710,8 @@ function render() {
   // 18.0 Omega Crisis HUD & Triumph Overdrive Overlay
   drawOmegaCrisisHUD(c, time);
   drawCrisisTriumph(c, time);
+  // 19.0 Adaptive Phylogeny Matrix HUD
+  drawPhylogenyHUD(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -3601,5 +3606,161 @@ function drawCrisisTriumph(c, time) {
   c.font = '800 14px ' + FONT;
   c.fillStyle = '#ffffff';
   c.fillText('+500G · NANITE CORES · TVM SSS OMNI-STRATEGIST', sW / 2, sH / 2 - 16);
+  c.restore();
+}
+
+// 19.0 The Omni-Synthesis Crucible & Evolutionary Phylogeny Matrix Rendering
+function drawFluxConduits(c, time) {
+  if (!G || !G.fluxConduits || G.fluxConduits.length === 0) return;
+  c.save();
+  for (const fc of G.fluxConduits) {
+    if (!fc.t1 || !fc.t2) continue;
+    const x1 = fc.t1.x, y1 = fc.t1.y, x2 = fc.t2.x, y2 = fc.t2.y;
+    const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+
+    if (fc.disabledT > 0) {
+      c.setLineDash([4, 4]);
+      c.strokeStyle = 'rgba(239, 68, 68, 0.85)';
+      c.lineWidth = 2.5;
+      c.beginPath();
+      c.moveTo(x1, y1);
+      c.lineTo(x2, y2);
+      c.stroke();
+      c.setLineDash([]);
+
+      c.font = '800 10px ' + FONT;
+      c.fillStyle = '#ef4444';
+      c.textAlign = 'center';
+      c.fillText('⚡ DISRUPTED', midX, midY - 6);
+    } else {
+      // Outer glow
+      c.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      c.lineWidth = 4.5;
+      c.beginPath();
+      c.moveTo(x1, y1);
+      c.lineTo(x2, y2);
+      c.stroke();
+
+      // Inner laser core
+      c.strokeStyle = '#38bdf8';
+      c.lineWidth = 1.8;
+      c.beginPath();
+      c.moveTo(x1, y1);
+      c.lineTo(x2, y2);
+      c.stroke();
+
+      // Energy packet pulse moving along beam
+      const prog = (time * 2.0) % 1.0;
+      const px = x1 + (x2 - x1) * prog;
+      const py = y1 + (y2 - y1) * prog;
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.arc(px, py, 3.2, 0, Math.PI * 2);
+      c.fill();
+
+      // Type label
+      c.font = '800 9px ' + FONT;
+      c.fillStyle = '#38bdf8';
+      c.textAlign = 'center';
+      const label = fc.type ? fc.type.replace('_', ' ').toUpperCase() : 'FLUX';
+      c.fillText(label, midX, midY - 6);
+    }
+  }
+  c.restore();
+}
+
+function drawOmniSynthesisVFX(c, time) {
+  if (!G) return;
+  c.save();
+
+  // Cyclones
+  if (G.omniSynthesis && G.omniSynthesis.cyclones && G.omniSynthesis.cyclones.length > 0) {
+    for (const cy of G.omniSynthesis.cyclones) {
+      const alpha = clamp(cy.life / 0.5, 0, 1) * 0.45;
+      c.strokeStyle = 'rgba(249, 115, 22, ' + alpha + ')';
+      c.lineWidth = 3;
+      c.beginPath();
+      c.arc(cy.x, cy.y, cy.r, 0, Math.PI * 2);
+      c.stroke();
+
+      // Rotating inner spiral vortex
+      const rot = time * 4;
+      for (let k = 0; k < 3; k++) {
+        const a = rot + (k * Math.PI * 2) / 3;
+        c.strokeStyle = 'rgba(234, 88, 12, ' + (alpha * 1.2) + ')';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.arc(cy.x, cy.y, cy.r * 0.6, a, a + 1.2);
+        c.stroke();
+      }
+
+      c.font = '900 10px ' + FONT;
+      c.fillStyle = '#f97316';
+      c.textAlign = 'center';
+      c.fillText('CYCLONE', cy.x, cy.y - cy.r - 6);
+    }
+  }
+
+  // Magma Geysers
+  if (G.omniSynthesis && G.omniSynthesis.magmaGeysers && G.omniSynthesis.magmaGeysers.length > 0) {
+    for (const mg of G.omniSynthesis.magmaGeysers) {
+      const alpha = clamp(mg.life / 0.5, 0, 1) * 0.4;
+      c.fillStyle = 'rgba(220, 38, 38, ' + (alpha * 0.5) + ')';
+      c.beginPath();
+      c.arc(mg.x, mg.y, mg.r, 0, Math.PI * 2);
+      c.fill();
+
+      c.strokeStyle = 'rgba(239, 68, 68, ' + alpha + ')';
+      c.lineWidth = 2.5;
+      c.stroke();
+
+      c.font = '900 10px ' + FONT;
+      c.fillStyle = '#ef4444';
+      c.textAlign = 'center';
+      c.fillText('MAGMA GEYSER', mg.x, mg.y - mg.r - 6);
+    }
+  }
+
+  // Paradigm Shift Wisps (Inverted Entropy)
+  if (G.paradigmShift && G.paradigmShift.active === 'inverted_entropy' && G.paradigmShift.wisps && G.paradigmShift.wisps.length > 0) {
+    for (const w of G.paradigmShift.wisps) {
+      c.fillStyle = 'rgba(56, 189, 248, 0.4)';
+      c.beginPath();
+      c.arc(w.x, w.y, 8, 0, Math.PI * 2);
+      c.fill();
+
+      c.fillStyle = '#38bdf8';
+      c.beginPath();
+      c.arc(w.x, w.y, 4, 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+
+  c.restore();
+}
+
+function drawPhylogenyHUD(c, time) {
+  if (!G || !G.phylogeny || !G.phylogeny.activeMutations || G.phylogeny.activeMutations.length === 0) return;
+  c.save();
+  const muts = G.phylogeny.activeMutations;
+  const sW = typeof W !== 'undefined' ? W : 960;
+  let startX = sW - 20 - (muts.length * 125);
+  const startY = 48;
+
+  for (let i = 0; i < muts.length; i++) {
+    const m = muts[i];
+    const bx = startX + i * 125;
+    c.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    c.fillRect(bx, startY, 120, 22);
+    c.strokeStyle = '#f43f5e';
+    c.lineWidth = 1.5;
+    c.strokeRect(bx, startY, 120, 22);
+
+    c.font = '800 9px ' + FONT;
+    c.fillStyle = '#fda4af';
+    c.textAlign = 'center';
+    const cleanName = m.replace(/_/g, ' ').toUpperCase();
+    c.fillText('TAXA: ' + cleanName.substring(0, 14), bx + 60, startY + 14);
+  }
   c.restore();
 }
