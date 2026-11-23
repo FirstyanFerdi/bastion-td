@@ -526,6 +526,10 @@ function render() {
   // 19.0 The Omni-Synthesis Crucible Battlefield Systems
   drawFluxConduits(c, time);
   drawOmniSynthesisVFX(c, time);
+  // 20.0 The Transcendent Architecture Battlefield Systems
+  drawSpatialFolds(c, time);
+  drawParadoxGhostFleet(c, time);
+  drawCraters(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -712,6 +716,9 @@ function render() {
   drawCrisisTriumph(c, time);
   // 19.0 Adaptive Phylogeny Matrix HUD
   drawPhylogenyHUD(c, time);
+  // 20.0 Epigenetic Swarm & Stance HUD
+  drawEpigeneticHUD(c, time);
+  drawMechStanceHUD(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -3762,5 +3769,156 @@ function drawPhylogenyHUD(c, time) {
     const cleanName = m.replace(/_/g, ' ').toUpperCase();
     c.fillText('TAXA: ' + cleanName.substring(0, 14), bx + 60, startY + 14);
   }
+  c.restore();
+}
+
+// 20.0 The Transcendent Architecture & Non-Euclidean Battlefield Rendering
+function drawSpatialFolds(c, time) {
+  if (!G || !G.spatialFolds || G.spatialFolds.length === 0) return;
+  c.save();
+  for (const fold of G.spatialFolds) {
+    if (!fold.active) continue;
+    const a = fold.ptA, b = fold.ptB;
+
+    c.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+    c.lineWidth = 4;
+    c.setLineDash([8, 8]);
+    c.beginPath();
+    c.moveTo(a.x, a.y);
+    c.lineTo(b.x, b.y);
+    c.stroke();
+    c.setLineDash([]);
+
+    for (const pt of [a, b]) {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+      c.fillStyle = 'rgba(14, 165, 233, 0.3)';
+      c.beginPath();
+      c.arc(pt.x, pt.y, 22 + pulse * 4, 0, Math.PI * 2);
+      c.fill();
+
+      c.strokeStyle = '#38bdf8';
+      c.lineWidth = 2;
+      c.stroke();
+
+      c.font = '800 8px ' + FONT;
+      c.fillStyle = '#38bdf8';
+      c.textAlign = 'center';
+      c.fillText('WORMHOLE', pt.x, pt.y - 26);
+    }
+
+    const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+    const stressPct = clamp((fold.stress || 0) / (fold.maxStress || 100), 0, 1);
+    c.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    c.fillRect(midX - 25, midY - 6, 50, 8);
+    c.fillStyle = stressPct > 0.7 ? '#ef4444' : '#38bdf8';
+    c.fillRect(midX - 24, midY - 5, 48 * stressPct, 6);
+  }
+  c.restore();
+}
+
+function drawParadoxGhostFleet(c, time) {
+  if (!G || !G.paradoxCoop || !G.paradoxCoop.active || !G.paradoxCoop.ghostFleet) return;
+  c.save();
+  const alpha = 0.45 + 0.25 * Math.sin(time * 8);
+  c.globalAlpha = alpha;
+
+  for (const gt of G.paradoxCoop.ghostFleet) {
+    c.fillStyle = 'rgba(34, 211, 238, 0.35)';
+    c.beginPath();
+    c.arc(gt.x, gt.y, 18, 0, Math.PI * 2);
+    c.fill();
+
+    c.strokeStyle = '#22d3ee';
+    c.lineWidth = 2;
+    c.stroke();
+
+    c.font = '800 8px ' + FONT;
+    c.fillStyle = '#22d3ee';
+    c.textAlign = 'center';
+    c.fillText('GHOST', gt.x, gt.y - 20);
+  }
+
+  if (G.paradoxCoop.ghostMech) {
+    const gm = G.paradoxCoop.ghostMech;
+    c.fillStyle = 'rgba(6, 182, 212, 0.5)';
+    c.beginPath();
+    c.arc(gm.x, gm.y, 24, 0, Math.PI * 2);
+    c.fill();
+
+    c.strokeStyle = '#06b6d4';
+    c.lineWidth = 2.5;
+    c.stroke();
+
+    c.font = '800 9px ' + FONT;
+    c.fillStyle = '#06b6d4';
+    c.textAlign = 'center';
+    c.fillText('GHOST MECH', gm.x, gm.y - 26);
+  }
+  c.restore();
+}
+
+function drawCraters(c, time) {
+  if (!G || !G.craters || G.craters.length === 0) return;
+  c.save();
+  for (const cr of G.craters) {
+    const alpha = clamp(cr.duration / 3.0, 0, 1) * 0.7;
+    c.fillStyle = 'rgba(23, 23, 23, ' + alpha + ')';
+    c.beginPath();
+    c.arc(cr.x, cr.y, 22, 0, Math.PI * 2);
+    c.fill();
+
+    c.strokeStyle = 'rgba(168, 85, 247, ' + (alpha * 0.8) + ')';
+    c.lineWidth = 2;
+    c.stroke();
+
+    c.font = '800 8px ' + FONT;
+    c.fillStyle = '#c084fc';
+    c.textAlign = 'center';
+    c.fillText('CRATER', cr.x, cr.y - 24);
+  }
+  c.restore();
+}
+
+function drawEpigeneticHUD(c, time) {
+  if (!G || !G.epigeneticSwarm || !G.epigeneticSwarm.activeMutations || G.epigeneticSwarm.activeMutations.length === 0) return;
+  c.save();
+  const muts = G.epigeneticSwarm.activeMutations;
+  const startX = 20;
+  const startY = 48;
+
+  for (let i = 0; i < muts.length; i++) {
+    const m = muts[i];
+    const bx = startX + i * 130;
+    c.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    c.fillRect(bx, startY, 125, 22);
+    c.strokeStyle = '#06b6d4';
+    c.lineWidth = 1.5;
+    c.strokeRect(bx, startY, 125, 22);
+
+    c.font = '800 9px ' + FONT;
+    c.fillStyle = '#67e8f9';
+    c.textAlign = 'center';
+    const clean = m.replace(/_/g, ' ').toUpperCase();
+    c.fillText('GENE: ' + clean.substring(0, 14), bx + 62, startY + 14);
+  }
+  c.restore();
+}
+
+function drawMechStanceHUD(c, time) {
+  if (!G || !G.mech || !G.mech.stance) return;
+  c.save();
+  const m = G.mech;
+  const stanceColor = m.stance === 'siege_bastion' ? '#fbbf24' : (m.stance === 'valkyrie_blade' ? '#f43f5e' : '#38bdf8');
+
+  c.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  c.fillRect(m.x - 35, m.y - 42, 70, 14);
+  c.strokeStyle = stanceColor;
+  c.lineWidth = 1.2;
+  c.strokeRect(m.x - 35, m.y - 42, 70, 14);
+
+  c.font = '800 8px ' + FONT;
+  c.fillStyle = stanceColor;
+  c.textAlign = 'center';
+  c.fillText(m.stance.replace('_', ' ').toUpperCase(), m.x, m.y - 32);
   c.restore();
 }

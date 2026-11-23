@@ -116,7 +116,9 @@ function newGame(keepSpeed) {
       swingT: 0,
       vx: 0,
       vy: 0,
-      isDocked: true
+      isDocked: true,
+      stance: 'valkyrie_blade',
+      parryWindowT: 0
     },
     dreadnought: {
       charge: 0,
@@ -348,6 +350,23 @@ function newGame(keepSpeed) {
       wisps: [],
       runawayTimer: 0,
       mirrorTowers: false
+    },
+    // 20.0 The Transcendent Architecture & Non-Euclidean Systems
+    spatialFolds: [],
+    epigeneticSwarm: {
+      damageVector: { phys: 0, cryo: 0, energy: 0, plasma: 0 },
+      generation: 1,
+      activeMutations: [],
+      evalTimer: 0
+    },
+    craters: [],
+    paradoxCoop: {
+      active: false,
+      snapshots: [],
+      ghostFleet: [],
+      ghostT: 0,
+      entropicFriction: 0,
+      snapshotTimer: 0
     }
   };
   initDoctrineSkills();
@@ -1812,6 +1831,58 @@ function dealDamage(e, amount, type, src, opts) {
       }
     }
     return 0; // Completely immune to electricity!
+  }
+
+  // 20.0 Causal Paradox Wraith Damage Filtering
+  if (e.isWraith && src !== 'titan_mech' && (!opts || !opts.isParry)) {
+    return 0; // Immune to all tower weapons, only Titan Mech parry/finisher can destroy!
+  }
+
+  // 20.0 Epigenetic Swarm Adaptive Gene Mutations & Tracking
+  if (G && G.epigeneticSwarm) {
+    const swType = (type === 'kinetic' || type === 'phys') ? 'phys' : ((type === 'tesla' || type === 'energy') ? 'energy' : type);
+    G.epigeneticSwarm.damageVector[swType] = (G.epigeneticSwarm.damageVector[swType] || 0) + a;
+
+    if (G.epigeneticSwarm.activeMutations.includes('anti_cryo') && type === 'cryo') {
+      e.armor = Math.min(0.85, (e.armor || 0.2) + 0.75);
+      e.slowT = 0; e.freezeT = 0;
+      if (G.enemies) {
+        for (const ally of G.enemies) {
+          if (ally !== e && !ally.dead && Math.hypot(ally.x - e.x, ally.y - e.y) <= 80) {
+            ally.speedBoostT = 3.0;
+          }
+        }
+      }
+    }
+    if (G.epigeneticSwarm.activeMutations.includes('faraday') && (type === 'tesla' || type === 'energy')) {
+      if (G.enemies) {
+        for (const ally of G.enemies) {
+          if (!ally.dead && Math.hypot(ally.x - e.x, ally.y - e.y) <= 90) {
+            ally.shield = Math.min((ally.maxHp || 400) * 0.5, (ally.shield || 0) + 40);
+          }
+        }
+      }
+      return 0;
+    }
+    if (G.epigeneticSwarm.activeMutations.includes('chitin') && (type === 'phys' || type === 'kinetic')) {
+      a *= 0.35;
+      if (Math.random() < 0.25 && typeof burst === 'function') {
+        burst(e.x, e.y, 6, '#94a3b8', 60, 0.25, 2, false);
+      }
+    }
+  }
+
+  // 20.0 Chrono-Topological Space-Fold Railgun Piercing Echo
+  if (src && src.type === 'rail' && !opts.isEcho && G && G.spatialFolds && G.spatialFolds.length > 0) {
+    for (const fold of G.spatialFolds) {
+      if (!fold.active) continue;
+      if (Math.hypot(e.x - fold.ptA.x, e.y - fold.ptA.y) <= 45) {
+        const mult = typeof SPACE_FOLD_CONFIG !== 'undefined' ? SPACE_FOLD_CONFIG.penetrationMult : 4;
+        dealDamage(e, a * mult, type, src, { isEcho: true, noReaction: true });
+        if (typeof addText === 'function') addText(fold.ptB.x, fold.ptB.y - 20, 'FOLD PIERCING x' + mult + '!', '#38bdf8', 14);
+        break;
+      }
+    }
   }
 
   // 15.0 DNTM Chameleon Carapace Reflection
@@ -6069,6 +6140,9 @@ function updateSingularityNexusSystems(dt) {
   updateOmniSynthesisSystems(dt);
   updatePhylogenyDirector(dt);
   updateParadigmShiftSystems(dt);
+
+  // 8. 20.0 The Transcendent Architecture & Non-Euclidean Crucible
+  updateBastion20Systems(dt);
 }
 
 /* ============================================================
@@ -6795,4 +6869,398 @@ function updateParadigmShiftSystems(dt) {
       }
     }
   }
+}
+
+/* ============================================================
+   20.0 THE TRANSCENDENT ARCHITECTURE & NON-EUCLIDEAN CRUCIBLE
+   ============================================================ */
+
+function createSpatialFold(x1, y1, x2, y2) {
+  if (!G) return null;
+  if (!G.spatialFolds) G.spatialFolds = [];
+  const cfg = typeof SPACE_FOLD_CONFIG !== 'undefined' ? SPACE_FOLD_CONFIG : { foldDuration: 12.0, maxStress: 100 };
+  const fold = {
+    id: 'fold_' + (++eid),
+    ptA: { x: x1, y: y1 },
+    ptB: { x: x2, y: y2 },
+    stress: 0,
+    maxStress: cfg.maxStress,
+    life: cfg.foldDuration,
+    maxLife: cfg.foldDuration,
+    active: true
+  };
+  G.spatialFolds.push(fold);
+
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('neural_link');
+    Sfx.play('laser_beam');
+  }
+  if (typeof burst === 'function') {
+    burst(x1, y1, 16, '#38bdf8', 90, 0.4, 2.5, true);
+    burst(x2, y2, 16, '#38bdf8', 90, 0.4, 2.5, true);
+  }
+  if (typeof addText === 'function') {
+    addText(x1, y1 - 20, 'FOLD ANCHOR ALPHA', '#38bdf8', 12);
+    addText(x2, y2 - 20, 'FOLD ANCHOR OMEGA', '#38bdf8', 12);
+  }
+  if (G) G.uiDirty = true;
+  return fold;
+}
+
+function updateSpatialFolds(dt) {
+  if (!G || !G.spatialFolds || G.spatialFolds.length === 0) return;
+  const cfg = typeof SPACE_FOLD_CONFIG !== 'undefined' ? SPACE_FOLD_CONFIG : { decayRate: 4.0 };
+  for (let i = G.spatialFolds.length - 1; i >= 0; i--) {
+    const f = G.spatialFolds[i];
+    f.life -= dt;
+    f.stress = Math.max(0, f.stress - cfg.decayRate * dt);
+    if (f.life <= 0 || !f.active) {
+      G.spatialFolds.splice(i, 1);
+    }
+  }
+}
+
+function triggerAbyssalTear(fold) {
+  if (!fold) return;
+  fold.active = false;
+  if (typeof shake === 'function') shake(16.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('boom');
+    Sfx.play('emp');
+  }
+  if (typeof burst === 'function') {
+    burst(fold.ptA.x, fold.ptA.y, 25, '#c084fc', 140, 0.5, 3.5, true);
+    burst(fold.ptB.x, fold.ptB.y, 25, '#c084fc', 140, 0.5, 3.5, true);
+  }
+  if (typeof addText === 'function') addText(fold.ptA.x, fold.ptA.y - 30, '★ ABYSSAL TEAR RIFT! ★', '#c084fc', 16);
+
+  if (typeof spawnEnemy === 'function') {
+    const p1 = spawnEnemy('void_phantom', G.wave || 1);
+    if (p1) { p1.x = fold.ptA.x; p1.y = fold.ptA.y; }
+    const p2 = spawnEnemy('void_phantom', G.wave || 1);
+    if (p2) { p2.x = fold.ptB.x; p2.y = fold.ptB.y; }
+  }
+}
+
+function stabilizeSpatialFold(fold, amount) {
+  if (!fold) return false;
+  const amt = amount || (typeof SPACE_FOLD_CONFIG !== 'undefined' ? SPACE_FOLD_CONFIG.stabilizeAmount : 30);
+  fold.stress = Math.max(0, fold.stress - amt);
+  if (typeof burst === 'function') burst(fold.ptA.x, fold.ptA.y, 12, '#38bdf8', 70, 0.3, 2, false);
+  if (typeof addText === 'function') addText(fold.ptA.x, fold.ptA.y - 20, 'FOLD STABILIZED -' + amt, '#38bdf8', 12);
+  return true;
+}
+
+function updateEpigeneticEvolution(dt) {
+  if (!G || !G.epigeneticSwarm) return;
+  const es = G.epigeneticSwarm;
+  es.evalTimer = (es.evalTimer || 0) + dt;
+
+  if (G.state === 'active' && es.evalTimer >= 3.0) {
+    es.evalTimer = 0;
+    const dv = es.damageVector || {};
+    const total = (dv.phys || 0) + (dv.cryo || 0) + (dv.energy || 0) + (dv.plasma || 0) + 1;
+    const pCryo = (dv.cryo || 0) / total;
+    const pElec = ((dv.energy || 0) + (dv.plasma || 0)) / total;
+    const pKin = (dv.phys || 0) / total;
+
+    const thresh = typeof EPIGENETIC_SWARM_CONFIG !== 'undefined' ? EPIGENETIC_SWARM_CONFIG.mutationThreshold : 0.55;
+
+    if (pCryo >= thresh && !es.activeMutations.includes('anti_cryo')) {
+      es.activeMutations.push('anti_cryo');
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('alpha_roar');
+      const sW = typeof W !== 'undefined' ? W : 960;
+      if (typeof addText === 'function') addText(sW / 2, 90, 'GENOME MUTATION: CRYO-SUBLIMATION!', '#06b6d4', 15);
+    } else if (pElec >= thresh && !es.activeMutations.includes('faraday')) {
+      es.activeMutations.push('faraday');
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('alpha_roar');
+      const sW = typeof W !== 'undefined' ? W : 960;
+      if (typeof addText === 'function') addText(sW / 2, 90, 'GENOME MUTATION: FARADAY ABSORBER!', '#38bdf8', 15);
+    } else if (pKin >= thresh && !es.activeMutations.includes('chitin')) {
+      es.activeMutations.push('chitin');
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('alpha_roar');
+      const sW = typeof W !== 'undefined' ? W : 960;
+      if (typeof addText === 'function') addText(sW / 2, 90, 'GENOME MUTATION: CHITIN HARDENING!', '#94a3b8', 15);
+    }
+  }
+}
+
+function applyEpigeneticMutagen(mutagenId) {
+  if (!G || !G.epigeneticSwarm) return false;
+  const cost = 25;
+  if ((G.gold || 0) < cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.gold -= cost;
+  const es = G.epigeneticSwarm;
+  if (mutagenId) {
+    const idx = es.activeMutations.indexOf(mutagenId);
+    if (idx !== -1) es.activeMutations.splice(idx, 1);
+  } else {
+    es.activeMutations = [];
+    es.damageVector = { phys: 0, cryo: 0, energy: 0, plasma: 0 };
+  }
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('reaction');
+  const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+  if (typeof burst === 'function') burst(sW / 2, sH / 2, 20, '#10b981', 120, 0.4, 3, true);
+  if (typeof addText === 'function') addText(sW / 2, sH / 2 - 25, 'MUTAGEN PURGE: GENE POOL RESET!', '#10b981', 16);
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function triggerCoreMeltdown(t) {
+  if (!G || !t) return;
+  const cfg = typeof OVERCLOCK_CONFIG !== 'undefined' ? OVERCLOCK_CONFIG : { nukeDamage: 10000, nukeRadius: 250, craterDuration: 20.0 };
+  if (typeof shake === 'function') shake(20.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('boom');
+    Sfx.play('nuke');
+  }
+  if (typeof addRing === 'function') addRing(t.x, t.y, 20, cfg.nukeRadius, 0.8, '#a855f7', 8);
+  if (typeof burst === 'function') burst(t.x, t.y, 50, '#c084fc', 260, 0.8, 5.0, true);
+  if (typeof addText === 'function') addText(t.x, t.y - 30, '☢ SUPERCRITICAL DETONATION (10,000 TRUE DMG)!', '#a855f7', 18);
+
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (!foe.dead && Math.hypot(foe.x - t.x, foe.y - t.y) <= cfg.nukeRadius) {
+        dealDamage(foe, cfg.nukeDamage, 'true', 'supercritical_meltdown', { noReaction: true });
+      }
+    }
+  }
+
+  // Create crater on map
+  if (!G.craters) G.craters = [];
+  G.craters.push({
+    x: t.x, y: t.y, c: t.c, r: t.r, duration: cfg.craterDuration, maxDuration: cfg.craterDuration
+  });
+
+  // Destroy tower permanently
+  const idx = G.towers.indexOf(t);
+  if (idx !== -1) G.towers.splice(idx, 1);
+  G.uiDirty = true;
+}
+
+function updateCraters(dt) {
+  if (!G || !G.craters || G.craters.length === 0) return;
+  for (let i = G.craters.length - 1; i >= 0; i--) {
+    const c = G.craters[i];
+    c.duration -= dt;
+    if (c.duration <= 0) G.craters.splice(i, 1);
+  }
+}
+
+function recordParadoxCoopSnapshot() {
+  if (!G) return;
+  if (!G.paradoxCoop) G.paradoxCoop = { active: false, snapshots: [], ghostFleet: [], ghostT: 0, entropicFriction: 0, snapshotTimer: 0 };
+  const pc = G.paradoxCoop;
+
+  const snap = {
+    t: Date.now(),
+    lives: G.lives,
+    enemies: (G.enemies || []).map(e => ({ id: e.id, x: e.x, y: e.y, hp: e.hp })),
+    towers: (G.towers || []).map(t => ({ id: t.id, x: t.x, y: t.y, type: t.type, tier: t.tier })),
+    mech: G.mech ? { x: G.mech.x, y: G.mech.y, stance: G.mech.stance } : null
+  };
+  pc.snapshots.push(snap);
+
+  if (pc.snapshots.length > 25) pc.snapshots.shift();
+}
+
+function triggerParadoxCoop() {
+  if (!G) return false;
+  if (!G.paradoxCoop) G.paradoxCoop = { active: false, snapshots: [], ghostFleet: [], ghostT: 0, entropicFriction: 0, snapshotTimer: 0 };
+  const pc = G.paradoxCoop;
+  if (pc.snapshots.length === 0) recordParadoxCoopSnapshot();
+
+  const oldest = pc.snapshots[0];
+  if (!oldest) return false;
+
+  G.lives = Math.max(G.lives, oldest.lives);
+
+  if (G.enemies && oldest.enemies) {
+    for (const snapFoe of oldest.enemies) {
+      const liveFoe = G.enemies.find(e => e.id === snapFoe.id);
+      if (liveFoe && !liveFoe.dead) {
+        liveFoe.x = snapFoe.x;
+        liveFoe.y = snapFoe.y;
+      }
+    }
+  }
+
+  pc.active = true;
+  pc.ghostT = (typeof PARADOX_COOP_CONFIG !== 'undefined' ? PARADOX_COOP_CONFIG.ghostDuration : 12.0);
+  pc.ghostFleet = (oldest.towers || []).map(t => ({
+    x: t.x, y: t.y, type: t.type, cd: 0
+  }));
+
+  if (oldest.mech) {
+    pc.ghostMech = { x: oldest.mech.x, y: oldest.mech.y, cd: 0 };
+  }
+
+  pc.entropicFriction = (pc.entropicFriction || 0) + 25;
+
+  if (typeof shake === 'function') shake(14.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('time_rewind');
+    Sfx.play('laser_beam');
+  }
+  const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+  if (typeof addText === 'function') addText(sW / 2, sH / 2 - 30, '★ CHRONOS GHOST FLEET CONVERGENCE! ★', '#22d3ee', 18);
+
+  if (pc.entropicFriction >= (typeof PARADOX_COOP_CONFIG !== 'undefined' ? PARADOX_COOP_CONFIG.maxFriction : 100)) {
+    pc.entropicFriction = 0;
+    if (typeof spawnEnemy === 'function') {
+      const wraith = spawnEnemy('causal_wraith', G.wave || 1);
+      if (wraith) { wraith.x = sW / 2; wraith.y = sH / 2; }
+    }
+  }
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function updateParadoxCoop(dt) {
+  if (!G || !G.paradoxCoop) return;
+  const pc = G.paradoxCoop;
+
+  pc.snapshotTimer = (pc.snapshotTimer || 0) + dt;
+  if (pc.snapshotTimer >= 0.5) {
+    pc.snapshotTimer = 0;
+    recordParadoxCoopSnapshot();
+  }
+
+  if (!pc.active) return;
+  pc.ghostT -= dt;
+
+  if (pc.ghostFleet && pc.ghostFleet.length > 0 && G.enemies) {
+    for (const gt of pc.ghostFleet) {
+      gt.cd -= dt;
+      if (gt.cd <= 0) {
+        gt.cd = 0.8;
+        let target = null, minDist = 180;
+        for (const foe of G.enemies) {
+          if (!foe.dead) {
+            const d = Math.hypot(foe.x - gt.x, foe.y - gt.y);
+            if (d <= minDist) { minDist = d; target = foe; }
+          }
+        }
+        if (target) {
+          dealDamage(target, 45, 'energy', 'ghost_fleet', { noReaction: true });
+          if (typeof addFx === 'function') addFx('tracer', gt.x, gt.y, target.x, target.y, 0.25, '#22d3ee', 2.5);
+        }
+      }
+    }
+  }
+
+  if (pc.ghostT <= 0) {
+    pc.active = false;
+    pc.ghostFleet = [];
+    pc.ghostMech = null;
+  }
+}
+
+function setMechStance(stance) {
+  if (!G || !G.mech) return false;
+  const cfg = typeof TITAN_STANCE_CONFIG !== 'undefined' ? TITAN_STANCE_CONFIG : { stances: ['siege_bastion', 'valkyrie_blade', 'matter_siphon'] };
+  if (!cfg.stances.includes(stance)) return false;
+
+  G.mech.stance = stance;
+  if (stance === 'valkyrie_blade') {
+    G.mech.speed = cfg.valkyrieSpeed || 240;
+  } else if (stance === 'siege_bastion') {
+    G.mech.speed = 0;
+  } else {
+    G.mech.speed = 120;
+  }
+
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('neural_link');
+  if (typeof burst === 'function') burst(G.mech.x, G.mech.y, 14, '#38bdf8', 90, 0.4, 2.5, true);
+  if (typeof addText === 'function') addText(G.mech.x, G.mech.y - 28, 'STANCE: ' + stance.toUpperCase(), '#38bdf8', 14);
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function mechParry() {
+  if (!G || !G.mech) return false;
+  const cfg = typeof TITAN_STANCE_CONFIG !== 'undefined' ? TITAN_STANCE_CONFIG : { parryWindow: 0.35, bulletTimeDuration: 1.5 };
+  G.mech.parryWindowT = cfg.parryWindow;
+
+  let deflectedAny = false;
+
+  if (G.hostileProjectiles && G.hostileProjectiles.length > 0) {
+    for (const proj of G.hostileProjectiles) {
+      if (!proj.deflected && Math.hypot(proj.x - G.mech.x, proj.y - G.mech.y) <= 120) {
+        proj.deflected = true;
+        deflectedAny = true;
+      }
+    }
+  }
+
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (!foe.dead && Math.hypot(foe.x - G.mech.x, foe.y - G.mech.y) <= 90) {
+        dealDamage(foe, 250, 'true', 'titan_mech', { isParry: true, noReaction: true });
+        deflectedAny = true;
+      }
+    }
+  }
+
+  if (deflectedAny) {
+    if (typeof shake === 'function') shake(15.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) {
+      Sfx.play('titan_break');
+      Sfx.play('shockwave');
+    }
+    if (typeof triggerBulletTime === 'function') triggerBulletTime(cfg.bulletTimeDuration);
+    if (typeof burst === 'function') burst(G.mech.x, G.mech.y, 25, '#fbbf24', 160, 0.6, 4, true);
+    if (typeof addText === 'function') addText(G.mech.x, G.mech.y - 30, '★ KINETIC PARRY REFLECTION! ★', '#fbbf24', 16);
+  } else {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('hit');
+  }
+  return deflectedAny;
+}
+
+function mechExecuteFinisher(enemy) {
+  if (!G || !G.mech || !enemy || enemy.dead) return false;
+  const cfg = typeof TITAN_STANCE_CONFIG !== 'undefined' ? TITAN_STANCE_CONFIG : { finisherThreshold: 0.20 };
+  const threshHp = (enemy.maxHp || 1000) * cfg.finisherThreshold;
+  if (enemy.hp > threshHp) return false;
+
+  enemy.hp = 0;
+  if (typeof killEnemy === 'function') killEnemy(enemy);
+
+  G.gold = (G.gold || 0) + 100;
+  if (typeof shake === 'function') shake(16.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('strike');
+    Sfx.play('coin');
+  }
+  if (typeof burst === 'function') burst(enemy.x, enemy.y, 30, '#ef4444', 180, 0.6, 4.5, true);
+  if (typeof addText === 'function') addText(enemy.x, enemy.y - 30, '★ TITAN EXECUTION FINISHER (+100G)! ★', '#ef4444', 17);
+  return true;
+}
+
+function updateTitanStanceSystems(dt) {
+  if (!G || !G.mech) return;
+  const m = G.mech;
+  if (m.parryWindowT > 0) m.parryWindowT = Math.max(0, m.parryWindowT - dt);
+
+  if (m.stance === 'matter_siphon' && G.towers) {
+    for (const t of G.towers) {
+      if ((t.heat || 0) > 0 && Math.hypot(t.x - m.x, t.y - m.y) <= 120) {
+        t.heat = Math.max(0, t.heat - dt * 25);
+        if (Math.random() < 0.15 && typeof burst === 'function') {
+          burst(t.x, t.y, 1, '#38bdf8', 30, 0.2, 1.5, false);
+        }
+      }
+    }
+  }
+}
+
+function updateBastion20Systems(dt) {
+  updateSpatialFolds(dt);
+  updateEpigeneticEvolution(dt);
+  updateParadoxCoop(dt);
+  updateTitanStanceSystems(dt);
+  updateCraters(dt);
 }

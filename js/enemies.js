@@ -53,7 +53,11 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     isFaraday: type === 'faraday_behemoth',
     isWeaver: type === 'resonance_weaver',
     carapaceHits: 0,
-    weaverCd: 6.0
+    weaverCd: 6.0,
+    // 20.0 The Transcendent Architecture & Non-Euclidean Properties
+    isPhantom: type === 'void_phantom',
+    isWraith: type === 'causal_wraith',
+    genome: { kin: 0.1, heat: 0.1, elec: 0.1, cryo: 0.1, twitch: 0.1, mitosis: 0, frenzy: 0, entropic: 0 }
   };
 
   // 17.0 Decoy Swarm & Dispersion Cocoon Adaptation
@@ -1032,5 +1036,23 @@ function updateEnemy(e, dt) {
   e.isTurningCorner = (p.seg !== e.seg);
   e.seg = p.seg;
   e.ang += angDiff(e.ang, p.ang) * Math.min(1, dt * 10);
-  e.x = p.x - Math.sin(p.ang) * e.off; e.y = p.y + Math.cos(p.ang) * e.off;
+  e.x = p.x - Math.sin(p.ang) * (e.off || 0); e.y = p.y + Math.cos(p.ang) * (e.off || 0);
+
+  // 20.0 Chrono-Topological Space-Folding Transit & Stress
+  if (!e.dead && G && G.spatialFolds && G.spatialFolds.length > 0) {
+    for (const fold of G.spatialFolds) {
+      if (!fold.active) continue;
+      if (Math.hypot(e.x - fold.ptA.x, e.y - fold.ptA.y) <= 28) {
+        e.x = fold.ptB.x;
+        e.y = fold.ptB.y;
+        fold.stress = (fold.stress || 0) + (typeof SPACE_FOLD_CONFIG !== 'undefined' ? SPACE_FOLD_CONFIG.stressPerPass : 12);
+        if (typeof burst === 'function') burst(fold.ptB.x, fold.ptB.y, 10, '#38bdf8', 80, 0.3, 2, false);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('reaction');
+        if (fold.stress >= (typeof SPACE_FOLD_CONFIG !== 'undefined' ? SPACE_FOLD_CONFIG.maxStress : 100)) {
+          if (typeof triggerAbyssalTear === 'function') triggerAbyssalTear(fold);
+        }
+        break;
+      }
+    }
+  }
 }

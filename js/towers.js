@@ -500,6 +500,37 @@ function updateTower(t, dt) {
   if (G && G.fluxConduits && G.fluxConduits.some(fc => (fc.t1 === t || fc.t2 === t) && !fc.disabledT)) {
     rateMult *= 1.25;
   }
+  // 20.0 Overclock Throttle & Supercritical Meltdown State
+  t.throttle = t.throttle || 1.0;
+  rateMult *= t.throttle;
+  if (t.throttle > 1.0) {
+    const heatInc = ((t.throttle - 1.0) ** 2) * (typeof OVERCLOCK_CONFIG !== 'undefined' ? OVERCLOCK_CONFIG.heatRate : 0.08) * 100 * dt;
+    t.heat = (t.heat || 0) + heatInc;
+  }
+  if ((t.heat || 0) >= 100 && t.throttle > 1.0 && !t.isSupercritical) {
+    t.isSupercritical = true;
+    t.supercriticalT = (typeof OVERCLOCK_CONFIG !== 'undefined' ? OVERCLOCK_CONFIG.supercriticalDuration : 4.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overload');
+    if (typeof addText === 'function') addText(t.x, t.y - 25, '★ SUPERCRITICAL MELTDOWN! ★', '#a855f7', 15);
+  }
+  if (t.isSupercritical) {
+    rateMult *= (typeof OVERCLOCK_CONFIG !== 'undefined' ? OVERCLOCK_CONFIG.supercriticalDmgMult : 8.0);
+    t.supercriticalT -= dt;
+    if (Math.random() < 0.25 && typeof burst === 'function') {
+      burst(t.x, t.y, 4, '#c084fc', 60, 0.25, 2, true);
+    }
+    if (t.supercriticalT <= 0) {
+      t.supercriticalT = 0;
+      if (typeof triggerCoreMeltdown === 'function') triggerCoreMeltdown(t);
+      return;
+    }
+  }
+
+  // 20.0 Titan Mech Siege Bastion Conduit
+  if (G && G.mech && G.mech.stance === 'siege_bastion' && Math.hypot(G.mech.x - t.x, G.mech.y - t.y) <= 150) {
+    rangeMult *= (1.0 + (typeof TITAN_STANCE_CONFIG !== 'undefined' ? TITAN_STANCE_CONFIG.siegeBonusRange : 0.60));
+    t.isAmmoDepleted = false;
+  }
   // Core Overload & Meltdown Hangover (4.0)
   if (G && G.overloadT > 0) rateMult *= 3.5;
   if (G && G.meltdownT > 0) rateMult *= 0.5;
@@ -1201,4 +1232,29 @@ function fireCustomTower(t, target) {
     });
     burst(mx, my, 8, '#f43f5e', 120, 0.35, 3, true);
   }
+}
+
+// 20.0 Overclock & Supercritical Core Meltdown Controls
+function setTowerThrottle(t, throttle) {
+  if (!t) return false;
+  const cfg = typeof OVERCLOCK_CONFIG !== 'undefined' ? OVERCLOCK_CONFIG : { minThrottle: 1.0, maxThrottle: 5.0 };
+  t.throttle = clamp(throttle, cfg.minThrottle, cfg.maxThrottle);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+  if (typeof addText === 'function') addText(t.x, t.y - 20, 'THROTTLE: ' + (t.throttle * 100).toFixed(0) + '%', '#a855f7', 12);
+  if (G) G.uiDirty = true;
+  return t.throttle;
+}
+
+function coolTower(t, amount) {
+  if (!t) return false;
+  const cool = amount || 30;
+  t.heat = Math.max(0, (t.heat || 0) - cool);
+  if (t.isSupercritical && t.heat < 80) {
+    t.isSupercritical = false;
+    t.supercriticalT = 0;
+    if (typeof addText === 'function') addText(t.x, t.y - 24, 'MELTDOWN COOLED!', '#38bdf8', 13);
+  }
+  if (typeof burst === 'function') burst(t.x, t.y, 10, '#38bdf8', 70, 0.35, 2, false);
+  if (G) G.uiDirty = true;
+  return true;
 }

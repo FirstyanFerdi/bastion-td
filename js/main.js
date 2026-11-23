@@ -660,5 +660,8 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   // 19.0 The Omni-Synthesis Crucible & Evolutionary Phylogeny Matrix Exports
   OMNI_SYNTHESIS_CONFIG, MODULAR_SUBCORE_DATABASE, ADAPTIVE_PHYLOGENY_CONFIG, PARADIGM_SHIFT_CONFIG,
   triggerBoseEinsteinSingularity, triggerThermobaricCyclone, triggerTachyonWeb, triggerMagmaGeyser, socketSubCore, createFluxConduit, removeFluxConduit, activateParadigmShift, speciateTaxa, updateOmniSynthesisSystems, updatePhylogenyDirector, updateParadigmShiftSystems,
-  explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateDreadnought
+  // 20.0 The Transcendent Architecture & Non-Euclidean Crucible Exports
+  SPACE_FOLD_CONFIG, EPIGENETIC_SWARM_CONFIG, OVERCLOCK_CONFIG, PARADOX_COOP_CONFIG, TITAN_STANCE_CONFIG,
+  createSpatialFold, updateSpatialFolds, triggerAbyssalTear, stabilizeSpatialFold, updateEpigeneticEvolution, applyEpigeneticMutagen, setTowerThrottle, coolTower, triggerCoreMeltdown, recordParadoxSnapshot, recordParadoxCoopSnapshot, triggerParadoxCoop, updateParadoxCoop, setMechStance, mechParry, mechExecuteFinisher, updateTitanStanceSystems, updateBastion20Systems,
+  explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateTower, updateDreadnought
 };

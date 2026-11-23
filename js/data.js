@@ -935,7 +935,9 @@ const ED = {
   chitin_phase_carapace: { name: 'Chitinous Phase-Carapace', hp: 550, speed: 52, r: 18, armor: 0.50, reward: 35, leak: 2, isCarapace: true },
   thermophilic_devourer: { name: 'Thermophilic Cryo-Devourer', hp: 480, speed: 64, r: 17, armor: 0.35, reward: 32, leak: 2, isDevourer: true },
   faraday_behemoth: { name: 'Faraday Bio-Behemoth', hp: 850, speed: 40, r: 22, armor: 0.45, reward: 55, leak: 3, isFaraday: true },
-  resonance_weaver: { name: 'Sub-Spatial Resonance Weaver', hp: 320, speed: 82, r: 15, armor: 0.25, reward: 28, leak: 2, isWeaver: true }
+  resonance_weaver: { name: 'Sub-Spatial Resonance Weaver', hp: 320, speed: 82, r: 15, armor: 0.25, reward: 28, leak: 2, isWeaver: true },
+  void_phantom: { name: 'Void Phantom', hp: 450, speed: 70, r: 16, armor: 0.30, reward: 40, leak: 2, isPhantom: true },
+  causal_wraith: { name: 'Causal Paradox Wraith', hp: 600, speed: 60, r: 18, armor: 0.50, reward: 60, leak: 3, isWraith: true }
 };
 const hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
@@ -2980,6 +2982,58 @@ const PARADIGM_SHIFT_CONFIG = {
   reactor_runaway: { id: 'reactor_runaway', name: 'Super-Critical Reactor Runaway', critBonus: 0.50, critMult: 3.0, meltdownInterval: 15.0 },
   quantum_duplication: { id: 'quantum_duplication', name: 'Quantum Duplication Paradox', mirrorTowers: true, twinBosses: true }
 };
+
+/* ============================================================
+   20.0 THE TRANSCENDENT ARCHITECTURE & NON-EUCLIDEAN CRUCIBLE
+   ============================================================ */
+
+const SPACE_FOLD_CONFIG = {
+  foldDuration: 12.0,
+  penetrationMult: 4,
+  maxStress: 100,
+  stressPerPass: 12,
+  decayRate: 4.0,
+  stabilizeAmount: 30
+};
+
+const EPIGENETIC_SWARM_CONFIG = {
+  alleles: ['kin', 'heat', 'elec', 'cryo', 'twitch', 'mitosis', 'frenzy', 'entropic'],
+  mutationThreshold: 0.55,
+  mutagens: {
+    anti_cryo: { id: 'anti_cryo', name: 'Cryo-Sublimation Exoskeleton', desc: 'Converts freeze into +75% armor and steam burst (+50% speed)' },
+    faraday: { id: 'faraday', name: 'Faraday Shock-Absorber', desc: 'Converts electric arcs into communal overshields' },
+    chitin: { id: 'chitin', name: 'Chitin Hardening', desc: 'Reflects kinetic railgun/gatling rounds' }
+  }
+};
+
+const OVERCLOCK_CONFIG = {
+  minThrottle: 1.0,
+  maxThrottle: 5.0,
+  heatRate: 0.08,
+  supercriticalDuration: 4.0,
+  supercriticalDmgMult: 8.0,
+  nukeDamage: 10000,
+  nukeRadius: 250,
+  craterDuration: 20.0
+};
+
+const PARADOX_COOP_CONFIG = {
+  rewindWindow: 12.0,
+  ghostDuration: 12.0,
+  snapshotInterval: 0.5,
+  maxFriction: 100
+};
+
+const TITAN_STANCE_CONFIG = {
+  stances: ['siege_bastion', 'valkyrie_blade', 'matter_siphon'],
+  siegeBonusRange: 0.60,
+  valkyrieSpeed: 240,
+  parryWindow: 0.35,
+  bulletTimeDuration: 1.5,
+  finisherThreshold: 0.20,
+  siphonCoolAmount: 40
+};
+
 
 
 
