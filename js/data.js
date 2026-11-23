@@ -937,7 +937,9 @@ const ED = {
   faraday_behemoth: { name: 'Faraday Bio-Behemoth', hp: 850, speed: 40, r: 22, armor: 0.45, reward: 55, leak: 3, isFaraday: true },
   resonance_weaver: { name: 'Sub-Spatial Resonance Weaver', hp: 320, speed: 82, r: 15, armor: 0.25, reward: 28, leak: 2, isWeaver: true },
   void_phantom: { name: 'Void Phantom', hp: 450, speed: 70, r: 16, armor: 0.30, reward: 40, leak: 2, isPhantom: true },
-  causal_wraith: { name: 'Causal Paradox Wraith', hp: 600, speed: 60, r: 18, armor: 0.50, reward: 60, leak: 3, isWraith: true }
+  causal_wraith: { name: 'Causal Paradox Wraith', hp: 600, speed: 60, r: 18, armor: 0.50, reward: 60, leak: 3, isWraith: true },
+  golden_drone: { name: 'Golden Nanite Drone', hp: 50, speed: 45, r: 12, armor: 0, reward: 85, leak: 0, isLootDrone: true },
+  doppelganger: { name: 'Corrupted Titan Doppelgänger', hp: 2500, speed: 45, r: 24, armor: 0.50, reward: 200, leak: 4, isDoppel: true }
 };
 const hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
@@ -3033,6 +3035,60 @@ const TITAN_STANCE_CONFIG = {
   finisherThreshold: 0.20,
   siphonCoolAmount: 40
 };
+
+/* ============================================================
+   21.0 THE MAESTRO DYNAMIC PACING DIRECTOR CONFIGS
+   ============================================================ */
+
+const MAESTRO_DIRECTOR_CONFIG = {
+  weights: {
+    lives: 35,
+    proximity: 35,
+    heat: 15,
+    mech: 15
+  },
+  thresholds: {
+    crescendo: 40,
+    panic: 85,
+    respiteDuration: 12.0,
+    buildupDuration: 10.0
+  },
+  gambits: {
+    crucible_surge: {
+      id: 'crucible_surge',
+      name: 'The Crucible Surge',
+      desc: 'Enemies gain +50% speed for 15s. Survive to earn +500G and +10 Cores.',
+      rewardGold: 500,
+      rewardCores: 10,
+      duration: 15.0
+    },
+    silent_arsenal: {
+      id: 'silent_arsenal',
+      name: 'Silent Arsenal',
+      desc: 'Strongest tower is EMP locked for 10s. Survive without leaking to earn +400G.',
+      rewardGold: 400,
+      rewardCores: 8,
+      duration: 10.0
+    },
+    titan_duel: {
+      id: 'titan_duel',
+      name: 'Titan Duel Pact',
+      desc: 'Spawns a Corrupted Titan Doppelgänger. Defeat it in 20s to earn +600G and +15 Cores.',
+      rewardGold: 600,
+      rewardCores: 15,
+      duration: 20.0
+    },
+    fragile_perfection: {
+      id: 'fragile_perfection',
+      name: 'Fragile Perfection',
+      desc: 'Any leak results in instant defeat for the next 15s. Reward: +750G.',
+      rewardGold: 750,
+      rewardCores: 20,
+      duration: 15.0
+    }
+  }
+};
+
 
 
 

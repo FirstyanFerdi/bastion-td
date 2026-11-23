@@ -663,5 +663,7 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   // 20.0 The Transcendent Architecture & Non-Euclidean Crucible Exports
   SPACE_FOLD_CONFIG, EPIGENETIC_SWARM_CONFIG, OVERCLOCK_CONFIG, PARADOX_COOP_CONFIG, TITAN_STANCE_CONFIG,
   createSpatialFold, updateSpatialFolds, triggerAbyssalTear, stabilizeSpatialFold, updateEpigeneticEvolution, applyEpigeneticMutagen, setTowerThrottle, coolTower, triggerCoreMeltdown, recordParadoxSnapshot, recordParadoxCoopSnapshot, triggerParadoxCoop, updateParadoxCoop, setMechStance, mechParry, mechExecuteFinisher, updateTitanStanceSystems, updateBastion20Systems,
+  // 21.0 The Maestro Dynamic Pacing Director & Neuro-Kinetic Tension Engine Exports
+  MAESTRO_DIRECTOR_CONFIG, calculatePlayerTension, calculatePlayerProficiency, transitionMaestroPhase, triggerMiracleClutch, offerDirectorGambit, acceptDirectorGambit, resolveDirectorGambit, updateMaestroDirector,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateTower, updateDreadnought
 };

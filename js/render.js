@@ -719,6 +719,9 @@ function render() {
   // 20.0 Epigenetic Swarm & Stance HUD
   drawEpigeneticHUD(c, time);
   drawMechStanceHUD(c, time);
+  // 21.0 Maestro Director HUD & Dynamic Vignette
+  drawMaestroDirectorHUD(c, time);
+  drawDynamicPacingVignette(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -3920,5 +3923,105 @@ function drawMechStanceHUD(c, time) {
   c.fillStyle = stanceColor;
   c.textAlign = 'center';
   c.fillText(m.stance.replace('_', ' ').toUpperCase(), m.x, m.y - 32);
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 21.0: THE MAESTRO DYNAMIC PACING DIRECTOR HUD & VFX
+   ============================================================ */
+
+function drawDynamicPacingVignette(c, time) {
+  if (!G || !G.maestro) return;
+  const m = G.maestro;
+  const phase = m.phase || 'buildup';
+
+  let color = 'rgba(56, 189, 248, 0.10)'; // buildup neon cyan
+  if (phase === 'crescendo') {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+    color = 'rgba(239, 68, 68, ' + (0.16 + 0.08 * pulse) + ')';
+  } else if (phase === 'miracle') {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 12);
+    color = 'rgba(251, 191, 36, ' + (0.24 + 0.12 * pulse) + ')';
+  } else if (phase === 'respite') {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 3);
+    color = 'rgba(16, 185, 129, ' + (0.12 + 0.06 * pulse) + ')';
+  }
+
+  c.save();
+  const grad = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.72);
+  grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  grad.addColorStop(1, color);
+  c.fillStyle = grad;
+  c.fillRect(0, 0, W, H);
+  c.restore();
+}
+
+function drawMaestroDirectorHUD(c, time) {
+  if (!G || !G.maestro) return;
+  const m = G.maestro;
+  const tension = clamp(m.tension || 0, 0, 100);
+  const phase = (m.phase || 'buildup').toUpperCase();
+
+  const phaseColors = {
+    BUILDUP: '#38bdf8',
+    CRESCENDO: '#ef4444',
+    MIRACLE: '#fbbf24',
+    RESPITE: '#10b981'
+  };
+  const themeColor = phaseColors[phase] || '#38bdf8';
+
+  c.save();
+  const bx = W - 230, by = 36, bw = 215, bh = 24;
+
+  // Background box
+  c.fillStyle = 'rgba(15, 23, 42, 0.90)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = themeColor;
+  c.lineWidth = 1.5;
+  c.strokeRect(bx, by, bw, bh);
+
+  // Tension Bar
+  const barX = bx + 64, barY = by + 6, barW = 100, barH = 12;
+  c.fillStyle = 'rgba(30, 41, 59, 0.8)';
+  c.fillRect(barX, barY, barW, barH);
+  c.fillStyle = tension > 80 ? '#ef4444' : (tension > 50 ? '#f59e0b' : themeColor);
+  c.fillRect(barX, barY, barW * (tension / 100), barH);
+  c.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  c.lineWidth = 1;
+  c.strokeRect(barX, barY, barW, barH);
+
+  // Phase Badge
+  c.font = '900 9px ' + FONT;
+  c.fillStyle = themeColor;
+  c.textAlign = 'left';
+  c.fillText(phase, bx + 6, by + 16);
+
+  // Stress %
+  c.font = '800 9px ' + FONT;
+  c.fillStyle = '#f8fafc';
+  c.textAlign = 'right';
+  c.fillText(Math.round(tension) + '%', bx + bw - 6, by + 16);
+
+  // Active Gambit sub-panel
+  if (m.activeGambit) {
+    const ag = m.activeGambit;
+    const gby = by + bh + 3, gbh = 18;
+    c.fillStyle = 'rgba(30, 27, 75, 0.92)';
+    c.fillRect(bx, gby, bw, gbh);
+    c.strokeStyle = '#f59e0b';
+    c.lineWidth = 1.2;
+    c.strokeRect(bx, gby, bw, gbh);
+
+    const pulse = 0.5 + 0.5 * Math.sin(time * 8);
+    c.fillStyle = '#fbbf24';
+    c.font = '800 8.5px ' + FONT;
+    c.textAlign = 'left';
+    c.fillText('★ ' + (ag.name || 'GAMBIT').toUpperCase(), bx + 6, gby + 12);
+
+    c.textAlign = 'right';
+    c.fillStyle = pulse > 0.5 ? '#f87171' : '#fef08a';
+    c.fillText((ag.timer ? ag.timer.toFixed(1) : '0.0') + 's', bx + bw - 6, gby + 12);
+  }
+
   c.restore();
 }

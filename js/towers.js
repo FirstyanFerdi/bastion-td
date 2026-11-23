@@ -544,6 +544,14 @@ function updateTower(t, dt) {
 
   // 5.0 Thermodynamics: Natural & Cryo Heat Dissipation (Pilar 2)
   let dissipation = (typeof THERMAL_CONFIG !== 'undefined' ? THERMAL_CONFIG.naturalDissipation : 8.0);
+  // 21.0 Maestro Golden Respite 2x Heat Dissipation
+  if (G && G.maestro && G.maestro.phase === 'respite') {
+    dissipation *= 2.0;
+  }
+  // 21.0 Maestro Silent Arsenal Gambit Lockout
+  if (t.silentArsenalLocked) {
+    rateMult = 0;
+  }
   for (const o of G.towers) {
     if (o !== t && (o.type === 'cryo' || o.type === 'fusion_zero')) {
       if ((o.x - t.x) ** 2 + (o.y - t.y) ** 2 <= (1.8 * TILE) ** 2) {

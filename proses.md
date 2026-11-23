@@ -2662,4 +2662,60 @@ Berdasarkan master blueprint `bastion_td_transcendent_architecture_blueprint.md`
 - `tests/smoke.js`: **LULUS (Simulasi headless stabil)**
 - **Seluruh 31 Unit Test Suites di repositori: 100% LULUS.**
 
+---
+
+## 41. Implementasi Bastion TD 21.0: The Maestro Dynamic Pacing Director & Neuro-Kinetic Tension Engine
+
+Berdasarkan master blueprint `bastion_td_maestro_director_blueprint.md` yang disetujui pengguna, telah diimplementasikan penuh sistem orkestrasi pacing cerdas (AI Director di balik layar) yang membaca ritme, stres biometrik, dan kemahiran pemain untuk menciptakan alur dramatis yang sangat adiktif:
+
+### 41.1 Empat Pilar Inti Bastion TD 21.0
+1. **The Sensory Net (3-Dimensional Biometric & Telemetry Profiler):**
+   - **Tension Index ($\Psi_{tension} \in [0, 100]$):**
+     $$\Psi_{tension} = \min\left(100, \sum w_i \cdot x_i\right)$$
+     - Defisit Nyawa ($w_1 = 35$): Menghitung rasio $1.0 - \frac{\text{Lives}}{20}$.
+     - Proximitas Ancaman Kuadratik ($w_2 = 35$): Mengukur jarak musuh terdekat ke markas secara kuadratik $\left(\frac{d_{foe}}{PLEN}\right)^2$.
+     - Rasio Overheat Menara ($w_3 = 15$): Mengukur proporsi menara yang berada pada suhu $\ge 70\%$, supercritical, atau kehabisan amunisi.
+     - Defisit Baterai Titan Mech ($w_4 = 15$): Mengukur rasio $1.0 - \frac{\text{Battery}}{100}$.
+   - **Proficiency Index ($\Phi_{skill} \in [0.5, 3.0]$):**
+     - Mengukur Cognitive APM Cadence dari kill streak, rasio kill per detik, dan frekuensi clutch parry.
+     - Mengklasifikasikan Flow State pemain ke dalam *Boredom Zone*, *Optimal Flow*, atau *Panic Threshold*.
+
+2. **The Pacing State Machine (Siklus 4 Fase Dramatis):**
+   - **Phase 1: Tactical Buildup (8.0–14.0s):**
+     - Jeda perencanaan taktis berjarak santai. Memberi ruang pemain menata space-folds, upgrade menara, atau mereposisi Mech.
+     - Vignette neon cyan (`rgba(56, 189, 248, 0.10)`).
+   - **Phase 2: Orchestrated Crescendo (Peak Surge 20.0s):**
+     - Puncak tekanan agresif yang dipicu saat pemain menunjukkan stabilitas ($\Phi_{skill} \ge 1.2$ dan $\Psi_{tension} < 50$).
+     - Formasi baji terkoordinasi (*Surgical Wedge Formations*), lonjakan panas menara, dan vignette merah membara berdenyut (`rgba(239, 68, 68, 0.22)`).
+   - **Phase 3: The Miracle Window (Heroic Near-Miss Clutch 6.0s):**
+     - Terbuka otomatis saat bahaya kritis ($\Psi_{tension} \ge 85\%$, Lives $\le 3$, atau creep mendekati gerbang).
+     - Menangkis (*Kinetic Parry* via `[SPACE]`) atau melancarkan tebasan finisher pada jendela ini memicu **Chrono-Bullet-Time 2.5s**, pengisian seketika 100% Baterai Mech, gelombang kejut *Repulsor Supernova* 200 True Damage yang menghempaskan seluruh creep mundur 100px, bonus +150G dan +5 Nanite Cores, lalu langsung mengalihkan panggung ke fase Respite.
+   - **Phase 4: The Golden Respite (Katharsis & Panen Hadiah 12.0s):**
+     - Seluruh tekanan musuh berbahaya dihentikan seketika. Menara yang kepanasan mendapat disipasi pendinginan $2\times$ lebih cepat.
+     - 4 unit *Golden Nanite Drones* meluncur perlahan melintasi arena; tidak mengurangi nyawa markas saat lolos (`leak: 0`), dan menyemburkan hadiah masif (+85G per drone, total +340G).
+     - Vignette hijau zamrud katarsis (`rgba(16, 185, 129, 0.18)`).
+
+3. **The Director's Gambits (Adaptive Provocations & Bribes):**
+   - Maestro menawarkan kontrak taruhan risiko tinggi di awal fase Buildup yang dapat diterima secara bebas oleh pemain:
+     - *The Crucible Surge:* Musuh memperoleh +50% kecepatan gerak selama 15 detik. Hadiah lolos: +500G dan +10 Cores.
+     - *Silent Arsenal:* Menara terkuat dinonaktifkan (*EMP Locked*) selama 10 detik. Hadiah lolos: +400G dan +8 Cores.
+     - *Titan Duel Pact:* Memunculkan boss bayangan *Corrupted Titan Doppelgänger* untuk duel 1v1 selama 20 detik. Hadiah kemenangan: +600G dan +15 Cores.
+     - *Fragile Perfection:* Satu saja creep menyentuh markas memicu kekalahan instan (1-Hit Death) selama 15 detik. Hadiah bertahan: +750G dan +20 Cores.
+
+4. **Bio-Sensory HUD & Dynamic Pacing Vignette:**
+   - Panel HUD Maestro di posisi `bx = W - 230, by = 36` menampilkan:
+     - Badge fase dinamis (`BUILDUP`, `CRESCENDO`, `MIRACLE`, `RESPITE`).
+     - Bar progres stres real-time $[0 - 100\%]$ dengan gradien warna adaptif.
+     - Sub-panel timer aktif saat kontrak Gambit sedang berjalan.
+   - Vignette radial sinematik di tepi layar yang berdenyut lembut mengikuti detak fase dramatis.
+
+---
+
+### 41.2 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_maestro_director.js`: **100% LULUS (Semua 7 Suite Pengujian Bastion TD 21.0 Terverifikasi)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 65 SFX sounds, 25 data-act & 38 data-ov, 58 element IDs)**
+- `tests/smoke.js`: **LULUS (Simulasi headless stabil)**
+- **Seluruh 32 Unit Test Suites di repositori: 100% LULUS.**
+
+
 

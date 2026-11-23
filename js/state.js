@@ -367,6 +367,19 @@ function newGame(keepSpeed) {
       ghostT: 0,
       entropicFriction: 0,
       snapshotTimer: 0
+    },
+    // 21.0 The Maestro Dynamic Pacing Director Systems
+    maestro: {
+      tension: 0,
+      phase: 'buildup',
+      phaseTimer: 10.0,
+      skillScore: 1.0,
+      activeGambit: null,
+      miracleAvailable: true,
+      miracleT: 0,
+      respiteT: 0,
+      totalClutches: 0,
+      dronesSpawned: 0
     }
   };
   initDoctrineSkills();
@@ -7206,6 +7219,9 @@ function mechParry() {
   }
 
   if (deflectedAny) {
+    if (G && G.maestro && G.maestro.phase === 'miracle' && G.maestro.miracleAvailable) {
+      if (typeof triggerMiracleClutch === 'function') triggerMiracleClutch();
+    }
     if (typeof shake === 'function') shake(15.0);
     if (typeof Sfx !== 'undefined' && Sfx.play) {
       Sfx.play('titan_break');
@@ -7228,6 +7244,10 @@ function mechExecuteFinisher(enemy) {
 
   enemy.hp = 0;
   if (typeof killEnemy === 'function') killEnemy(enemy);
+
+  if (G && G.maestro && G.maestro.phase === 'miracle' && G.maestro.miracleAvailable) {
+    if (typeof triggerMiracleClutch === 'function') triggerMiracleClutch();
+  }
 
   G.gold = (G.gold || 0) + 100;
   if (typeof shake === 'function') shake(16.0);
@@ -7263,4 +7283,316 @@ function updateBastion20Systems(dt) {
   updateParadoxCoop(dt);
   updateTitanStanceSystems(dt);
   updateCraters(dt);
+  // 21.0 The Maestro Dynamic Pacing Director Systems
+  updateMaestroDirector(dt);
+}
+
+/* ============================================================
+   21.0 THE MAESTRO DYNAMIC PACING DIRECTOR & TENSION ENGINE
+   ============================================================ */
+
+function calculatePlayerTension() {
+  if (!G) return 0;
+  const cfg = typeof MAESTRO_DIRECTOR_CONFIG !== 'undefined' ? MAESTRO_DIRECTOR_CONFIG.weights : { lives: 35, proximity: 35, heat: 15, mech: 15 };
+
+  // 1. Lives Deficit
+  const maxLives = 20;
+  const liveDeficit = clamp(1.0 - (G.lives || 0) / maxLives, 0, 1.0);
+  const livesScore = liveDeficit * cfg.lives;
+
+  // 2. Proximity: closest live enemy to base
+  let proxRatio = 0;
+  const plen = typeof PLEN !== 'undefined' ? PLEN : 1000;
+  if (G.enemies && G.enemies.length > 0) {
+    for (const foe of G.enemies) {
+      if (!foe.dead && foe.d) {
+        const ratio = clamp(foe.d / plen, 0, 1);
+        if (ratio > proxRatio) proxRatio = ratio;
+      }
+    }
+  }
+  const proxScore = (proxRatio ** 2) * cfg.proximity;
+
+  // 3. Tower Heat
+  let hotTowers = 0;
+  if (G.towers && G.towers.length > 0) {
+    for (const t of G.towers) {
+      if ((t.heat || 0) >= 70 || t.isSupercritical || t.isAmmoDepleted) hotTowers++;
+    }
+    hotTowers = hotTowers / G.towers.length;
+  }
+  const heatScore = hotTowers * cfg.heat;
+
+  // 4. Mech Battery Deficit
+  let mechScore = 0;
+  if (G.mech && G.mech.active) {
+    const battDeficit = clamp(1.0 - (G.mech.battery || 0) / 100, 0, 1.0);
+    mechScore = battDeficit * cfg.mech;
+  }
+
+  const totalTension = clamp(Math.round(livesScore + proxScore + heatScore + mechScore), 0, 100);
+  if (G.maestro) G.maestro.tension = totalTension;
+  return totalTension;
+}
+
+function calculatePlayerProficiency() {
+  if (!G) return 1.0;
+  const streak = G.killStreak || 0;
+  const streakBonus = clamp(streak / 20, 0, 1.0);
+  const clutches = G.maestro ? G.maestro.totalClutches || 0 : 0;
+  const clutchBonus = Math.min(1.0, clutches * 0.2);
+
+  const baseProf = 1.0 + streakBonus * 0.8 + clutchBonus * 0.5;
+  const prof = clamp(Number(baseProf.toFixed(2)), 0.5, 3.0);
+  if (G.maestro) G.maestro.skillScore = prof;
+  return prof;
+}
+
+function transitionMaestroPhase(newPhase) {
+  if (!G || !G.maestro) return false;
+  const m = G.maestro;
+  if (m.phase === newPhase) return false;
+  m.phase = newPhase;
+
+  if (newPhase === 'buildup') {
+    m.phaseTimer = (typeof MAESTRO_DIRECTOR_CONFIG !== 'undefined' ? MAESTRO_DIRECTOR_CONFIG.thresholds.buildupDuration : 10.0);
+    const sW = typeof W !== 'undefined' ? W : 960;
+    if (typeof addText === 'function') addText(sW / 2, 70, 'DIRECTOR: TACTICAL BUILDUP', '#38bdf8', 14);
+  } else if (newPhase === 'crescendo') {
+    m.phaseTimer = 20.0;
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overload');
+    if (typeof shake === 'function') shake(8.0);
+    const sW = typeof W !== 'undefined' ? W : 960;
+    if (typeof addText === 'function') addText(sW / 2, 70, '⚡ DIRECTOR CRESCENDO: PEAK SURGE! ⚡', '#f43f5e', 16);
+    G.banner = {
+      text: 'DIRECTOR: CRESCENDO CLIMAX',
+      sub: 'The Maestro accelerates enemy assault vectors!',
+      t: 0, max: 3.5, color: '#f43f5e'
+    };
+  } else if (newPhase === 'miracle') {
+    m.phaseTimer = 6.0;
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('time_rewind');
+    if (typeof shake === 'function') shake(12.0);
+    const sW = typeof W !== 'undefined' ? W : 960;
+    if (typeof addText === 'function') addText(sW / 2, 70, '★ MIRACLE CLUTCH WINDOW OPEN! ★', '#fbbf24', 18);
+    G.banner = {
+      text: '★ MIRACLE CLUTCH WINDOW ★',
+      sub: 'Near-death state detected! Land a parry or attack to reverse destiny!',
+      t: 0, max: 4.0, color: '#fbbf24'
+    };
+  } else if (newPhase === 'respite') {
+    m.phaseTimer = (typeof MAESTRO_DIRECTOR_CONFIG !== 'undefined' ? MAESTRO_DIRECTOR_CONFIG.thresholds.respiteDuration : 12.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('victory');
+    const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+    if (typeof burst === 'function') burst(sW / 2, sH / 2, 35, '#10b981', 180, 0.7, 4.0, true);
+    if (typeof addText === 'function') addText(sW / 2, 70, '★ GOLDEN RESPITE: RESTRUCTURE & REAP! ★', '#10b981', 16);
+    G.banner = {
+      text: '★ GOLDEN RESPITE ★',
+      sub: 'Tension resolved! Towers cool 2x faster, harvest Golden Drones!',
+      t: 0, max: 4.0, color: '#10b981'
+    };
+
+    if (typeof spawnEnemy === 'function') {
+      for (let k = 0; k < 4; k++) {
+        const drone = spawnEnemy('golden_drone', G.wave || 1);
+        if (drone) {
+          drone.d = Math.max(0, 40 + k * 80);
+          drone.reward = 85;
+        }
+      }
+    }
+
+    if (G.towers) {
+      for (const t of G.towers) {
+        if (typeof coolTower === 'function') coolTower(t, 60);
+      }
+    }
+  }
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function triggerMiracleClutch() {
+  if (!G || !G.maestro) return false;
+  const m = G.maestro;
+  m.miracleAvailable = false;
+  m.totalClutches = (m.totalClutches || 0) + 1;
+
+  if (typeof triggerBulletTime === 'function') triggerBulletTime(2.5);
+  if (typeof shake === 'function') shake(18.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('shockwave');
+    Sfx.play('time_rewind');
+    Sfx.play('coin');
+  }
+
+  if (G.mech) {
+    G.mech.battery = 100;
+    G.mech.hp = Math.min(G.mech.maxHp || 1200, (G.mech.hp || 800) + 400);
+  }
+
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (!foe.dead) {
+        foe.d = Math.max(0, (foe.d || 0) - 100);
+        dealDamage(foe, 200, 'true', 'miracle_clutch', { noReaction: true });
+        foe.stunT = Math.max(foe.stunT || 0, 2.0);
+      }
+    }
+  }
+
+  G.gold = (G.gold || 0) + 150;
+  if (typeof addCores === 'function') addCores(5);
+
+  const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+  if (typeof burst === 'function') burst(sW / 2, sH / 2, 40, '#fbbf24', 220, 0.8, 5.0, true);
+  if (typeof addText === 'function') addText(sW / 2, sH / 2 - 35, '★ MIRACLE CLUTCH DEFLECTION (+150G / +5 CORES)! ★', '#fbbf24', 18);
+
+  transitionMaestroPhase('respite');
+  return true;
+}
+
+function offerDirectorGambit(gambitId) {
+  if (!G || !G.maestro) return null;
+  const cfg = typeof MAESTRO_DIRECTOR_CONFIG !== 'undefined' ? MAESTRO_DIRECTOR_CONFIG.gambits[gambitId] : null;
+  if (!cfg) return null;
+  G.maestro.offeredGambit = cfg;
+  return cfg;
+}
+
+function acceptDirectorGambit(gambitId) {
+  if (!G || !G.maestro) return false;
+  const cfg = typeof MAESTRO_DIRECTOR_CONFIG !== 'undefined' ? MAESTRO_DIRECTOR_CONFIG.gambits[gambitId] : null;
+  if (!cfg) return false;
+
+  G.maestro.activeGambit = {
+    id: cfg.id,
+    name: cfg.name,
+    timer: cfg.duration,
+    maxTimer: cfg.duration,
+    rewardGold: cfg.rewardGold,
+    rewardCores: cfg.rewardCores,
+    startLives: G.lives
+  };
+  G.maestro.offeredGambit = null;
+
+  if (cfg.id === 'crucible_surge') {
+    if (G.enemies) {
+      for (const foe of G.enemies) foe.speedBoostT = cfg.duration;
+    }
+  } else if (cfg.id === 'silent_arsenal') {
+    if (G.towers && G.towers.length > 0) {
+      let bestTower = G.towers[0];
+      for (const t of G.towers) {
+        if ((t.tier || 0) > (bestTower.tier || 0)) bestTower = t;
+      }
+      bestTower.silentArsenalLocked = true;
+      G.maestro.activeGambit.lockedTower = bestTower;
+    }
+  } else if (cfg.id === 'titan_duel') {
+    if (typeof spawnEnemy === 'function') {
+      const dop = spawnEnemy('doppelganger', G.wave || 1);
+      if (dop) {
+        const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+        dop.x = sW / 2; dop.y = sH / 2;
+        G.maestro.activeGambit.doppel = dop;
+      }
+    }
+  }
+
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overload');
+  const sW = typeof W !== 'undefined' ? W : 960;
+  if (typeof addText === 'function') addText(sW / 2, 95, 'GAMBIT ACCEPTED: ' + cfg.name.toUpperCase(), '#f59e0b', 15);
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function resolveDirectorGambit(success) {
+  if (!G || !G.maestro || !G.maestro.activeGambit) return false;
+  const ag = G.maestro.activeGambit;
+
+  if (ag.lockedTower) {
+    ag.lockedTower.silentArsenalLocked = false;
+  }
+
+  if (success) {
+    G.gold = (G.gold || 0) + (ag.rewardGold || 400);
+    if (typeof addCores === 'function') addCores(ag.rewardCores || 10);
+    if (typeof Sfx !== 'undefined' && Sfx.play) {
+      Sfx.play('victory');
+      Sfx.play('coin');
+    }
+    const sW = typeof W !== 'undefined' ? W : 960;
+    if (typeof addText === 'function') addText(sW / 2, 95, '★ GAMBIT TRIUMPH: +' + ag.rewardGold + 'G / +' + ag.rewardCores + ' CORES! ★', '#10b981', 16);
+  } else {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    const sW = typeof W !== 'undefined' ? W : 960;
+    if (typeof addText === 'function') addText(sW / 2, 95, 'GAMBIT FAILED!', '#ef4444', 15);
+  }
+
+  G.maestro.activeGambit = null;
+  if (G) G.uiDirty = true;
+  return success;
+}
+
+function updateMaestroDirector(dt) {
+  if (!G || !G.maestro) return;
+  const m = G.maestro;
+
+  calculatePlayerTension();
+  calculatePlayerProficiency();
+
+  // Active Gambit timer
+  if (m.activeGambit) {
+    m.activeGambit.timer -= dt;
+    if (m.activeGambit.id === 'titan_duel') {
+      if (m.activeGambit.doppel && m.activeGambit.doppel.dead) {
+        resolveDirectorGambit(true);
+      } else if (m.activeGambit.timer <= 0) {
+        resolveDirectorGambit(false);
+      }
+    } else if (m.activeGambit.id === 'fragile_perfection') {
+      if (G.lives < m.activeGambit.startLives) {
+        G.lives = 0;
+        if (typeof endGame === 'function') endGame(false);
+      } else if (m.activeGambit.timer <= 0) {
+        resolveDirectorGambit(true);
+      }
+    } else {
+      if (m.activeGambit.timer <= 0) {
+        const success = (G.lives >= (m.activeGambit.startLives || G.lives));
+        resolveDirectorGambit(success);
+      }
+    }
+  }
+
+  // Phase state machine updates
+  if (m.phase === 'buildup') {
+    m.phaseTimer -= dt;
+    if (m.phaseTimer <= 0) {
+      transitionMaestroPhase('crescendo');
+    }
+  } else if (m.phase === 'crescendo') {
+    m.phaseTimer -= dt;
+    if (m.tension >= (typeof MAESTRO_DIRECTOR_CONFIG !== 'undefined' ? MAESTRO_DIRECTOR_CONFIG.thresholds.panic : 85)) {
+      if (m.miracleAvailable) {
+        transitionMaestroPhase('miracle');
+      }
+    } else if (m.phaseTimer <= 0 || (G.enemies && G.enemies.every(e => e.dead))) {
+      transitionMaestroPhase('respite');
+    }
+  } else if (m.phase === 'miracle') {
+    m.phaseTimer -= dt;
+    if (G.lives <= 0 && m.miracleAvailable) {
+      G.lives = 4;
+      triggerMiracleClutch();
+    } else if (m.phaseTimer <= 0) {
+      transitionMaestroPhase('crescendo');
+    }
+  } else if (m.phase === 'respite') {
+    m.phaseTimer -= dt;
+    if (m.phaseTimer <= 0) {
+      transitionMaestroPhase('buildup');
+    }
+  }
 }

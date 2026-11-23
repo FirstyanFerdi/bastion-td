@@ -57,6 +57,9 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     // 20.0 The Transcendent Architecture & Non-Euclidean Properties
     isPhantom: type === 'void_phantom',
     isWraith: type === 'causal_wraith',
+    // 21.0 Maestro Dynamic Pacing Properties
+    isLootDrone: type === 'golden_drone',
+    isDoppel: type === 'doppelganger',
     genome: { kin: 0.1, heat: 0.1, elec: 0.1, cryo: 0.1, twitch: 0.1, mitosis: 0, frenzy: 0, entropic: 0 }
   };
 
@@ -132,6 +135,7 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     e.y = startPt.y + e.off;
   }
   G.enemies.push(e);
+  return e;
 }
 
 function updateEnemy(e, dt) {
