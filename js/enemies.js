@@ -60,6 +60,11 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     // 21.0 Maestro Dynamic Pacing Properties
     isLootDrone: type === 'golden_drone',
     isDoppel: type === 'doppelganger',
+    // 22.0 The Epoch Horizon Properties
+    isSlimeWeaver: type === 'slime_weaver',
+    isEtherVoid: type === 'rift_breacher',
+    isLeviathan: type === 'planetary_leviathan',
+    slimeSprayCd: 3.0,
     genome: { kin: 0.1, heat: 0.1, elec: 0.1, cryo: 0.1, twitch: 0.1, mitosis: 0, frenzy: 0, entropic: 0 }
   };
 
@@ -1056,6 +1061,40 @@ function updateEnemy(e, dt) {
           if (typeof triggerAbyssalTear === 'function') triggerAbyssalTear(fold);
         }
         break;
+      }
+    }
+  }
+
+  // 22.0 The Epoch Horizon Hostile Routines (Slime Weaver, Ether Void, Planetary Leviathan)
+  if (!e.dead) {
+    if (e.isSlimeWeaver) {
+      e.slimeSprayCd = (e.slimeSprayCd || 3.0) - dt;
+      if (e.slimeSprayCd <= 0) {
+        e.slimeSprayCd = 4.5;
+        if (G && G.fluxConduits && G.fluxConduits.length > 0) {
+          const fc = G.fluxConduits.find(c => !c.disabledT && Math.hypot(((c.t1.x + c.t2.x) / 2) - e.x, ((c.t1.y + c.t2.y) / 2) - e.y) <= 120);
+          if (fc) {
+            fc.disabledT = 4.0;
+            if (typeof burst === 'function') burst(e.x, e.y, 14, '#22c55e', 80, 0.4, 3, false);
+            if (typeof addText === 'function') addText(e.x, e.y - 18, 'CONDUIT CORRODED!', '#22c55e', 12);
+            if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('reaction');
+          }
+        }
+      }
+    }
+    if (e.isEtherVoid) {
+      const bPt = (typeof BASE_PT !== 'undefined') ? BASE_PT : { x: 880, y: 300 };
+      const toBaseAngle = Math.atan2(bPt.y - e.y, bPt.x - e.x);
+      e.x += Math.cos(toBaseAngle) * (e.speed * 0.35) * dt;
+      e.y += Math.sin(toBaseAngle) * (e.speed * 0.35) * dt;
+    }
+    if (e.isLeviathan) {
+      e.pulseTimer = (e.pulseTimer || 0) + dt;
+      if (e.pulseTimer >= 6.0) {
+        e.pulseTimer = 0;
+        if (typeof shake === 'function') shake(10.0);
+        if (typeof addRing === 'function') addRing(e.x, e.y, 10, 110, 0.6, '#a855f7', 4);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shockwave');
       }
     }
   }

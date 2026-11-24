@@ -2717,5 +2717,50 @@ Berdasarkan master blueprint `bastion_td_maestro_director_blueprint.md` yang dis
 - `tests/smoke.js`: **LULUS (Simulasi headless stabil)**
 - **Seluruh 32 Unit Test Suites di repositori: 100% LULUS.**
 
+---
+
+## 42. Implementasi Bastion TD 22.0: The Epoch Horizon & Macro-Scale Dimensional Metamorphosis
+
+Berdasarkan master blueprint `bastion_td_epoch_ascension_blueprint.md` yang disetujui pengguna, telah diimplementasikan penuh sistem metamorfosis skala permainan bertingkat tiga (Tri-Epoch Paradigm Shift), rekayasa tektonik geospasial, superweapon orbital kosmik, dan sistem kecerdasan Nemesis Overmind adaptif:
+
+### 42.1 Rincian Empat Pilar Inti Bastion TD 22.0
+1. **Tri-Epoch Paradigm State Machine (Metamorfosis Skala Progresif):**
+   - **Epoch 1: Tactical Guerilla (Wave 1–8):**
+     - Skala mikro-survival intim: Emas dan amunisi terbatas.
+     - *Scavenger Scrap Metal:* Setiap musuh yang gugur menjatuhkan scrap salvage yang dapat dirakit menjadi ranjau nanit darurat (*Nanite Mines*) atau barikade baja darurat (*Scrap Barricades*) via `craftScavengerTrap()`.
+     - Titan Mech bertindak sebagai instrumen bedah mikro melalui parry kinetik dan pemenggalan brute.
+   - **Epoch 2: Industrial Cyber-Grid (Wave 9–18 / Dynamic Net Worth Threshold):**
+     - Skala makro-infrastruktur otomatisasi: Menara terhubung ke dalam *Trans-Logistics Cyber-Grid*.
+     - Seluruh menara yang terhubung memperoleh bonus pasif **+40% Fire Rate** dan disipasi pendinginan panas **$2\times$ lebih cepat**.
+     - Titan Mech bertransformasi menjadi *Mobile Command Citadel* yang dikawal oleh 2 unit **Autonomous Combat Skiff Drones** yang berpatroli dan menembaki musuh di sekitarnya.
+   - **Epoch 3: Orbital Hegemony (Wave 19–30+ / Celestial Ascendancy):**
+     - Skala kosmik hegemoni: Membuka instalasi superweapon orbital planetarium.
+     - **Planetary Orbital Ion Lance (`fireOrbitalIonLance(targetX, targetY)`):** Sinar ion vertikal selebar 60px berkekuatan **1,200 True Damage** yang menyapu musuh dalam jalurnya dengan getaran layar dramatis (`shake(18)`), efek suara ion beam, dan cincin ledakan kosmik.
+     - **Chronos Singularity (`activateChronosSingularity()`):** Gelombang waktu stasis global yang membekukan seluruh pergerakan musuh di layar selama 8.0 detik.
+     - Titan Mech mencapai wujud *Ascendant Colossus* dengan kekebalan dan daya hancur berlipat ganda.
+
+2. **Tectonic Geo-Engineering (Rekayasa Lempeng Bumi Dinamis):**
+   - Pemain dapat membelah lempeng tanah menggunakan `triggerTectonicChasm(x1, y1, x2, y2)`.
+   - Menghasilkan jurang magma lava menyala yang bertahan selama 14.0 detik. Musuh yang melintas di atasnya menerima kerusakan magma kontinu 60 True Damage/detik dan perlambatan 50% slow.
+
+3. **The Nemesis Overmind (Sistem Kontra-Skala Adaptif Dinamis):**
+   - Algoritma menghitung vektor hegemoni pemain secara berkala:
+     $$\mathbf{\Omega}_{power} = \left(\frac{\text{DPS}_{effective}}{400}\right) \times \left(1 + \frac{\text{Grid Efficiency}}{100}\right) \times \left(1 + \frac{\text{Net Worth}}{3000}\right)$$
+   - **Anti-Grid Counter-Measure (Epoch 2):** Bila $\mathbf{\Omega}_{power} \ge 1.5$, Overmind mengerahkan **Corrosive Slime Weaver** yang menyemprotkan lendir asam untuk melumpuhkan jaringan konduit daya (*conduit disabled*).
+   - **Dimensional Void Breachers (Epoch 3):** Bila $\mathbf{\Omega}_{power} \ge 2.5$, Overmind melahirkan **Dimensional Rift Breacher** yang melayang langsung menembus celah ruang eterik menuju markas tanpa terikat jalur darat biasa.
+   - **Planetary World-Eater Leviathan:** Monster kosmik kolosal ber-HP 8500 dengan denyut gelombang kejut periodik yang mengancam pangkalan pemain.
+
+4. **Bio-Sensory HUD & Dynamic Epoch Atmosphere:**
+   - Panel HUD Epoch di pojok kiri atas kanvas menampilkan status Epoch aktif, jumlah Salvage (Epoch 1), Grid Efficiency bonus (Epoch 2), dan kesiapan Orbital Lance (Epoch 3).
+   - Efek atmosferik perbatasan kanvas: Grid sian halus pada Epoch 2 dan aurora kosmik ungu bertabur bintang pada Epoch 3.
+
+---
+
+### 42.2 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_epoch_ascension.js`: **100% LULUS (Semua 7 Suite Pengujian Bastion TD 22.0 Terverifikasi)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 65 SFX sounds, 25 data-act & 38 data-ov, 58 element IDs)**
+- **Seluruh 33 Unit Test Suites di repositori: 100% LULUS.**
+
+
 
 

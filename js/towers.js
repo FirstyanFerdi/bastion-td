@@ -548,6 +548,15 @@ function updateTower(t, dt) {
   if (G && G.maestro && G.maestro.phase === 'respite') {
     dissipation *= 2.0;
   }
+  // 22.0 Epoch Horizon: Trans-Logistics Grid Fire Rate & Heat Dissipation
+  if (G && G.epoch && G.epoch.current >= 2) {
+    const gridBonus = (typeof EPOCH_CONFIG !== 'undefined' && EPOCH_CONFIG.epochs[2]) ? EPOCH_CONFIG.epochs[2].gridFireRateBonus : 0.40;
+    rateMult *= (1.0 + gridBonus);
+    dissipation *= ((typeof EPOCH_CONFIG !== 'undefined' && EPOCH_CONFIG.epochs[2]) ? EPOCH_CONFIG.epochs[2].gridCoolingBonus : 2.0);
+  }
+  if (G && G.epoch && G.epoch.chronosSingularityActive) {
+    rateMult *= 1.50;
+  }
   // 21.0 Maestro Silent Arsenal Gambit Lockout
   if (t.silentArsenalLocked) {
     rateMult = 0;

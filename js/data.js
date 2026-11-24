@@ -939,7 +939,11 @@ const ED = {
   void_phantom: { name: 'Void Phantom', hp: 450, speed: 70, r: 16, armor: 0.30, reward: 40, leak: 2, isPhantom: true },
   causal_wraith: { name: 'Causal Paradox Wraith', hp: 600, speed: 60, r: 18, armor: 0.50, reward: 60, leak: 3, isWraith: true },
   golden_drone: { name: 'Golden Nanite Drone', hp: 50, speed: 45, r: 12, armor: 0, reward: 85, leak: 0, isLootDrone: true },
-  doppelganger: { name: 'Corrupted Titan Doppelgänger', hp: 2500, speed: 45, r: 24, armor: 0.50, reward: 200, leak: 4, isDoppel: true }
+  doppelganger: { name: 'Corrupted Titan Doppelgänger', hp: 2500, speed: 45, r: 24, armor: 0.50, reward: 200, leak: 4, isDoppel: true },
+  // 22.0 The Epoch Horizon & Macro-Scale Metamorphosis Hostiles
+  slime_weaver: { name: 'Corrosive Slime Weaver', hp: 420, speed: 65, r: 15, armor: 0.20, reward: 35, leak: 2, isSlimeWeaver: true },
+  rift_breacher: { name: 'Dimensional Rift Breacher', hp: 550, speed: 75, r: 16, armor: 0.35, reward: 50, leak: 2, isEtherVoid: true },
+  planetary_leviathan: { name: 'Planetary World-Eater Leviathan', hp: 8500, speed: 32, r: 35, armor: 0.60, reward: 500, leak: 5, isLeviathan: true }
 };
 const hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
@@ -3085,6 +3089,58 @@ const MAESTRO_DIRECTOR_CONFIG = {
       rewardGold: 750,
       rewardCores: 20,
       duration: 15.0
+    }
+  }
+};
+
+/* ============================================================
+   BASTION TD 22.0: THE EPOCH HORIZON & MACRO-SCALE METAMORPHOSIS
+   ============================================================ */
+const EPOCH_CONFIG = {
+  epochs: {
+    1: {
+      id: 1,
+      name: 'Tactical Guerilla',
+      subtitle: 'Scavenger Logistics & Micro-Survival',
+      color: '#f59e0b',
+      waveRange: [1, 8],
+      salvageMultiplier: 1.0,
+      craftCosts: {
+        scrap_barricade: 30,
+        nanite_mine: 20
+      }
+    },
+    2: {
+      id: 2,
+      name: 'Industrial Cyber-Grid',
+      subtitle: 'Automated Monorail & Geo-Engineering',
+      color: '#38bdf8',
+      waveRange: [9, 18],
+      gridFireRateBonus: 0.40,
+      gridCoolingBonus: 2.0,
+      chasmCost: 150,
+      chasmDuration: 14.0
+    },
+    3: {
+      id: 3,
+      name: 'Orbital Hegemony',
+      subtitle: 'Celestial Megastructures & Ether Void Warfare',
+      color: '#a855f7',
+      waveRange: [19, 999],
+      orbitalLanceCooldown: 25.0,
+      orbitalLanceWidth: 60,
+      orbitalLanceDamage: 1200,
+      chronosSingularityDuration: 8.0
+    }
+  },
+  nemesisOvermind: {
+    powerThresholds: {
+      epoch2Ramp: 1.5,
+      epoch3Ramp: 2.5
+    },
+    counterMeasures: {
+      slimeWeaverInterval: 12.0,
+      etherRiftInterval: 10.0
     }
   }
 };

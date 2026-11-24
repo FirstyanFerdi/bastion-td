@@ -530,6 +530,8 @@ function render() {
   drawSpatialFolds(c, time);
   drawParadoxGhostFleet(c, time);
   drawCraters(c, time);
+  // 22.0 The Epoch Horizon Tectonic Chasms
+  drawTectonicChasms(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -722,6 +724,11 @@ function render() {
   // 21.0 Maestro Director HUD & Dynamic Vignette
   drawMaestroDirectorHUD(c, time);
   drawDynamicPacingVignette(c, time);
+  // 22.0 Epoch Horizon Atmosphere, Battlefield VFX & HUD
+  drawOrbitalIonLance(c, time);
+  drawEtherVoidAura(c, time);
+  drawEpochAtmosphere(c, time);
+  drawEpochHUD(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -4021,6 +4028,145 @@ function drawMaestroDirectorHUD(c, time) {
     c.textAlign = 'right';
     c.fillStyle = pulse > 0.5 ? '#f87171' : '#fef08a';
     c.fillText((ag.timer ? ag.timer.toFixed(1) : '0.0') + 's', bx + bw - 6, gby + 12);
+  }
+
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 22.0: THE EPOCH HORIZON RENDERING SYSTEMS & HUD
+   ============================================================ */
+
+function drawTectonicChasms(c, time) {
+  if (!G || !G.epoch || !G.epoch.chasms || G.epoch.chasms.length === 0) return;
+  c.save();
+  for (const ch of G.epoch.chasms) {
+    const alpha = clamp(ch.life / 1.0, 0, 1);
+    const pulse = 0.5 + 0.5 * Math.sin(time * 8);
+
+    c.strokeStyle = 'rgba(249, 115, 22, ' + (0.5 + 0.3 * pulse) * alpha + ')';
+    c.lineWidth = 14;
+    c.beginPath();
+    c.moveTo(ch.x1, ch.y1);
+    c.lineTo(ch.x2, ch.y2);
+    c.stroke();
+
+    c.strokeStyle = 'rgba(254, 240, 138, ' + (0.8 * alpha) + ')';
+    c.lineWidth = 4;
+    c.beginPath();
+    c.moveTo(ch.x1, ch.y1);
+    c.lineTo(ch.x2, ch.y2);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function drawOrbitalIonLance(c, time) {
+  if (!G || !G.epoch || !G.epoch.orbitalBeams || G.epoch.orbitalBeams.length === 0) return;
+  c.save();
+  for (const b of G.epoch.orbitalBeams) {
+    const alpha = clamp(b.life / 0.4, 0, 1);
+    const pulse = 0.5 + 0.5 * Math.sin(time * 20);
+
+    c.fillStyle = 'rgba(192, 132, 252, ' + (0.45 * alpha) + ')';
+    c.fillRect(b.x - b.width / 2, 0, b.width, H);
+
+    c.fillStyle = 'rgba(255, 255, 255, ' + (0.85 * alpha) + ')';
+    c.fillRect(b.x - b.width / 6, 0, b.width / 3, H);
+
+    c.strokeStyle = '#c084fc';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.ellipse(b.x, b.y, b.width + pulse * 15, (b.width / 2) + pulse * 7, 0, 0, TAU);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function drawEtherVoidAura(c, time) {
+  if (!G || !G.enemies) return;
+  c.save();
+  for (const foe of G.enemies) {
+    if (foe.dead || !foe.isEtherVoid) continue;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 10 + foe.id);
+
+    c.strokeStyle = 'rgba(168, 85, 247, ' + (0.6 + 0.3 * pulse) + ')';
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.arc(foe.x, foe.y, (foe.r || 16) + 6 + pulse * 4, 0, TAU);
+    c.stroke();
+
+    c.font = '800 8.5px ' + FONT;
+    c.fillStyle = '#c084fc';
+    c.textAlign = 'center';
+    c.fillText('ETHER VOID', foe.x, foe.y - (foe.r || 16) - 10);
+  }
+  c.restore();
+}
+
+function drawEpochAtmosphere(c, time) {
+  if (!G || !G.epoch) return;
+  const ep = G.epoch.current || 1;
+  c.save();
+
+  if (ep === 2) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 4);
+    c.strokeStyle = 'rgba(56, 189, 248, ' + (0.08 + 0.05 * pulse) + ')';
+    c.lineWidth = 4;
+    c.strokeRect(6, 6, W - 12, H - 12);
+  } else if (ep === 3) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 5);
+    c.strokeStyle = 'rgba(168, 85, 247, ' + (0.14 + 0.08 * pulse) + ')';
+    c.lineWidth = 8;
+    c.strokeRect(4, 4, W - 8, H - 8);
+  }
+  c.restore();
+}
+
+function drawEpochHUD(c, time) {
+  if (!G || !G.epoch) return;
+  const ep = G.epoch;
+  const cur = ep.current || 1;
+  const cfg = (typeof EPOCH_CONFIG !== 'undefined' && EPOCH_CONFIG.epochs[cur]) ? EPOCH_CONFIG.epochs[cur] : { name: 'Epoch ' + cur, color: '#f59e0b' };
+
+  c.save();
+  const bx = 20, by = 10, bw = 175, bh = 22;
+
+  c.fillStyle = 'rgba(15, 23, 42, 0.90)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = cfg.color;
+  c.lineWidth = 1.5;
+  c.strokeRect(bx, by, bw, bh);
+
+  c.fillStyle = cfg.color;
+  c.fillRect(bx, by, 6, bh);
+
+  c.font = '900 9px ' + FONT;
+  c.fillStyle = cfg.color;
+  c.textAlign = 'left';
+  c.fillText(cfg.name.toUpperCase(), bx + 12, by + 15);
+
+  c.textAlign = 'right';
+  c.fillStyle = '#f8fafc';
+  c.font = '800 8.5px ' + FONT;
+  if (cur === 1) {
+    c.fillText('SALVAGE: ' + (ep.salvage || 0), bx + bw - 6, by + 15);
+  } else if (cur === 2) {
+    c.fillText('GRID: +40% FIRE', bx + bw - 6, by + 15);
+  } else {
+    c.fillText(ep.orbitalCooldown > 0 ? ('LANCE: ' + ep.orbitalCooldown.toFixed(0) + 's') : 'LANCE READY', bx + bw - 6, by + 15);
+  }
+
+  if (ep.combatSkiffs && ep.combatSkiffs.length > 0) {
+    for (const sk of ep.combatSkiffs) {
+      c.fillStyle = '#38bdf8';
+      c.beginPath();
+      c.arc(sk.x, sk.y, 5, 0, TAU);
+      c.fill();
+      c.strokeStyle = '#e0f2fe';
+      c.lineWidth = 1.5;
+      c.stroke();
+    }
   }
 
   c.restore();

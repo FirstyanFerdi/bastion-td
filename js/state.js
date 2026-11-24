@@ -380,6 +380,21 @@ function newGame(keepSpeed) {
       respiteT: 0,
       totalClutches: 0,
       dronesSpawned: 0
+    },
+    // 22.0 The Epoch Horizon & Macro-Scale Metamorphosis Systems
+    epoch: {
+      current: 1,
+      salvage: 0,
+      powerVector: 1.0,
+      gridEfficiency: 0,
+      chasms: [],
+      orbitalCooldown: 0,
+      orbitalBeams: [],
+      chronosSingularityActive: false,
+      chronosTimer: 0,
+      etherEnemiesKilled: 0,
+      overmindEvalTimer: 0,
+      combatSkiffs: []
     }
   };
   initDoctrineSkills();
@@ -2497,6 +2512,16 @@ function killEnemy(e, src) {
   // 18.0 Predator Velocity Rolling Kill Tracker
   if (G) {
     G.killCountThisSec = (G.killCountThisSec || 0) + 1;
+  }
+
+  // 22.0 Epoch Horizon: Scavenger Salvage Drops & Ether Void Tracking
+  if (G && G.epoch) {
+    const scrapMult = (typeof EPOCH_CONFIG !== 'undefined' && EPOCH_CONFIG.epochs[G.epoch.current]) ? EPOCH_CONFIG.epochs[G.epoch.current].salvageMultiplier || 1.0 : 1.0;
+    const scrapAmount = Math.max(1, Math.round(5 * scrapMult));
+    G.epoch.salvage = (G.epoch.salvage || 0) + scrapAmount;
+    if (e.isEtherVoid) {
+      G.epoch.etherEnemiesKilled = (G.epoch.etherEnemiesKilled || 0) + 1;
+    }
   }
 
   // 13.0 Visceral Resonance: Overkill Kinetic Shatter & Arc Discharge
@@ -7285,6 +7310,8 @@ function updateBastion20Systems(dt) {
   updateCraters(dt);
   // 21.0 The Maestro Dynamic Pacing Director Systems
   updateMaestroDirector(dt);
+  // 22.0 The Epoch Horizon & Macro-Scale Metamorphosis Systems
+  updateEpochSystems(dt);
 }
 
 /* ============================================================
@@ -7593,6 +7620,321 @@ function updateMaestroDirector(dt) {
     m.phaseTimer -= dt;
     if (m.phaseTimer <= 0) {
       transitionMaestroPhase('buildup');
+    }
+  }
+}
+
+/* ============================================================
+   22.0 THE EPOCH HORIZON & MACRO-SCALE METAMORPHOSIS SYSTEMS
+   ============================================================ */
+
+function calculatePlayerPowerVector() {
+  if (!G) return 1.0;
+  const dpsEst = G.towers ? G.towers.reduce((acc, t) => acc + (t.damage || 20) * (t.rate || 1), 0) : 100;
+  const gridEff = (G.fluxConduits ? G.fluxConduits.length : 0) * 15;
+  const netWorth = (G.gold || 0) + (G.towers ? G.towers.reduce((acc, t) => acc + (t.totalCost || 100), 0) : 0);
+  const omegaPower = (dpsEst / 400) * (1 + gridEff / 100) * (1 + netWorth / 3000);
+  const clampedOmega = Number(clamp(omegaPower, 0.5, 10.0).toFixed(2));
+  if (G.epoch) G.epoch.powerVector = clampedOmega;
+  return clampedOmega;
+}
+
+function checkEpochProgression() {
+  if (!G || !G.epoch) return;
+  const ep = G.epoch.current;
+  const w = G.wave || 1;
+  const nw = (G.gold || 0) + (G.towers ? G.towers.reduce((acc, t) => acc + (t.totalCost || 100), 0) : 0);
+
+  if (ep === 1) {
+    if (w >= 9 || (G.towers && G.towers.length >= 6 && nw >= 1200)) {
+      advanceEpoch(2);
+    }
+  } else if (ep === 2) {
+    if (w >= 19 || (nw >= 4500 && G.towers && G.towers.filter(t => (t.tier || 0) >= 2).length >= 4)) {
+      advanceEpoch(3);
+    }
+  }
+}
+
+function advanceEpoch(newEpoch) {
+  if (!G || !G.epoch || G.epoch.current >= newEpoch) return false;
+  G.epoch.current = newEpoch;
+  const cfg = typeof EPOCH_CONFIG !== 'undefined' ? EPOCH_CONFIG.epochs[newEpoch] : null;
+  const name = cfg ? cfg.name : ('EPOCH ' + newEpoch);
+  const subtitle = cfg ? cfg.subtitle : '';
+  const col = cfg ? cfg.color : '#38bdf8';
+
+  if (typeof shake === 'function') shake(16.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('victory');
+    Sfx.play('levelup');
+  }
+
+  const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+  if (typeof burst === 'function') burst(sW / 2, sH / 2, 45, col, 240, 0.8, 5.0, true);
+  if (typeof addText === 'function') addText(sW / 2, 75, '★ EPOCH ADVANCEMENT: ' + name.toUpperCase() + ' ★', col, 18);
+
+  G.banner = {
+    text: '★ ' + name.toUpperCase() + ' ★',
+    sub: subtitle,
+    t: 0, max: 4.5, color: col
+  };
+
+  if (newEpoch === 2) {
+    if (G.mech) {
+      G.epoch.combatSkiffs = [
+        { x: G.mech.x - 30, y: G.mech.y - 30, cd: 0, r: 10 },
+        { x: G.mech.x + 30, y: G.mech.y - 30, cd: 0.4, r: 10 }
+      ];
+    }
+  } else if (newEpoch === 3) {
+    G.epoch.orbitalCooldown = 0;
+    G.epoch.ascendantActive = true;
+  }
+
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function craftScavengerTrap(type, x, y) {
+  if (!G || !G.epoch) return false;
+  const cfg = typeof EPOCH_CONFIG !== 'undefined' ? EPOCH_CONFIG.epochs[1] : null;
+  const cost = cfg && cfg.craftCosts[type] ? cfg.craftCosts[type] : 20;
+
+  if ((G.epoch.salvage || 0) < cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.epoch.salvage -= cost;
+
+  if (type === 'nanite_mine') {
+    G.hazards = G.hazards || [];
+    G.hazards.push({
+      type: 'mine',
+      x, y,
+      hp: 1,
+      damage: 180,
+      radius: 45
+    });
+    if (typeof burst === 'function') burst(x, y, 10, '#f59e0b', 60, 0.3, 2, false);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('place');
+    if (typeof addText === 'function') addText(x, y - 16, 'NANITE MINE ARMED', '#f59e0b', 12);
+  } else if (type === 'scrap_barricade') {
+    G.barricades = G.barricades || [];
+    G.barricades.push({
+      id: 'barricade_scrap_' + Date.now(),
+      x, y,
+      hp: 250,
+      maxHp: 250
+    });
+    if (typeof burst === 'function') burst(x, y, 12, '#94a3b8', 70, 0.3, 2.5, false);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('place');
+    if (typeof addText === 'function') addText(x, y - 16, 'SCRAP BARRICADE', '#94a3b8', 12);
+  }
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function triggerTectonicChasm(x1, y1, x2, y2) {
+  if (!G || !G.epoch) return false;
+  const cfg = typeof EPOCH_CONFIG !== 'undefined' ? EPOCH_CONFIG.epochs[2] : null;
+  const cost = cfg ? cfg.chasmCost : 150;
+  if ((G.gold || 0) < cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.gold -= cost;
+
+  G.epoch.chasms = G.epoch.chasms || [];
+  const chasm = {
+    id: 'chasm_' + Date.now(),
+    x1, y1, x2, y2,
+    life: cfg ? cfg.chasmDuration : 14.0,
+    maxLife: cfg ? cfg.chasmDuration : 14.0
+  };
+  G.epoch.chasms.push(chasm);
+
+  if (typeof shake === 'function') shake(12.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('rockslide');
+    Sfx.play('boom');
+  }
+  const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+  if (typeof burst === 'function') burst(midX, midY, 25, '#f97316', 140, 0.5, 3.5, true);
+  if (typeof addText === 'function') addText(midX, midY - 20, 'TECTONIC CHASM FRACTURE!', '#f97316', 15);
+  if (G) G.uiDirty = true;
+  return chasm;
+}
+
+function fireOrbitalIonLance(targetX, targetY) {
+  if (!G || !G.epoch) return false;
+  const cfg = typeof EPOCH_CONFIG !== 'undefined' ? EPOCH_CONFIG.epochs[3] : null;
+  if (G.epoch.orbitalCooldown > 0) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.epoch.orbitalCooldown = cfg ? cfg.orbitalLanceCooldown : 25.0;
+
+  G.epoch.orbitalBeams = G.epoch.orbitalBeams || [];
+  const beam = {
+    x: targetX,
+    y: targetY,
+    width: cfg ? cfg.orbitalLanceWidth : 60,
+    life: 1.5,
+    maxLife: 1.5
+  };
+  G.epoch.orbitalBeams.push(beam);
+
+  if (typeof shake === 'function') shake(18.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('ion_beam');
+    Sfx.play('orbital_impact');
+  }
+
+  const dmg = cfg ? cfg.orbitalLanceDamage : 1200;
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (!foe.dead && Math.abs(foe.x - targetX) <= (beam.width / 2 + (foe.r || 15))) {
+        dealDamage(foe, dmg, 'true', 'orbital_lance', { noReaction: true });
+        foe.stunT = Math.max(foe.stunT || 0, 2.5);
+      }
+    }
+  }
+
+  if (typeof addRing === 'function') addRing(targetX, targetY, 15, 120, 0.7, '#c084fc', 5);
+  if (typeof burst === 'function') burst(targetX, targetY, 35, '#a855f7', 180, 0.6, 4.0, true);
+  if (typeof addText === 'function') addText(targetX, 40, '★ PLANETARY ION LANCE PURGE! ★', '#c084fc', 18);
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function activateChronosSingularity() {
+  if (!G || !G.epoch) return false;
+  const cfg = typeof EPOCH_CONFIG !== 'undefined' ? EPOCH_CONFIG.epochs[3] : null;
+  const dur = cfg ? cfg.chronosSingularityDuration : 8.0;
+
+  G.epoch.chronosSingularityActive = true;
+  G.epoch.chronosTimer = dur;
+
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (!foe.dead) {
+        foe.stunT = Math.max(foe.stunT || 0, dur);
+        foe.slowT = Math.max(foe.slowT || 0, dur);
+        foe.slowAmt = 0.95;
+      }
+    }
+  }
+
+  if (typeof shake === 'function') shake(14.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('time_rewind');
+    Sfx.play('matrix_unlock');
+  }
+  const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+  if (typeof addRing === 'function') addRing(sW / 2, sH / 2, 20, 250, 0.9, '#38bdf8', 6);
+  if (typeof addText === 'function') addText(sW / 2, 85, '★ CHRONOS SINGULARITY: 8s GLOBAL STASIS! ★', '#38bdf8', 18);
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function updateNemesisOvermind(dt) {
+  if (!G || !G.epoch) return;
+  G.epoch.overmindEvalTimer = (G.epoch.overmindEvalTimer || 0) + dt;
+  if (G.epoch.overmindEvalTimer < 4.0) return;
+  G.epoch.overmindEvalTimer = 0;
+
+  calculatePlayerPowerVector();
+  const power = G.epoch.powerVector || 1.0;
+  const cfg = typeof EPOCH_CONFIG !== 'undefined' ? EPOCH_CONFIG.nemesisOvermind : null;
+
+  if (G.epoch.current === 2 && power >= (cfg ? cfg.powerThresholds.epoch2Ramp : 1.5)) {
+    if (typeof spawnEnemy === 'function' && G.enemies && G.enemies.filter(e => e.isSlimeWeaver && !e.dead).length < 2) {
+      spawnEnemy('slime_weaver', G.wave || 9);
+      if (typeof addText === 'function') addText(typeof W !== 'undefined' ? W / 2 : 480, 110, '⚠️ OVERMIND: CORROSIVE SLIME WEAVER DETECTED!', '#22c55e', 14);
+    }
+  } else if (G.epoch.current === 3 && power >= (cfg ? cfg.powerThresholds.epoch3Ramp : 2.5)) {
+    if (typeof spawnEnemy === 'function' && G.enemies && G.enemies.filter(e => e.isEtherVoid && !e.dead).length < 3) {
+      spawnEnemy('rift_breacher', G.wave || 19);
+      if (typeof addText === 'function') addText(typeof W !== 'undefined' ? W / 2 : 480, 110, '⚠️ OVERMIND: DIMENSIONAL RIFT BREACHER INVASION!', '#a855f7', 14);
+    }
+  }
+}
+
+function updateEpochSystems(dt) {
+  if (!G || !G.epoch) return;
+  const ep = G.epoch;
+
+  checkEpochProgression();
+  updateNemesisOvermind(dt);
+
+  // Orbital Lance Cooldown
+  if (ep.orbitalCooldown > 0) {
+    ep.orbitalCooldown = Math.max(0, ep.orbitalCooldown - dt);
+  }
+
+  // Chronos Singularity
+  if (ep.chronosSingularityActive) {
+    ep.chronosTimer -= dt;
+    if (ep.chronosTimer <= 0) {
+      ep.chronosSingularityActive = false;
+    }
+  }
+
+  // Update Chasms
+  if (ep.chasms && ep.chasms.length > 0) {
+    for (let i = ep.chasms.length - 1; i >= 0; i--) {
+      const ch = ep.chasms[i];
+      ch.life -= dt;
+      if (G.enemies) {
+        for (const foe of G.enemies) {
+          if (!foe.dead && typeof distToSegment === 'function') {
+            const d = distToSegment(foe.x, foe.y, ch.x1, ch.y1, ch.x2, ch.y2);
+            if (d <= 25) {
+              dealDamage(foe, 60 * dt, 'true', 'chasm', { noReaction: true });
+              foe.slowT = Math.max(foe.slowT || 0, 1.0);
+              foe.slowAmt = 0.5;
+            }
+          }
+        }
+      }
+      if (ch.life <= 0) {
+        ep.chasms.splice(i, 1);
+      }
+    }
+  }
+
+  // Update Orbital Beams
+  if (ep.orbitalBeams && ep.orbitalBeams.length > 0) {
+    for (let i = ep.orbitalBeams.length - 1; i >= 0; i--) {
+      const b = ep.orbitalBeams[i];
+      b.life -= dt;
+      if (b.life <= 0) ep.orbitalBeams.splice(i, 1);
+    }
+  }
+
+  // Update Combat Skiffs
+  if (ep.combatSkiffs && ep.combatSkiffs.length > 0 && G.mech) {
+    for (let i = 0; i < ep.combatSkiffs.length; i++) {
+      const sk = ep.combatSkiffs[i];
+      const ang = (G.time || 0) * 2.5 + (i * Math.PI);
+      sk.x = G.mech.x + Math.cos(ang) * 45;
+      sk.y = G.mech.y + Math.sin(ang) * 45;
+      sk.cd -= dt;
+      if (sk.cd <= 0 && G.enemies && G.enemies.length > 0) {
+        let bestTar = null, bestDist = 140 * 140;
+        for (const foe of G.enemies) {
+          if (foe.dead) continue;
+          const d2 = (foe.x - sk.x) ** 2 + (foe.y - sk.y) ** 2;
+          if (d2 <= bestDist) { bestDist = d2; bestTar = foe; }
+        }
+        if (bestTar) {
+          sk.cd = 0.8;
+          dealDamage(bestTar, 40, 'energy', 'skiff', { noReaction: true });
+          if (typeof addFx === 'function') addFx('laser', sk.x, sk.y, bestTar.x, bestTar.y, 0.1, '#38bdf8', 1.5);
+          if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('gatling');
+        }
+      }
     }
   }
 }

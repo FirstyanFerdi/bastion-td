@@ -665,5 +665,7 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   createSpatialFold, updateSpatialFolds, triggerAbyssalTear, stabilizeSpatialFold, updateEpigeneticEvolution, applyEpigeneticMutagen, setTowerThrottle, coolTower, triggerCoreMeltdown, recordParadoxSnapshot, recordParadoxCoopSnapshot, triggerParadoxCoop, updateParadoxCoop, setMechStance, mechParry, mechExecuteFinisher, updateTitanStanceSystems, updateBastion20Systems,
   // 21.0 The Maestro Dynamic Pacing Director & Neuro-Kinetic Tension Engine Exports
   MAESTRO_DIRECTOR_CONFIG, calculatePlayerTension, calculatePlayerProficiency, transitionMaestroPhase, triggerMiracleClutch, offerDirectorGambit, acceptDirectorGambit, resolveDirectorGambit, updateMaestroDirector,
+  // 22.0 The Epoch Horizon & Macro-Scale Metamorphosis Exports
+  EPOCH_CONFIG, calculatePlayerPowerVector, checkEpochProgression, advanceEpoch, craftScavengerTrap, triggerTectonicChasm, fireOrbitalIonLance, activateChronosSingularity, updateNemesisOvermind, updateEpochSystems,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateTower, updateDreadnought
 };
