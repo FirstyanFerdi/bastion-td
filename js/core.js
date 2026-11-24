@@ -69,7 +69,11 @@ const SAVE = {
   edm: Store.get('nb_edm', 0),
   causalMonolith: Store.get('nb_causalMonolith', null),
   causalScars: Store.get('nb_causalScars', []),
-  grudgeNemesis: Store.get('nb_grudgeNemesis', null)
+  grudgeNemesis: Store.get('nb_grudgeNemesis', null),
+  // 24.0 The Living Biosphere & Dynamic Commodity Crucible
+  marketReputation: Store.get('nb_marketReputation', 100),
+  ecoMastery: Store.get('nb_ecoMastery', 0),
+  futuresProfit: Store.get('nb_futuresProfit', 0)
 };
 
 function setDoctrine(id) {

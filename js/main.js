@@ -669,5 +669,7 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   EPOCH_CONFIG, calculatePlayerPowerVector, checkEpochProgression, advanceEpoch, craftScavengerTrap, triggerTectonicChasm, fireOrbitalIonLance, activateChronosSingularity, updateNemesisOvermind, updateEpochSystems,
   // 23.0 The Phoenix Protocol & Causal Failure Metamorphosis Exports
   PHOENIX_CONFIG, triggerPhoenixDoomsday, resolvePhoenixRebirth, generateBlackboxForensics, restoreCausalMonolith, updatePhoenixSystems,
+  // 24.0 The Living Biosphere & Dynamic Commodity Crucible Exports
+  BIOSPHERE_CONFIG, updateBiosphereSystems, executeCommodityTrade, triggerGeomorphicReaction, fireSensorFlare, deployBioScrubber, settleBiosphereWave, recordBiosphereEndGame, spawnSymbioticBroodling, spawnBioTitanRootWalker,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateTower, updateDreadnought
 };

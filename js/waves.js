@@ -382,6 +382,11 @@ function onWaveClear() {
     showOverlay('edicts');
   }
 
+  // 24.0 Biosphere Market & Symbiotic Settlement
+  if (typeof settleBiosphereWave === 'function') {
+    settleBiosphereWave();
+  }
+
   if (n >= WIN_WAVE && !G.endless) { endGame(true); return; }
   G.state = 'prep'; G.prepT = 20; G.uiDirty = true;
 }
@@ -429,6 +434,10 @@ function endGame(won) {
     }
   }
   saveBest();
+  // 24.0 Biosphere End Game Records
+  if (typeof recordBiosphereEndGame === 'function') {
+    recordBiosphereEndGame(won);
+  }
   G.state = won ? 'victory' : 'over';
   G.placing = null; G.casting = null; G.drafting = null;
   showOverlay(won ? 'win' : 'over');

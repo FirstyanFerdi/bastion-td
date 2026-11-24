@@ -408,7 +408,46 @@ function newGame(keepSpeed) {
     },
     causalMonolith: (typeof SAVE !== 'undefined' && SAVE.causalMonolith) ? { ...SAVE.causalMonolith, restored: false } : null,
     causalScars: (typeof SAVE !== 'undefined' && SAVE.causalScars) ? SAVE.causalScars.map(s => ({ ...s })) : [],
-    grudgeNemesis: (typeof SAVE !== 'undefined' && SAVE.grudgeNemesis) ? { ...SAVE.grudgeNemesis } : null
+    grudgeNemesis: (typeof SAVE !== 'undefined' && SAVE.grudgeNemesis) ? { ...SAVE.grudgeNemesis } : null,
+    // 24.0 The Living Biosphere & Dynamic Commodity Crucible Systems
+    biosphere: {
+      footprint: 0,
+      state: 'equilibrium',
+      harmonyScore: 0.5,
+      inHarmony: false,
+      immuneIndex: 0,
+      sporeFogActive: false,
+      sporeFogTimer: 0,
+      sensorFlares: [],
+      scrubbers: [],
+      geomorphicNodes: [
+        { id: 1, type: 'oil_vent', x: 260, y: 220, r: 35, state: 'idle', stateTimer: 0 },
+        { id: 2, type: 'spore_grove', x: 520, y: 380, r: 40, state: 'idle', stateTimer: 0 },
+        { id: 3, type: 'magnetic_lodestone', x: 740, y: 190, r: 30, state: 'idle', charges: 0 }
+      ],
+      symbioticBroodlings: [],
+      broodlingTimer: 0,
+      rootWalkersSpawned: 0
+    },
+    bourse: {
+      prices: {
+        titanium: 50,
+        promethium: 60,
+        cryo_polymer: 45,
+        nanofluid: 75
+      },
+      holdings: {
+        titanium: 20,
+        promethium: 15,
+        cryo_polymer: 20,
+        nanofluid: 10
+      },
+      futures: [],
+      priceTrends: { titanium: 0, promethium: 0, cryo_polymer: 0, nanofluid: 0 },
+      consumptionThisWave: { titanium: 0, promethium: 0, cryo_polymer: 0, nanofluid: 0 },
+      embargoActive: false,
+      embargoTimer: 0
+    }
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -2449,6 +2488,24 @@ function dealDamage(e, amount, type, src, opts) {
   }
   e.hp -= toHp;
   e.lastDmgType = type;
+
+  // 24.0 Biosphere Thermodynamics Footprint Tracking
+  if (G && G.biosphere && typeof BIOSPHERE_CONFIG !== 'undefined') {
+    const bcfg = BIOSPHERE_CONFIG.thermodynamics;
+    if (type === 'plasma') G.biosphere.footprint += toHp * bcfg.heatPerPlasmaDmg;
+    else if (type === 'cryo') G.biosphere.footprint -= toHp * bcfg.coolPerCryoDmg;
+    else if (type === 'phys') G.biosphere.footprint += toHp * bcfg.chemPerPhysDmg;
+  }
+  // 24.0 Geomorphic Node Proximity Reactions
+  if (G && G.biosphere && G.biosphere.geomorphicNodes) {
+    for (const node of G.biosphere.geomorphicNodes) {
+      if (Math.hypot(e.x - node.x, e.y - node.y) <= (node.r || 35) + 20) {
+        if (typeof triggerGeomorphicReaction === 'function') {
+          triggerGeomorphicReaction(node.id, type);
+        }
+      }
+    }
+  }
 
   // 15.0 Cinematic Titan Finisher Detection (HP <= 15% on Boss or Nemesis)
   if (!e.dead && e.hp > 0 && (e.type === 'boss' || e.isNemesis || e.name === 'Abyssal Apex Juggernaut') && (e.hp / e.maxHp) <= 0.15) {
@@ -7356,6 +7413,8 @@ function updateBastion20Systems(dt) {
   updateEpochSystems(dt);
   // 23.0 The Phoenix Protocol & Causal Failure Systems
   updatePhoenixSystems(dt);
+  // 24.0 The Living Biosphere & Dynamic Commodity Crucible Systems
+  updateBiosphereSystems(dt);
 }
 
 /* ============================================================
@@ -8219,5 +8278,449 @@ function updatePhoenixSystems(dt) {
         }
       }
     }
+  }
+}
+
+/* ============================================================
+   24.0 THE LIVING BIOSPHERE & DYNAMIC COMMODITY CRUCIBLE
+   ============================================================ */
+
+function updateBiosphereSystems(dt) {
+  if (!G || !G.biosphere) return;
+  const bio = G.biosphere;
+  const cfg = typeof BIOSPHERE_CONFIG !== 'undefined' ? BIOSPHERE_CONFIG : null;
+  const thCfg = cfg ? cfg.thermodynamics : { superheatThreshold: 100, glacialThreshold: -100, harmonyMin: -35, harmonyMax: 35, scrubberRate: 15.0 };
+
+  // 1. Scrubber Terraforming & Natural Dissipation
+  if (bio.scrubbers && bio.scrubbers.length > 0) {
+    for (const sc of bio.scrubbers) {
+      if (bio.footprint > 0) {
+        bio.footprint = Math.max(0, bio.footprint - thCfg.scrubberRate * dt);
+      } else if (bio.footprint < 0) {
+        bio.footprint = Math.min(0, bio.footprint + thCfg.scrubberRate * dt);
+      }
+      sc.bioFuelTimer = (sc.bioFuelTimer || 0) + dt;
+      if (sc.bioFuelTimer >= 5.0) {
+        sc.bioFuelTimer = 0;
+        G.gold = (G.gold || 0) + 15;
+        if (typeof addText === 'function') addText(sc.x, sc.y - 20, '+15G Bio-Fuel', '#10b981', 12);
+      }
+    }
+  } else {
+    // Gentle natural atmospheric decay
+    if (bio.footprint > 0) bio.footprint = Math.max(0, bio.footprint - 0.8 * dt);
+    else if (bio.footprint < 0) bio.footprint = Math.min(0, bio.footprint + 0.8 * dt);
+  }
+
+  // 2. Thermodynamic State Machine
+  if (bio.footprint >= thCfg.superheatThreshold) {
+    bio.state = 'superheat';
+    bio.inHarmony = false;
+    // Overheated biome penalty: towers accumulate heat faster
+    if (G.towers) {
+      for (const t of G.towers) {
+        if (typeof t.heat === 'number' && t.heat > 0) {
+          t.heat = Math.min(100, t.heat + 2.5 * dt);
+        }
+      }
+    }
+  } else if (bio.footprint <= thCfg.glacialThreshold) {
+    bio.state = 'glacial';
+    bio.inHarmony = false;
+    // Glacial permafrost bonus/hazard: creeps slide faster
+    if (G.enemies) {
+      for (const foe of G.enemies) {
+        if (!foe.dead) {
+          foe.speedMult = Math.max(foe.speedMult || 1.0, 1.4);
+        }
+      }
+    }
+  } else if (bio.footprint >= thCfg.harmonyMin && bio.footprint <= thCfg.harmonyMax) {
+    bio.state = 'harmony';
+    bio.inHarmony = true;
+    bio.harmonyScore = 1.0 - Math.abs(bio.footprint) / Math.max(1, thCfg.harmonyMax);
+    // Symbiotic Super-Bloom: spawn friendly broodlings
+    bio.broodlingTimer = (bio.broodlingTimer || 0) + dt;
+    const bInt = (cfg && cfg.harmony) ? cfg.harmony.broodlingInterval : 14.0;
+    if (bio.broodlingTimer >= bInt && bio.symbioticBroodlings.length < 4) {
+      bio.broodlingTimer = 0;
+      spawnSymbioticBroodling();
+    }
+  } else {
+    bio.state = 'equilibrium';
+    bio.inHarmony = false;
+    bio.harmonyScore = 0.5;
+  }
+
+  // 3. Update Geomorphic Nodes
+  if (bio.geomorphicNodes) {
+    for (const node of bio.geomorphicNodes) {
+      if (node.type === 'oil_vent') {
+        if (node.state === 'ignited') {
+          node.stateTimer -= dt;
+          if (G.enemies) {
+            for (const foe of G.enemies) {
+              if (!foe.dead && Math.hypot(foe.x - node.x, foe.y - node.y) <= (node.r || 35)) {
+                dealDamage(foe, 120 * dt, 'plasma', null, { noReaction: true });
+              }
+            }
+          }
+          if (node.stateTimer <= 0) node.state = 'idle';
+        } else if (node.state === 'frozen') {
+          node.stateTimer -= dt;
+          if (G.enemies) {
+            for (const foe of G.enemies) {
+              if (!foe.dead && Math.hypot(foe.x - node.x, foe.y - node.y) <= (node.r || 35)) {
+                foe.slowT = Math.max(foe.slowT || 0, 1.5);
+                foe.slowAmt = 0.6;
+              }
+            }
+          }
+          if (node.stateTimer <= 0) node.state = 'idle';
+        }
+      } else if (node.type === 'spore_grove') {
+        if (G.enemies) {
+          for (const foe of G.enemies) {
+            if (!foe.dead && Math.hypot(foe.x - node.x, foe.y - node.y) <= (node.r || 40)) {
+              dealDamage(foe, 30 * dt, 'true', null, { noReaction: true });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Update Symbiotic Broodlings (Friendly Allies)
+  if (bio.symbioticBroodlings && bio.symbioticBroodlings.length > 0) {
+    for (let i = bio.symbioticBroodlings.length - 1; i >= 0; i--) {
+      const br = bio.symbioticBroodlings[i];
+      br.life -= dt;
+      // Seek closest hostile
+      let target = null, minDist = 220;
+      if (G.enemies) {
+        for (const foe of G.enemies) {
+          if (!foe.dead) {
+            const d = Math.hypot(foe.x - br.x, foe.y - br.y);
+            if (d < minDist) { minDist = d; target = foe; }
+          }
+        }
+      }
+      if (target) {
+        const angle = Math.atan2(target.y - br.y, target.x - br.x);
+        br.x += Math.cos(angle) * br.speed * dt;
+        br.y += Math.sin(angle) * br.speed * dt;
+        if (minDist <= 25) {
+          dealDamage(target, br.dps * dt, 'true', 'broodling', { noReaction: true });
+        }
+      }
+      if (br.life <= 0 || br.hp <= 0) {
+        bio.symbioticBroodlings.splice(i, 1);
+      }
+    }
+  }
+
+  // 5. Update Sensor Flares
+  if (bio.sensorFlares && bio.sensorFlares.length > 0) {
+    for (let i = bio.sensorFlares.length - 1; i >= 0; i--) {
+      const fl = bio.sensorFlares[i];
+      fl.t -= dt;
+      if (fl.t <= 0) bio.sensorFlares.splice(i, 1);
+    }
+  }
+
+  // 6. Planetary Immune Retribution Tracking
+  const playerKdr = (G.enemiesKilled || 0) / Math.max(1, G.leakedThisWave || 1);
+  const monopolyPenalty = (G.bourse && G.bourse.embargoActive) ? 20 : 0;
+  bio.immuneIndex = clamp((playerKdr * 0.8) + (Math.abs(bio.footprint) * 0.35) + monopolyPenalty, 0, 100);
+
+  if (bio.immuneIndex >= 85 && !bio.sporeFogActive) {
+    bio.sporeFogActive = true;
+    bio.sporeFogTimer = 20.0;
+    if (typeof addText === 'function') {
+      const sW = typeof W !== 'undefined' ? W : 960;
+      addText(sW / 2, 95, '⚠️ BIOSPHERE IMMUNE RESPONSE: SPORE ECLIPSE FOG!', '#10b981', 16);
+    }
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('spore_burst');
+  }
+
+  if (bio.sporeFogActive) {
+    bio.sporeFogTimer -= dt;
+    if (bio.sporeFogTimer <= 0) bio.sporeFogActive = false;
+  }
+
+  if (bio.immuneIndex >= 100 && bio.rootWalkersSpawned < 1) {
+    bio.rootWalkersSpawned++;
+    spawnBioTitanRootWalker();
+  }
+
+  // 7. Dynamic Commodity Bourse Price Fluctuations
+  if (G.bourse) {
+    const b = G.bourse;
+    if (b.embargoActive) {
+      b.embargoTimer -= dt;
+      if (b.embargoTimer <= 0) b.embargoActive = false;
+    }
+    // Periodic subtle price drift towards balance or consumption
+    for (const k in b.prices) {
+      const cons = (b.consumptionThisWave && b.consumptionThisWave[k]) || 0;
+      const targetPrice = 50 + (cons * 1.5);
+      b.prices[k] = clamp(lerp(b.prices[k], targetPrice, 0.05 * dt), 15, 250);
+    }
+  }
+}
+
+function spawnSymbioticBroodling() {
+  if (!G || !G.biosphere) return;
+  const cfg = typeof BIOSPHERE_CONFIG !== 'undefined' ? BIOSPHERE_CONFIG.harmony : { broodlingHp: 350, broodlingDps: 60 };
+  const bPt = typeof BASE_PT !== 'undefined' ? BASE_PT : { x: 800, y: 300 };
+  const broodling = {
+    x: bPt.x - 30 + rand(-15, 15),
+    y: bPt.y + rand(-15, 15),
+    hp: cfg.broodlingHp || 350,
+    maxHp: cfg.broodlingHp || 350,
+    dps: cfg.broodlingDps || 60,
+    speed: 90,
+    life: 25.0
+  };
+  G.biosphere.symbioticBroodlings.push(broodling);
+  if (typeof burst === 'function') burst(broodling.x, broodling.y, 15, '#10b981', 80, 0.4, 2.5, true);
+  if (typeof addText === 'function') addText(broodling.x, broodling.y - 15, '★ SYMBIOTIC BROODLING! ★', '#10b981', 13);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('gene_splice');
+}
+
+function spawnBioTitanRootWalker() {
+  if (!G || !G.enemies) return;
+  const rootWalker = {
+    type: 'root_walker',
+    name: 'Gaia Colossal Root-Walker',
+    hp: 7500,
+    maxHp: 7500,
+    speed: 0.45,
+    r: 28,
+    bounty: 400,
+    armor: 45,
+    color: '#059669',
+    isBoss: true,
+    isRootWalker: true,
+    d: 0,
+    x: (typeof PATH !== 'undefined' && PATH[0]) ? PATH[0].x : 0,
+    y: (typeof PATH !== 'undefined' && PATH[0]) ? PATH[0].y : 300,
+    dead: false,
+    slowT: 0,
+    stunT: 0
+  };
+  G.enemies.push(rootWalker);
+  if (typeof shake === 'function') shake(16.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('boss');
+    Sfx.play('rockslide');
+  }
+  const sW = typeof W !== 'undefined' ? W : 960;
+  if (typeof addText === 'function') addText(sW / 2, 85, '★ CATACLYSMIC IMMUNE AWAKENING: BIO-TITAN ROOT-WALKER! ★', '#059669', 18);
+}
+
+function executeCommodityTrade(commodityId, action, amount) {
+  if (!G || !G.bourse) return false;
+  const b = G.bourse;
+  if (b.embargoActive && (action === 'buy' || action === 'futures')) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    if (typeof addText === 'function') addText(typeof W !== 'undefined' ? W / 2 : 480, 95, 'SYNDICATE EMBARGO ACTIVE! TRADING BLOCKED!', '#f43f5e', 14);
+    return false;
+  }
+  const price = b.prices[commodityId] || 50;
+  amount = amount || 10;
+
+  if (action === 'buy') {
+    const totalCost = Math.round(price * amount);
+    if ((G.gold || 0) < totalCost) {
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+      return false;
+    }
+    G.gold -= totalCost;
+    b.holdings[commodityId] = (b.holdings[commodityId] || 0) + amount;
+    b.prices[commodityId] = clamp(b.prices[commodityId] * 1.15, 15, 250);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('coin');
+    G.uiDirty = true;
+    return true;
+  } else if (action === 'sell') {
+    const currentHolding = b.holdings[commodityId] || 0;
+    if (currentHolding < amount) amount = currentHolding;
+    if (amount <= 0) return false;
+    const totalRevenue = Math.round(price * amount);
+    G.gold = (G.gold || 0) + totalRevenue;
+    b.holdings[commodityId] -= amount;
+    b.prices[commodityId] = clamp(b.prices[commodityId] * 0.88, 15, 250);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('coin');
+    G.uiDirty = true;
+    return true;
+  } else if (action === 'futures') {
+    const marginCost = Math.round(price * amount * 0.5); // 50% margin
+    if ((G.gold || 0) < marginCost) {
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+      return false;
+    }
+    G.gold -= marginCost;
+    b.futures.push({
+      commodityId,
+      buyPrice: price,
+      units: amount,
+      margin: marginCost,
+      waveTarget: (G.wave || 1) + 1
+    });
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('upgrade');
+    G.uiDirty = true;
+    return true;
+  }
+  return false;
+}
+
+function triggerGeomorphicReaction(nodeId, element) {
+  if (!G || !G.biosphere || !G.biosphere.geomorphicNodes) return false;
+  const node = G.biosphere.geomorphicNodes.find(n => n.id === nodeId);
+  if (!node) return false;
+
+  if (node.type === 'oil_vent') {
+    if (element === 'plasma' || element === 'laser') {
+      if (node.state !== 'ignited') {
+        node.state = 'ignited';
+        node.stateTimer = 12.0;
+        if (typeof burst === 'function') burst(node.x, node.y, 25, '#f97316', 140, 0.6, 4.0, true);
+        if (typeof addText === 'function') addText(node.x, node.y - 25, '🔥 HELLFIRE WALL IGNITED! 🔥', '#f97316', 15);
+        if (typeof Sfx !== 'undefined' && Sfx.play) { Sfx.play('boom'); Sfx.play('plasma'); }
+        return true;
+      }
+    } else if (element === 'cryo') {
+      if (node.state !== 'frozen') {
+        node.state = 'frozen';
+        node.stateTimer = 10.0;
+        if (typeof burst === 'function') burst(node.x, node.y, 20, '#38bdf8', 120, 0.5, 3.5, true);
+        if (typeof addText === 'function') addText(node.x, node.y - 25, '❄️ FROST SLICK FROZEN! ❄️', '#38bdf8', 15);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('freeze');
+        return true;
+      }
+    }
+  } else if (node.type === 'magnetic_lodestone') {
+    if (element === 'rail' || element === 'phys') {
+      node.charges = (node.charges || 0) + 1;
+      if (node.charges >= 10) {
+        node.charges = 0;
+        // EMP Overload discharge
+        if (G.enemies) {
+          for (const foe of G.enemies) {
+            if (!foe.dead && Math.hypot(foe.x - node.x, foe.y - node.y) <= 160) {
+              dealDamage(foe, 150, 'energy', null, { noReaction: true });
+              foe.stunT = Math.max(foe.stunT || 0, 3.0);
+            }
+          }
+        }
+        if (typeof burst === 'function') burst(node.x, node.y, 30, '#818cf8', 160, 0.6, 4.0, true);
+        if (typeof addText === 'function') addText(node.x, node.y - 25, '⚡ MAGNETIC EMP DISCHARGE! ⚡', '#818cf8', 15);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function fireSensorFlare(x, y) {
+  if (!G || !G.biosphere) return false;
+  const cfg = typeof BIOSPHERE_CONFIG !== 'undefined' ? BIOSPHERE_CONFIG.retribution : { flareRadius: 160, flareDuration: 12.0 };
+  const flare = {
+    x: x,
+    y: y,
+    r: cfg.flareRadius || 160,
+    t: cfg.flareDuration || 12.0
+  };
+  G.biosphere.sensorFlares.push(flare);
+  if (typeof burst === 'function') burst(x, y, 20, '#fef08a', 140, 0.5, 3.5, true);
+  if (typeof addText === 'function') addText(x, y - 20, '★ SENSOR FLARE ILLUMINATED ★', '#fef08a', 14);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('target');
+  return true;
+}
+
+function deployBioScrubber(c, r) {
+  if (!G || !G.biosphere) return false;
+  const cost = 120;
+  if ((G.gold || 0) < cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+  G.gold -= cost;
+  const tileSz = typeof TILE !== 'undefined' ? TILE : 60;
+  G.biosphere.scrubbers.push({
+    c, r,
+    x: c * tileSz + tileSz / 2,
+    y: r * tileSz + tileSz / 2,
+    bioFuelTimer: 0
+  });
+  if (typeof burst === 'function') burst(c * tileSz + tileSz / 2, r * tileSz + tileSz / 2, 15, '#10b981', 90, 0.4, 2.5, true);
+  if (typeof addText === 'function') addText(c * tileSz + tileSz / 2, r * tileSz + tileSz / 2 - 20, '★ BIO-SCRUBBER ONLINE! ★', '#10b981', 14);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('place');
+  G.uiDirty = true;
+  return true;
+}
+
+function settleBiosphereWave() {
+  if (!G || !G.bourse) return;
+  const b = G.bourse;
+  const bio = G.biosphere;
+
+  // 1. Settle Futures Contracts
+  if (b.futures && b.futures.length > 0) {
+    let totalProfit = 0;
+    for (let i = b.futures.length - 1; i >= 0; i--) {
+      const f = b.futures[i];
+      if ((G.wave || 1) >= f.waveTarget) {
+        const curPrice = b.prices[f.commodityId] || 50;
+        const diff = (curPrice - f.buyPrice) * f.units;
+        const payout = Math.max(0, f.margin + diff);
+        G.gold = (G.gold || 0) + Math.round(payout);
+        totalProfit += diff;
+        b.futures.splice(i, 1);
+      }
+    }
+    if (totalProfit !== 0) {
+      if (typeof SAVE !== 'undefined') {
+        SAVE.futuresProfit = (SAVE.futuresProfit || 0) + totalProfit;
+        if (typeof Store !== 'undefined') Store.set('nb_futuresProfit', SAVE.futuresProfit);
+      }
+      const sW = typeof W !== 'undefined' ? W : 960;
+      if (typeof addText === 'function') {
+        addText(sW / 2, 140, 'FUTURES SETTLED: ' + (totalProfit >= 0 ? '+' : '') + Math.round(totalProfit) + 'G', totalProfit >= 0 ? '#34d399' : '#f87171', 16);
+      }
+    }
+  }
+
+  // 2. Symbiotic Super-Bloom Harmony Bonus (+100% Gold & Cores)
+  if (bio && bio.inHarmony) {
+    const sW = typeof W !== 'undefined' ? W : 960;
+    const bonusGold = Math.round(40 + (G.wave || 1) * 8);
+    G.gold = (G.gold || 0) + bonusGold;
+    if (typeof addCores === 'function') addCores(2);
+    if (typeof addText === 'function') {
+      addText(sW / 2, 165, '★ SYMBIOTIC HARMONY SUPER-BLOOM: +' + bonusGold + 'G & +2 CORES! ★', '#10b981', 16);
+    }
+    if (typeof burst === 'function') burst(sW / 2, 165, 30, '#10b981', 160, 0.6, 4.0, true);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('victory');
+  }
+
+  // 3. Reset per-wave consumption
+  if (b.consumptionThisWave) {
+    b.consumptionThisWave = { titanium: 0, promethium: 0, cryo_polymer: 0, nanofluid: 0 };
+  }
+}
+
+function recordBiosphereEndGame(won) {
+  if (typeof SAVE === 'undefined') return;
+  if (won) {
+    SAVE.ecoMastery = (SAVE.ecoMastery || 0) + 1;
+    SAVE.marketReputation = Math.min(200, (SAVE.marketReputation || 100) + 10);
+  } else {
+    SAVE.marketReputation = Math.max(20, (SAVE.marketReputation || 100) - 5);
+  }
+  if (typeof Store !== 'undefined') {
+    Store.set('nb_ecoMastery', SAVE.ecoMastery);
+    Store.set('nb_marketReputation', SAVE.marketReputation);
   }
 }

@@ -3174,6 +3174,116 @@ const PHOENIX_CONFIG = {
   }
 };
 
+/* ============================================================
+   BASTION TD 24.0: THE LIVING BIOSPHERE & DYNAMIC COMMODITY CRUCIBLE
+   ============================================================ */
+const BIOSPHERE_CONFIG = {
+  thermodynamics: {
+    heatPerPlasmaDmg: 0.08,
+    heatPerLaserDmg: 0.05,
+    coolPerCryoDmg: 0.10,
+    chemPerPhysDmg: 0.04,
+    scrubberRate: 15.0,
+    superheatThreshold: 100,
+    glacialThreshold: -100,
+    superheatCoolingPenalty: 0.35, // -35% cooling speed
+    superheatBurnAreaBonus: 0.25,
+    glacialSlideSpeedBonus: 0.60,
+    harmonyMin: -35,
+    harmonyMax: 35
+  },
+  commodities: {
+    titanium: {
+      id: 'titanium',
+      name: 'Titanium Bar',
+      symbol: 'Ti',
+      color: '#94a3b8',
+      basePrice: 50,
+      minPrice: 15,
+      maxPrice: 200,
+      volatility: 0.25,
+      towerCategory: ['gatling', 'railgun', 'flak', 'mortar']
+    },
+    promethium: {
+      id: 'promethium',
+      name: 'Promethium Fuel',
+      symbol: 'Pm',
+      color: '#f97316',
+      basePrice: 60,
+      minPrice: 20,
+      maxPrice: 240,
+      volatility: 0.30,
+      towerCategory: ['plasma', 'laser', 'flamethrower']
+    },
+    cryo_polymer: {
+      id: 'cryo_polymer',
+      name: 'Cryo-Polymer',
+      symbol: 'Cp',
+      color: '#38bdf8',
+      basePrice: 45,
+      minPrice: 15,
+      maxPrice: 180,
+      volatility: 0.25,
+      towerCategory: ['cryo', 'frost_spire']
+    },
+    nanofluid: {
+      id: 'nanofluid',
+      name: 'Quantum Nanofluid',
+      symbol: 'Qn',
+      color: '#a855f7',
+      basePrice: 75,
+      minPrice: 25,
+      maxPrice: 300,
+      volatility: 0.35,
+      towerCategory: ['tesla', 'drone_carrier', 'ion_uplink']
+    }
+  },
+  geomorphicNodes: {
+    oil_vent: {
+      id: 'oil_vent',
+      name: 'Crude Oil Vent',
+      color: '#1e293b',
+      burnColor: '#f97316',
+      frozenColor: '#67e8f9',
+      slowFactor: 0.35,
+      ignitedDps: 120,
+      ignitedDuration: 12.0,
+      frozenDuration: 10.0
+    },
+    spore_grove: {
+      id: 'spore_grove',
+      name: 'Bioluminescent Spore Grove',
+      color: '#10b981',
+      leechDps: 30,
+      leechDuration: 4.0,
+      blindRadius: 80
+    },
+    magnetic_lodestone: {
+      id: 'magnetic_lodestone',
+      name: 'Magnetic Lodestone Monolith',
+      color: '#6366f1',
+      railgunDamageBonus: 0.40,
+      empStunDuration: 3.0,
+      overloadHits: 10
+    }
+  },
+  retribution: {
+    kdrThreshold: 25,
+    immuneWarningThreshold: 60,
+    sporeFogThreshold: 85,
+    rootWalkerThreshold: 100,
+    flareRadius: 160,
+    flareDuration: 12.0
+  },
+  harmony: {
+    freeLogistics: true,
+    broodlingInterval: 14.0,
+    broodlingHp: 350,
+    broodlingDps: 60,
+    rewardMultiplier: 2.0
+  }
+};
+
 
 
 

@@ -2806,6 +2806,56 @@ Berdasarkan master blueprint `bastion_td_phoenix_rebirth_blueprint.md` yang tela
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 65 SFX sounds, 25 data-act & 38 data-ov, 58 element IDs)**
 - **Seluruh 35 Unit Test Suites di repositori: 100% LULUS.**
 
+---
+
+## 44. Implementasi Bastion TD 24.0: The Living Biosphere & Dynamic Commodity Crucible
+
+Berdasarkan master blueprint `bastion_td_living_biosphere_blueprint.md` yang telah disetujui, telah diimplementasikan penuh sistem ekosistem makro dinamis, bursa komoditas galaksi, reaksi lingkungan geofisik, dan mekanisme harmonisasi biosfer:
+
+### 44.1 Rincian Lima Pilar Inti Bastion TD 24.0
+1. **The Thermodynamic Biosphere & Pollution Feedback (Atmosfer, Heat Island, & Glaciation):**
+   - Setiap proyektil plasma, kriogenik, dan balistik terakumulasi ke dalam **Jejak Ekologis ($\Xi_{footprint}$)**:
+     - Tembakan plasma/laser menaikkan footprint menuju **Thermal Superheat** ($\Xi \ge 100$), mengurangi laju pendinginan menara sebesar $-35\%$.
+     - Tembakan cryo mendinginkan sektor menuju **Glacial Permafrost** ($\Xi \le -100$), membekukan tanah menjadi es licin yang meningkatkan kecepatan lari creep sebesar $+60\%$.
+   - Pemain dapat membangun fasilitas penunjang **Bio-Scrubber Terraformer** (`deployBioScrubber(c, r)`) seharga 120G yang mereduksi polusi secara berkala dan memanen **Nutrien Bio-Fuel** bernilai +15 Gold setiap 5 detik.
+
+2. **The Interstellar Commodity Bourse (Bursa Komoditas & Elastisitas Harga):**
+   - Amunisi dan bahan konstruksi terhubung ke bursa pasar 4 komoditas: **Titanium Bar (Ti)**, **Promethium Fuel (Pm)**, **Cryo-Polymer (Cp)**, dan **Quantum Nanofluid (Qn)**.
+   - Perdagangan real-time melalui `executeCommodityTrade(id, action, amount)`:
+     - Membeli komoditas memicu inflasi harga lokal.
+     - Menjual kelebihan cadangan menghasilkan Gold namun menurunkan harga komoditas terkait.
+   - **Kontrak Berjangka (Futures Contracts):** Pemain dapat melakukan spekulasi pasar dengan membeli kontrak berjangka pada margin 50%. Saat pergantian wave (`settleBiosphereWave`), keuntungan atau kerugian dieksekusi secara otomatis dan dicatat pada `SAVE.futuresProfit`.
+
+3. **Reactive Geomorphic Biomes (Nodus Geologi Reaktif & Rantai Kimiawi):**
+   - **Crude Oil Vent:** Genangan minyak bumi alami yang jika terkena proyektil Plasma meledak menjadi **Hellfire Wall** (120 DPS Plasma selama 12 detik). Bila disemprot Cryo, membeku menjadi lempengan es licin (**Frost Slick**) yang memperlambat musuh sebesar $60\%$.
+   - **Bioluminescent Spore Grove:** Rumpun spora yang memberikan kerusakan bio-racun parasitik (30 DPS True Damage) pada seluruh musuh yang melintas di radiusnya.
+   - **Magnetic Lodestone Monolith:** Menyerap 10 tembakan Railgun lalu meledakkan gelombang kejut **Magnetic EMP Overload** (150 True Damage + 3.0 detik stun ke seluruh musuh dalam radius 160px).
+
+4. **The Biosphere Immune Retribution (Sistem Pertahanan Planet & Sensor Flare):**
+   - Algoritma menghitung Indeks Imun Planet ($\mathbf{\Psi}_{immune}$) berdasarkan KDR pemain dan eksploitasi alam:
+     - Jika $\mathbf{\Psi} \ge 85\%$: Memicu **Spore Eclipse Fog** yang menyelimuti peta dan membutakan radar otomatis menara.
+     - Titan Mech dapat menembakkan **Sensor Flare Beacon** (`fireSensorFlare(x, y)`) untuk menerangi radius 160px selama 12 detik guna menembus kabut.
+     - Jika $\mathbf{\Psi} \ge 100\%$: Biosfer mengerahkan raksasa flora purba **Bio-Titan Root-Walker** ber-HP 7,500 dengan armor tebal 45 yang hanya rentan terhadap reaksi lingkungan.
+
+5. **Symbiotic Harmonization Engine (Puncak Penguasaan: Harmoni Alam & Kemakmuran Sempurna):**
+   - Ketika jejak polusi berada dalam rentang keseimbangan sejati ($-35 \le \Xi_{footprint} \le 35$), sektor mencapai status **Symbiotic Super-Bloom**:
+     - Membebaskan biaya logistik amunisi.
+     - Melahirkan sekutu serangga purba **Symbiotic Broodling Defenders** (350 HP, 60 DPS True Damage) yang berpatroli dan mencabik-cabik musuh.
+     - Menggandakan pendapatan wave pada `settleBiosphereWave()` (+Bonus Gold melimpah dan +2 Nanite Cores).
+
+6. **Bio-Sensory HUD & Atmospheric Visuals (`js/render.js`):**
+   - `drawBiosphereHUD`: Widget HUD di pojok kiri atas yang menampilkan bar suhu footprint atmosfer, badge status ekologi real-time (`HARMONY [2X LOOT]`, `SUPERHEAT`, `GLACIAL`, `EQUILIBRIUM`), dan ticker harga komoditas (Ti/Pm).
+   - `drawGeomorphicNodes`: Visualisasi sumur minyak (api membara / es beku), hutan spora berpendar hijau, dan monolit lodestone bermuatan listrik.
+   - `drawSymbioticBroodlings`: Render kawanan sekutu kumbang bersayap hijau berpendar.
+   - `drawSporeFogOverlay` & `drawSensorFlares`: Kabut atmosferik hijau tua dramatis dengan lubang pencahayaan suar sensor.
+
+---
+
+### 44.2 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_living_biosphere.js`: **100% LULUS (Semua 7 Suite Pengujian Bastion TD 24.0 Terverifikasi)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 65 SFX sounds, 25 data-act & 38 data-ov, 58 element IDs)**
+- **Seluruh 36 Unit Test Suites di repositori: 100% LULUS.**
+
 
 
 

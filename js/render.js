@@ -535,6 +535,10 @@ function render() {
   // 23.0 The Phoenix Protocol & Causal Failure Battlefield Relics
   drawCausalMonolith(c, time);
   drawCausalScars(c, time);
+  // 24.0 The Living Biosphere Battlefield VFX & Geomorphic Nodes
+  drawGeomorphicNodes(c, time);
+  drawSymbioticBroodlings(c, time);
+  drawSensorFlares(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -735,6 +739,9 @@ function render() {
   // 23.0 The Phoenix Protocol & Causal Failure Standoff and Blackbox HUD
   drawPhoenixStandoffHUD(c, time);
   drawBlackboxForensicsOverlay(c, time);
+  // 24.0 The Living Biosphere Spore Fog & Biosphere HUD
+  drawSporeFogOverlay(c, time);
+  drawBiosphereHUD(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -4312,5 +4319,186 @@ function drawBlackboxForensicsOverlay(c, time) {
   c.textAlign = 'center';
   c.fillText('ENTROPIC DARK MATTER EARNED: +' + (data.edmEarned || 0) + ' EDM (TOTAL: ' + (data.totalEdm || 0) + ')', sW / 2, by + 185);
 
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 24.0: THE LIVING BIOSPHERE & DYNAMIC COMMODITY CRUCIBLE RENDERING
+   ============================================================ */
+
+function drawGeomorphicNodes(c, time) {
+  if (!G || !G.biosphere || !G.biosphere.geomorphicNodes) return;
+  c.save();
+  for (const node of G.biosphere.geomorphicNodes) {
+    const r = node.r || 35;
+    if (node.type === 'oil_vent') {
+      const isIgnited = node.state === 'ignited';
+      const isFrozen = node.state === 'frozen';
+      c.fillStyle = isIgnited ? 'rgba(249, 115, 22, 0.35)' : (isFrozen ? 'rgba(56, 189, 248, 0.35)' : 'rgba(30, 41, 59, 0.65)');
+      c.beginPath();
+      c.arc(node.x, node.y, r, 0, TAU);
+      c.fill();
+      c.strokeStyle = isIgnited ? '#f97316' : (isFrozen ? '#38bdf8' : '#475569');
+      c.lineWidth = 2.5;
+      c.stroke();
+
+      if (isIgnited) {
+        const pulse = 0.5 + 0.5 * Math.sin(time * 12 + node.x);
+        c.fillStyle = '#ea580c';
+        c.beginPath();
+        c.arc(node.x, node.y, r * (0.5 + 0.3 * pulse), 0, TAU);
+        c.fill();
+      }
+
+      c.font = '800 8.5px ' + FONT;
+      c.fillStyle = isIgnited ? '#fdba74' : (isFrozen ? '#bae6fd' : '#94a3b8');
+      c.textAlign = 'center';
+      c.fillText(isIgnited ? '🔥 HELLFIRE' : (isFrozen ? '❄️ FROST SLICK' : 'OIL VENT'), node.x, node.y - r - 4);
+    } else if (node.type === 'spore_grove') {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 5 + node.y);
+      c.fillStyle = 'rgba(16, 185, 129, ' + (0.2 + 0.1 * pulse) + ')';
+      c.beginPath();
+      c.arc(node.x, node.y, r, 0, TAU);
+      c.fill();
+      c.strokeStyle = '#10b981';
+      c.lineWidth = 2;
+      c.stroke();
+
+      c.font = '800 8.5px ' + FONT;
+      c.fillStyle = '#6ee7b7';
+      c.textAlign = 'center';
+      c.fillText('SPORE GROVE', node.x, node.y - r - 4);
+    } else if (node.type === 'magnetic_lodestone') {
+      c.fillStyle = 'rgba(99, 102, 241, 0.25)';
+      c.beginPath();
+      c.arc(node.x, node.y, r, 0, TAU);
+      c.fill();
+      c.strokeStyle = '#6366f1';
+      c.lineWidth = 2;
+      c.stroke();
+
+      c.font = '800 8.5px ' + FONT;
+      c.fillStyle = '#a5b4fc';
+      c.textAlign = 'center';
+      c.fillText('LODESTONE (' + (node.charges || 0) + '/10)', node.x, node.y - r - 4);
+    }
+  }
+  c.restore();
+}
+
+function drawSymbioticBroodlings(c, time) {
+  if (!G || !G.biosphere || !G.biosphere.symbioticBroodlings || G.biosphere.symbioticBroodlings.length === 0) return;
+  c.save();
+  for (const br of G.biosphere.symbioticBroodlings) {
+    c.fillStyle = '#10b981';
+    c.beginPath();
+    c.arc(br.x, br.y, 8, 0, TAU);
+    c.fill();
+    c.strokeStyle = '#a7f3d0';
+    c.lineWidth = 1.5;
+    c.stroke();
+
+    // Antennae
+    c.beginPath();
+    c.moveTo(br.x - 3, br.y - 7);
+    c.lineTo(br.x - 6, br.y - 12);
+    c.moveTo(br.x + 3, br.y - 7);
+    c.lineTo(br.x + 6, br.y - 12);
+    c.stroke();
+
+    c.font = '800 7.5px ' + FONT;
+    c.fillStyle = '#a7f3d0';
+    c.textAlign = 'center';
+    c.fillText('BROODLING', br.x, br.y + 16);
+  }
+  c.restore();
+}
+
+function drawSensorFlares(c, time) {
+  if (!G || !G.biosphere || !G.biosphere.sensorFlares || G.biosphere.sensorFlares.length === 0) return;
+  c.save();
+  for (const fl of G.biosphere.sensorFlares) {
+    const pulse = 0.6 + 0.4 * Math.sin(time * 10);
+    c.fillStyle = 'rgba(254, 240, 138, ' + (0.15 + 0.08 * pulse) + ')';
+    c.beginPath();
+    c.arc(fl.x, fl.y, fl.r || 160, 0, TAU);
+    c.fill();
+    c.strokeStyle = '#fde047';
+    c.lineWidth = 1.5;
+    c.setLineDash([6, 6]);
+    c.stroke();
+    c.setLineDash([]);
+
+    c.fillStyle = '#fde047';
+    c.beginPath();
+    c.arc(fl.x, fl.y, 5, 0, TAU);
+    c.fill();
+  }
+  c.restore();
+}
+
+function drawSporeFogOverlay(c, time) {
+  if (!G || !G.biosphere || !G.biosphere.sporeFogActive) return;
+  c.save();
+  const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+  const pulse = 0.5 + 0.5 * Math.sin(time * 4);
+  c.fillStyle = 'rgba(6, 78, 59, ' + (0.28 + 0.08 * pulse) + ')';
+  c.fillRect(0, 0, sW, sH);
+
+  // Border warning
+  c.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+  c.lineWidth = 6;
+  c.strokeRect(3, 3, sW - 6, sH - 6);
+
+  c.font = '800 11px ' + FONT;
+  c.fillStyle = '#6ee7b7';
+  c.textAlign = 'center';
+  c.fillText('⚠️ BIOSPHERE IMMUNE RESPONSE: SPORE ECLIPSE FOG ACTIVE ⚠️', sW / 2, 28);
+  c.restore();
+}
+
+function drawBiosphereHUD(c, time) {
+  if (!G || !G.biosphere) return;
+  const bio = G.biosphere;
+  const bourse = G.bourse;
+  c.save();
+  const bx = 16, by = 48, bw = 175, bh = 42;
+
+  // Background Box
+  c.fillStyle = 'rgba(15, 23, 42, 0.90)';
+  c.fillRect(bx, by, bw, bh);
+  const stateColors = {
+    harmony: '#10b981',
+    superheat: '#f97316',
+    glacial: '#38bdf8',
+    equilibrium: '#94a3b8'
+  };
+  const themeCol = stateColors[bio.state] || '#94a3b8';
+  c.strokeStyle = themeCol;
+  c.lineWidth = 1.5;
+  c.strokeRect(bx, by, bw, bh);
+
+  // Footprint / Temperature Bar
+  const fp = clamp(bio.footprint || 0, -100, 100);
+  const norm = (fp + 100) / 200; // 0 to 1
+  c.fillStyle = 'rgba(30, 41, 59, 0.8)';
+  c.fillRect(bx + 6, by + 6, bw - 12, 10);
+  c.fillStyle = themeCol;
+  c.fillRect(bx + 6, by + 6, (bw - 12) * norm, 10);
+
+  // State Name
+  c.font = '800 8.5px ' + FONT;
+  c.fillStyle = themeCol;
+  c.textAlign = 'left';
+  const label = bio.inHarmony ? '★ HARMONY (2X LOOT) ★' : (bio.state ? bio.state.toUpperCase() : 'EQUILIBRIUM');
+  c.fillText(label, bx + 6, by + 28);
+
+  // Mini Bourse Ticker
+  if (bourse && bourse.prices) {
+    c.font = '700 8px ' + FONT;
+    c.fillStyle = '#e2e8f0';
+    c.textAlign = 'left';
+    c.fillText('Ti:' + Math.round(bourse.prices.titanium || 50) + 'G  Pm:' + Math.round(bourse.prices.promethium || 60) + 'G', bx + 6, by + 38);
+  }
   c.restore();
 }
