@@ -144,9 +144,81 @@ button {
   min-height: 32px;
 }
 .topbar-actions {
-  min-height: 30px;
+  min-height: 32px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 4px;
+  padding-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.topbar-actions::-webkit-scrollbar {
+  height: 3px;
+}
+.topbar-actions::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+.topbar-action-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  padding: 2px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.action-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 25px;
+  padding: 0 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font: 800 9.5px var(--mono);
+  letter-spacing: .04em;
+  color: var(--mute);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s ease;
+}
+.action-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+.action-tab.active {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+.action-tab[data-tab="protocols"].active {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #f59e0b;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+}
+.action-tab[data-tab="all"].active {
+  background: rgba(168, 85, 247, 0.16);
+  border-color: rgba(168, 85, 247, 0.45);
+  color: #c084fc;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.25);
+}
+.tab-count {
+  font-size: 8px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 4px;
+  border-radius: 2px;
+  color: inherit;
 }
 .ctrl-group-lbl {
   font-size: 8px;
@@ -289,12 +361,14 @@ button {
 .ctrl-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid var(--line2);
   border-radius: 4px;
-  padding: 2px 6px;
+  padding: 2px 7px;
   backdrop-filter: blur(2px);
+  flex-shrink: 0;
+  transition: all .15s ease;
 }
 .ctrl-group.systems {
   border-color: rgba(56, 189, 248, 0.35);

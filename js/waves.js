@@ -12,6 +12,10 @@ function startWave() {
   G.state = 'active';
   G.leakedThisWave = 0;
   G.emergencyBlackoutUsed = false;
+  // Dynamic Action Tab Switcher: auto-switch to Combat Overrides during wave
+  if (typeof setActionTab === 'function' && (!G || !G.actionTabLocked)) {
+    setActionTab('protocols', false);
+  }
   if (n > SAVE.bestWave) { SAVE.bestWave = n; Store.set('nb_bestWave', n); addCores(3); }
 
   // 10.0 Crucible Gambits: Blood Oath of the Vanguard (1 Live Only)
@@ -174,6 +178,10 @@ function callWave() {
   startWave();
 }
 function onWaveClear() {
+  // Dynamic Action Tab Switcher: auto-switch to Facilities during prep
+  if (typeof setActionTab === 'function' && (!G || !G.actionTabLocked)) {
+    setActionTab('facilities', false);
+  }
   G.callStreak = 0;
   G.adrenalineT = 0;
   G.adrenalineHeat = 1;

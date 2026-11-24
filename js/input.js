@@ -17,6 +17,7 @@ function toggleMute() { Sfx.init(); Sfx.setMuted(!Sfx.muted); if (!Sfx.muted) Sf
 function begin() {
   Sfx.init(); Sfx.resume && Sfx.resume();
   newGame(true); showOverlay(null); wcWave = -1;
+  if (typeof setActionTab === 'function') setActionTab('facilities', false);
 }
 Sfx.resume = function () { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); };
 

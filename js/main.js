@@ -436,6 +436,22 @@ function init() {
       showOverlay('menu');
     });
   }
+
+  // Action Category Tab Switcher
+  if (typeof document !== 'undefined' && document.querySelectorAll) {
+    const actionTabs = document.querySelectorAll('.action-tab');
+    if (actionTabs && actionTabs.forEach) {
+      actionTabs.forEach(btn => {
+        if (btn.addEventListener) {
+          btn.addEventListener('click', () => {
+            Sfx.init(); Sfx.resume && Sfx.resume();
+            if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('click');
+            setActionTab(btn.dataset.tab, true);
+          });
+        }
+      });
+    }
+  }
   $('overlay').addEventListener('click', e => {
     const card = e.target.closest('[data-perk]');
     if (card && G.drafting) { selectPerk(card.dataset.perk); return; }
@@ -626,10 +642,45 @@ function init() {
   last = performance.now();
   requestAnimationFrame(frame);
 }
+
+function setActionTab(tabName, isManual) {
+  const gSys = typeof $ === 'function' ? $('groupSystems') : (typeof document !== 'undefined' ? document.getElementById('groupSystems') : null);
+  const gProto = typeof $ === 'function' ? $('groupProtocols') : (typeof document !== 'undefined' ? document.getElementById('groupProtocols') : null);
+  if (typeof document !== 'undefined' && document.querySelectorAll) {
+    const tabs = document.querySelectorAll('.action-tab');
+    if (tabs && tabs.forEach) {
+      tabs.forEach(t => {
+        if (t.dataset && t.dataset.tab === tabName) {
+          if (t.classList && t.classList.add) t.classList.add('active');
+        } else {
+          if (t.classList && t.classList.remove) t.classList.remove('active');
+        }
+      });
+    }
+  }
+
+  if (gSys && gProto && gSys.style && gProto.style) {
+    if (tabName === 'facilities') {
+      gSys.style.display = 'flex';
+      gProto.style.display = 'none';
+    } else if (tabName === 'protocols') {
+      gSys.style.display = 'none';
+      gProto.style.display = 'flex';
+    } else { // 'all'
+      gSys.style.display = 'flex';
+      gProto.style.display = 'flex';
+    }
+  }
+  if (typeof G !== 'undefined' && G) {
+    G.currentActionTab = tabName;
+    if (isManual) G.actionTabLocked = (tabName === 'all');
+  }
+}
+
 init();
 
 // Small debug/test hook (harmless in production)
-window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive, MAP_SECTORS, loadSector, setSector, getSectorMastery, recordSectorProgress, isSectorUnlocked, FUSION_RECIPES, CURSED_PROTOCOLS, FIELD_ANOMALIES, HIVE_COUNTER_TRAITS, fuseTowers, triggerCoreOverload, applyCursedProtocol, getEligibleFusion, isCodexDiscovered, recordCodexDiscovery, getCodexProgress, spawnFieldAnomaly, RESONANCE_CONDUITS, THERMAL_CONFIG, BIOMASS_CONFIG, TACTICAL_MATRIX_PROTOCOLS, updateResonanceConduits, triggerThermalPurge, addBiomassCreep, cleanseBiomassCreep, hasMatrixProtocol, unlockMatrixProtocol, recordTimeSnapshot, triggerChronoRewind, createNeuralSynapse, removeNeuralSynapse, getTowerSynapses, reclaimCorpse, bribeSyndicate, raidSyndicate, triggerTectonicShift, CHRONO_CONFIG, NEURAL_SYNAPSE_CONFIG, RECLAIMER_CONFIG, SYNDICATE_CONFIG, toggleMechPilot, mechFireVulcan, mechSwingBlade, triggerDreadnoughtStrike, triggerAnomalyVault, selectAnomalyVault, spawnDropPod, updateWartimeMarket, hasRelic, TITAN_MECH_CONFIG, DREADNOUGHT_CONFIG, ANOMALY_RELICS, ANOMALY_VAULTS, CYBER_LOGIC_PRESETS, MARKET_CONFIG,
+window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS, TITAN_BOSSES, DEFENSE_CONTRACTS, socketChip, unsocketChip, swapTowers, addChip, maxChipsForTier, get G() { return G; }, begin, update, render, startWave, placeTower, upgradeTower, sellTower, callWave, endGame, buildSpawns, hpScale, TD, ED, refreshUI, triggerSkill, selectPerk, PERKS, COMMANDER_SKILLS, WAVE_MUTATORS, getTierData, addCores, upgradeWorkshop, getWorkshopLevel, getUpgradeCost, WORKSHOP_UPGRADES, SAVE, showOverlay, detonateFuelCell, LEYLINE_NODES, getLeylineAt, PLEN_BREACH, PATH_BREACH, getTowerCost, ASCENSION_MODIFIERS, getAscensionData, setAscension, unlockNextAscension, getGridPowerStatus, getTowerPower, triggerOverdrive, MAP_SECTORS, loadSector, setSector, getSectorMastery, recordSectorProgress, isSectorUnlocked, FUSION_RECIPES, CURSED_PROTOCOLS, FIELD_ANOMALIES, HIVE_COUNTER_TRAITS, fuseTowers, triggerCoreOverload, applyCursedProtocol, getEligibleFusion, isCodexDiscovered, recordCodexDiscovery, getCodexProgress, spawnFieldAnomaly, RESONANCE_CONDUITS, THERMAL_CONFIG, BIOMASS_CONFIG, TACTICAL_MATRIX_PROTOCOLS, updateResonanceConduits, triggerThermalPurge, addBiomassCreep, cleanseBiomassCreep, hasMatrixProtocol, unlockMatrixProtocol, recordTimeSnapshot, triggerChronoRewind, createNeuralSynapse, removeNeuralSynapse, getTowerSynapses, reclaimCorpse, bribeSyndicate, raidSyndicate, triggerTectonicShift, CHRONO_CONFIG, NEURAL_SYNAPSE_CONFIG, RECLAIMER_CONFIG, SYNDICATE_CONFIG, toggleMechPilot, mechFireVulcan, mechSwingBlade, triggerDreadnoughtStrike, triggerAnomalyVault, selectAnomalyVault, spawnDropPod, updateWartimeMarket, hasRelic, TITAN_MECH_CONFIG, DREADNOUGHT_CONFIG, ANOMALY_RELICS, ANOMALY_VAULTS, CYBER_LOGIC_PRESETS, MARKET_CONFIG, setActionTab,
   // 8.0 Masterclass AAA/Indie Exports
   canPlaceMegastructure, placeMegastructure, updateMegastructures, setupBossMultiParts, damageBossPart, mechGrappleStrike, routeLogistics, updateLogistics, recordPheromoneDeath, updatePheromones, applyGeneSplice, applyDarkCurio, MEGASTRUCTURE_CONFIG, MULTI_PART_TITAN_CONFIG, LOGISTICS_CONFIG, GENE_SPLICING_CONFIG, DARK_TECH_CURIOS,
   // 9.0 Living Ecosystem & Nemesis Network Exports

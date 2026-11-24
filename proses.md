@@ -2856,6 +2856,34 @@ Berdasarkan master blueprint `bastion_td_living_biosphere_blueprint.md` yang tel
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 65 SFX sounds, 25 data-act & 38 data-ov, 58 element IDs)**
 - **Seluruh 36 Unit Test Suites di repositori: 100% LULUS.**
 
+---
+
+## 45. Optimalisasi Layout & Perapian Topbar: Dynamic Action Tab Switcher (Opsi 1)
+
+Menindaklanjuti masukan pengguna terkait tampilan toolbar atas (`.topbar-actions`) yang sebelumnya terasa sangat padat dan menumpuk akibat 23 tombol dijejalkan dalam satu baris horizontal, telah diimplementasikan arsitektur **Dynamic Action Tab Switcher** (Opsi 1):
+
+### 45.1 Rincian Penataan & Desain Baru
+1. **Modular Tab Switcher:**
+   - Ditempatkan di sisi kiri baris aksi:
+     - `[ 🏛️ FACILITIES (12) ]`: Menampilkan 12 tombol fasilitas modal (HQ, Codex, Matrix, Lab, Expedition, Heat, Logistics, Bonds, Bourse, Engrams, Directive, Forensics).
+     - `[ ⚡ COMBAT (11) ]`: Menampilkan 11 tombol aksi jurus tempur real-time (Purge, Chrono, Anchor, Paradox, Overload, Mech, Exosuit, Dreadnought, Spear, Doctrine, Parry).
+     - `[ 👁️ ALL (23) ]`: Opsi menampilkan seluruh tombol secara simultan dengan scrolling horizontal halus.
+2. **Konteks Cerdas (Smart Auto-Switching):**
+   - Saat fase persiapan (*Wave Prep* / `onWaveClear`), tampilan otomatis aktif pada tab **FACILITIES** agar pemain leluasa mengakses fasilitas dan riset.
+   - Saat pertempuran aktif (`startWave`), tampilan otomatis berpindah ke tab **COMBAT** agar fokus pemain tertuju pada tombol jurus darurat dan status cooldown/charge.
+   - Pemain tetap bebas mengklik tombol tab kapan saja untuk beralih secara manual tanpa membatalkan fungsi hotkey keyboard yang tetap aktif $100\%$.
+3. **Peningkatan CSS & Ergonomi Layar:**
+   - Spasi antar tombol dibuat lebih lega (`gap: 5px`, padding 7px).
+   - Ditambahkan `overflow-x: auto` dengan scrollbar ramping (*thin cyberpunk aesthetic*) sehingga tidak akan pernah terjadi pemampatan atau teks gepeng berdesakan pada layar laptop/monitor dengan resolusi apa pun.
+   - Semua ID elemen HTML dan class CSS dipertahankan secara utuh tanpa ada yang dihilangkan.
+
+---
+
+### 45.2 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_ui_layout_overhaul.js`: **100% LULUS (Semantic Grouping & Anti-Collision Terverifikasi)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 60 referenced element IDs terverifikasi utuh)**
+- **Seluruh 36 Unit Test Suites di repositori: 100% LULUS.**
+
 
 
 
