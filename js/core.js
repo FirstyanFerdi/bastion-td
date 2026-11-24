@@ -64,7 +64,12 @@ const SAVE = {
     feedback_chrono: 2
   }),
   codex: Store.get('nb_codex', {}),
-  nemesisRoster: Store.get('nb_nemesis', [])
+  nemesisRoster: Store.get('nb_nemesis', []),
+  // 23.0 The Phoenix Protocol & Causal Failure Persistent Data
+  edm: Store.get('nb_edm', 0),
+  causalMonolith: Store.get('nb_causalMonolith', null),
+  causalScars: Store.get('nb_causalScars', []),
+  grudgeNemesis: Store.get('nb_grudgeNemesis', null)
 };
 
 function setDoctrine(id) {

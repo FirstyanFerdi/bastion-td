@@ -395,7 +395,20 @@ function newGame(keepSpeed) {
       etherEnemiesKilled: 0,
       overmindEvalTimer: 0,
       combatSkiffs: []
-    }
+    },
+    // 23.0 The Phoenix Protocol & Causal Failure Engine Systems
+    phoenix: {
+      ghostStandoff: false,
+      standoffTimer: 0,
+      standoffKills: 0,
+      standoffTriggered: false,
+      scarredBastion: false,
+      blackboxData: null,
+      blackboxActive: false
+    },
+    causalMonolith: (typeof SAVE !== 'undefined' && SAVE.causalMonolith) ? { ...SAVE.causalMonolith, restored: false } : null,
+    causalScars: (typeof SAVE !== 'undefined' && SAVE.causalScars) ? SAVE.causalScars.map(s => ({ ...s })) : [],
+    grudgeNemesis: (typeof SAVE !== 'undefined' && SAVE.grudgeNemesis) ? { ...SAVE.grudgeNemesis } : null
   };
   initDoctrineSkills();
   partPool.clear(); fxPool.clear(); textPool.clear();
@@ -2424,6 +2437,10 @@ function dealDamage(e, amount, type, src, opts) {
       }
     }
   }
+  // 23.0 Phoenix Protocol: Scarred Bastion Crit Damage Bonus (+25%)
+  if (opts.crit && G && G.phoenix && G.phoenix.scarredBastion) {
+    a *= (1.0 + (typeof PHOENIX_CONFIG !== 'undefined' ? PHOENIX_CONFIG.standoff.scarredCritBonus : 0.25));
+  }
   e.flash = 1;
   let toHp = a;
   if (e.shield > 0) {
@@ -2522,6 +2539,31 @@ function killEnemy(e, src) {
     if (e.isEtherVoid) {
       G.epoch.etherEnemiesKilled = (G.epoch.etherEnemiesKilled || 0) + 1;
     }
+  }
+
+  // 23.0 Phoenix Protocol: Standoff Kill Tracking & Grudge Nemesis Bounty
+  if (G && G.phoenix && G.phoenix.ghostStandoff) {
+    G.phoenix.standoffKills = (G.phoenix.standoffKills || 0) + 1;
+    const reqKills = (typeof PHOENIX_CONFIG !== 'undefined' && PHOENIX_CONFIG.standoff) ? PHOENIX_CONFIG.standoff.requiredKills : 15;
+    if (e.type === 'boss' || e.isElite || e.isNemesis || G.phoenix.standoffKills >= reqKills) {
+      resolvePhoenixRebirth(true);
+    }
+  }
+
+  // 23.0 Phoenix Protocol: Grudge Nemesis Revenge Vendetta Bounty
+  if (G && G.grudgeNemesis && (e.type === G.grudgeNemesis.type || e.isGrudge)) {
+    const bountyG = G.grudgeNemesis.bountyGold || 500;
+    const bountyC = G.grudgeNemesis.bountyCores || 15;
+    G.gold = (G.gold || 0) + bountyG;
+    if (typeof addCores === 'function') addCores(bountyC);
+    if (typeof Sfx !== 'undefined' && Sfx.play) {
+      Sfx.play('victory');
+      Sfx.play('levelup');
+    }
+    const sW = typeof W !== 'undefined' ? W : 960;
+    if (typeof addText === 'function') addText(sW / 2, 70, '★ VENDETTA TRIUMPH: +' + bountyG + 'G / +' + bountyC + ' CORES! ★', '#10b981', 18);
+    G.grudgeNemesis = null;
+    if (typeof Store !== 'undefined') Store.set('nb_grudgeNemesis', null);
   }
 
   // 13.0 Visceral Resonance: Overkill Kinetic Shatter & Arc Discharge
@@ -7312,6 +7354,8 @@ function updateBastion20Systems(dt) {
   updateMaestroDirector(dt);
   // 22.0 The Epoch Horizon & Macro-Scale Metamorphosis Systems
   updateEpochSystems(dt);
+  // 23.0 The Phoenix Protocol & Causal Failure Systems
+  updatePhoenixSystems(dt);
 }
 
 /* ============================================================
@@ -7933,6 +7977,245 @@ function updateEpochSystems(dt) {
           dealDamage(bestTar, 40, 'energy', 'skiff', { noReaction: true });
           if (typeof addFx === 'function') addFx('laser', sk.x, sk.y, bestTar.x, bestTar.y, 0.1, '#38bdf8', 1.5);
           if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('gatling');
+        }
+      }
+    }
+  }
+}
+
+/* ============================================================
+   23.0 THE PHOENIX PROTOCOL & CAUSAL FAILURE METAMORPHOSIS
+   ============================================================ */
+
+function triggerPhoenixDoomsday() {
+  if (!G || !G.phoenix || G.phoenix.standoffTriggered) return false;
+  const cfg = typeof PHOENIX_CONFIG !== 'undefined' ? PHOENIX_CONFIG.standoff : { duration: 10.0, requiredKills: 15, singularityBossDamagePct: 0.40 };
+
+  G.phoenix.ghostStandoff = true;
+  G.phoenix.standoffTimer = cfg.duration;
+  G.phoenix.standoffKills = 0;
+  G.phoenix.standoffTriggered = true;
+
+  if (typeof shake === 'function') shake(20.0);
+  if (typeof Sfx !== 'undefined' && Sfx.play) {
+    Sfx.play('nuke');
+    Sfx.play('shockwave');
+    Sfx.play('time_rewind');
+  }
+
+  // Singularity Overload Wave: wipes non-bosses, chunks bosses
+  if (G.enemies && G.enemies.length > 0) {
+    const sBossDmg = cfg.singularityBossDamagePct || 0.40;
+    for (const foe of G.enemies) {
+      if (foe.dead) continue;
+      if (foe.type === 'boss' || foe.isElite || foe.isNemesis) {
+        dealDamage(foe, foe.maxHp * sBossDmg, 'true', 'doomsday_wave', { noReaction: true });
+        foe.stunT = Math.max(foe.stunT || 0, 2.5);
+      } else {
+        killEnemy(foe);
+      }
+    }
+  }
+
+  // Titan Mech Berserk Phantom Overdrive
+  if (G.mech) {
+    G.mech.battery = 100;
+    G.mech.hp = G.mech.maxHp || 1200;
+    G.mech.speed = (G.mech.speed || 120) * (cfg.mechSpeedMultiplier || 1.6);
+    G.mech.berserkT = cfg.duration;
+  }
+
+  const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+  if (typeof burst === 'function') burst(sW / 2, sH / 2, 50, '#f59e0b', 260, 0.9, 5.0, true);
+  if (typeof addRing === 'function') addRing(sW / 2, sH / 2, 20, 300, 1.0, '#ef4444', 6);
+  if (typeof addText === 'function') addText(sW / 2, 85, '★ PHOENIX PROTOCOL: GHOST STANDOFF! ★', '#f59e0b', 20);
+
+  G.banner = {
+    text: '★ PHOENIX PROTOCOL: GHOST STANDOFF ★',
+    sub: '10 SECONDS! KILL 15 CREEPS OR 1 ELITE/BOSS TO DEFY DEFEAT!',
+    t: 0, max: 4.5, color: '#f59e0b'
+  };
+
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function resolvePhoenixRebirth(success) {
+  if (!G || !G.phoenix || !G.phoenix.ghostStandoff) return false;
+  G.phoenix.ghostStandoff = false;
+  G.phoenix.standoffTriggered = true;
+
+  if (success) {
+    G.phoenix.scarredBastion = true;
+    G.lives = 1;
+
+    if (typeof shake === 'function') shake(16.0);
+    if (typeof Sfx !== 'undefined' && Sfx.play) {
+      Sfx.play('victory');
+      Sfx.play('levelup');
+    }
+
+    const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+    if (typeof burst === 'function') burst(sW / 2, sH / 2, 40, '#10b981', 220, 0.8, 4.5, true);
+    if (typeof addText === 'function') addText(sW / 2, 85, '★ SCARRED REBIRTH: DEFEAT DEFIED (+25% CRIT)! ★', '#10b981', 18);
+
+    G.banner = {
+      text: '★ SCARRED REBIRTH ★',
+      sub: 'Base restored with 1 Life! +25% Critical Damage permanent!',
+      t: 0, max: 4.0, color: '#10b981'
+    };
+    if (G) G.uiDirty = true;
+    return true;
+  } else {
+    generateBlackboxForensics();
+    if (typeof endGame === 'function') endGame(false);
+    return false;
+  }
+}
+
+function generateBlackboxForensics() {
+  if (!G || !G.phoenix) return null;
+  const cfg = typeof PHOENIX_CONFIG !== 'undefined' ? PHOENIX_CONFIG.blackbox : { baseEDMMultiplier: 10, overheatEDMBonus: 25, overkillEDMRatio: 0.05 };
+
+  let hotTowers = 0;
+  if (G.towers) {
+    for (const t of G.towers) {
+      if ((t.heat || 0) >= 70 || t.isSupercritical || t.isAmmoDepleted) hotTowers++;
+    }
+  }
+
+  let rootCause = 'Perimeter Breach: Rapid enemy influx overwhelmed front-line defensive choke points.';
+  if (hotTowers >= 2) {
+    rootCause = 'Thermal Starvation: High heat accumulation caused defensive grid paralysis at critical moments.';
+  } else if (G.damageTrack && G.damageTrack.phys > 0) {
+    const totalDmg = (G.damageTrack.phys || 0) + (G.damageTrack.energy || 0) + (G.damageTrack.plasma || 0) + (G.damageTrack.cryo || 0);
+    if (totalDmg > 0 && (G.damageTrack.phys / totalDmg) >= 0.65) {
+      rootCause = 'Tactical Monoculture: Excessive physical damage reliance triggered reactive hardened chitin.';
+    }
+  }
+
+  const vulnerability = 'Forensic telemetry reveals killer hostile species is -80% vulnerable to Cryo + Railgun shock combinations.';
+
+  const edmEarned = Math.round((G.wave || 1) * cfg.baseEDMMultiplier + hotTowers * cfg.overheatEDMBonus + Math.floor((G.score || 0) * cfg.overkillEDMRatio));
+  if (typeof SAVE !== 'undefined') {
+    SAVE.edm = (SAVE.edm || 0) + edmEarned;
+    if (typeof Store !== 'undefined') Store.set('nb_edm', SAVE.edm);
+  }
+
+  // Causal Monolith: save best tower
+  if (G.towers && G.towers.length > 0) {
+    let bestT = G.towers[0];
+    for (const t of G.towers) {
+      if ((t.totalCost || t.cost || 0) > (bestT.totalCost || bestT.cost || 0)) bestT = t;
+    }
+    const tName = (typeof TD !== 'undefined' && TD[bestT.type]) ? TD[bestT.type].name : bestT.type;
+    const monolith = {
+      c: bestT.c, r: bestT.r, x: bestT.x, y: bestT.y,
+      type: bestT.type, tier: bestT.tier || 1, name: tName
+    };
+    if (typeof SAVE !== 'undefined') {
+      SAVE.causalMonolith = monolith;
+      if (typeof Store !== 'undefined') Store.set('nb_causalMonolith', monolith);
+    }
+  }
+
+  // Causal Battlefield Scar
+  const bPt = (typeof BASE_PT !== 'undefined') ? BASE_PT : { x: 800, y: 300 };
+  if (typeof SAVE !== 'undefined') {
+    SAVE.causalScars = SAVE.causalScars || [];
+    SAVE.causalScars.push({ x: bPt.x, y: bPt.y, r: 40 });
+    if (typeof Store !== 'undefined') Store.set('nb_causalScars', SAVE.causalScars);
+  }
+
+  // Record Grudge Nemesis
+  const lastFoe = (G.enemies && G.enemies.find(e => !e.dead)) || { type: 'brute' };
+  const fName = (typeof ED !== 'undefined' && ED[lastFoe.type]) ? ED[lastFoe.type].name : lastFoe.type;
+  const grudge = {
+    type: lastFoe.type,
+    title: fName + ' the Conqueror',
+    wave: G.wave || 1,
+    bountyGold: (typeof PHOENIX_CONFIG !== 'undefined' ? PHOENIX_CONFIG.grudge.defaultBountyGold : 500),
+    bountyCores: (typeof PHOENIX_CONFIG !== 'undefined' ? PHOENIX_CONFIG.grudge.defaultBountyCores : 15)
+  };
+  if (typeof SAVE !== 'undefined') {
+    SAVE.grudgeNemesis = grudge;
+    if (typeof Store !== 'undefined') Store.set('nb_grudgeNemesis', grudge);
+  }
+
+  const forensics = {
+    rootCause,
+    vulnerability,
+    edmEarned,
+    totalEdm: (typeof SAVE !== 'undefined' ? SAVE.edm : edmEarned)
+  };
+
+  G.phoenix.blackboxData = forensics;
+  G.phoenix.blackboxActive = true;
+  return forensics;
+}
+
+function restoreCausalMonolith() {
+  if (!G || !G.causalMonolith || G.causalMonolith.restored) return false;
+  const m = G.causalMonolith;
+  const baseCost = (typeof TD !== 'undefined' && TD[m.type]) ? TD[m.type].cost : 100;
+  const discount = (typeof PHOENIX_CONFIG !== 'undefined') ? PHOENIX_CONFIG.causalHeritage.monolithDiscount : 0.50;
+  const cost = Math.round(baseCost * discount);
+
+  if ((G.gold || 0) < cost) {
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('error');
+    return false;
+  }
+
+  G.gold -= cost;
+  m.restored = true;
+
+  if (typeof placeTower === 'function') {
+    const t = placeTower(m.c, m.r, m.type);
+    if (t) {
+      t.tier = m.tier || 1;
+      t.awakenedGhostMemory = true;
+      t.range *= (1.0 + ((typeof PHOENIX_CONFIG !== 'undefined') ? PHOENIX_CONFIG.causalHeritage.monolithRangeBonus : 0.20));
+      t.isAmmoDepleted = false;
+      if (typeof burst === 'function') burst(t.x, t.y, 20, '#38bdf8', 120, 0.5, 3.5, true);
+      if (typeof addText === 'function') addText(t.x, t.y - 25, '★ AWAKENED GHOST MEMORY! ★', '#38bdf8', 15);
+      if (typeof Sfx !== 'undefined' && Sfx.play) {
+        Sfx.play('place');
+        Sfx.play('levelup');
+      }
+    }
+  }
+
+  if (typeof SAVE !== 'undefined') {
+    SAVE.causalMonolith = null;
+    if (typeof Store !== 'undefined') Store.set('nb_causalMonolith', null);
+  }
+
+  if (G) G.uiDirty = true;
+  return true;
+}
+
+function updatePhoenixSystems(dt) {
+  if (!G || !G.phoenix) return;
+  const p = G.phoenix;
+
+  // Standoff countdown
+  if (p.ghostStandoff) {
+    p.standoffTimer -= dt;
+    if (G.mech) {
+      G.mech.battery = 100;
+      if (G.mech.berserkT > 0) G.mech.berserkT = Math.max(0, G.mech.berserkT - dt);
+    }
+    if (p.standoffTimer <= 0) {
+      resolvePhoenixRebirth(false);
+    }
+  }
+
+  // Causal Scars: burning magma environmental damage
+  if (G.causalScars && G.causalScars.length > 0 && G.enemies) {
+    for (const s of G.causalScars) {
+      for (const foe of G.enemies) {
+        if (!foe.dead && Math.hypot(foe.x - s.x, foe.y - s.y) <= (s.r || 35)) {
+          dealDamage(foe, 45 * dt, 'plasma', null, { noReaction: true });
         }
       }
     }

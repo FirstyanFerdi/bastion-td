@@ -667,5 +667,7 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   MAESTRO_DIRECTOR_CONFIG, calculatePlayerTension, calculatePlayerProficiency, transitionMaestroPhase, triggerMiracleClutch, offerDirectorGambit, acceptDirectorGambit, resolveDirectorGambit, updateMaestroDirector,
   // 22.0 The Epoch Horizon & Macro-Scale Metamorphosis Exports
   EPOCH_CONFIG, calculatePlayerPowerVector, checkEpochProgression, advanceEpoch, craftScavengerTrap, triggerTectonicChasm, fireOrbitalIonLance, activateChronosSingularity, updateNemesisOvermind, updateEpochSystems,
+  // 23.0 The Phoenix Protocol & Causal Failure Metamorphosis Exports
+  PHOENIX_CONFIG, triggerPhoenixDoomsday, resolvePhoenixRebirth, generateBlackboxForensics, restoreCausalMonolith, updatePhoenixSystems,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateTower, updateDreadnought
 };

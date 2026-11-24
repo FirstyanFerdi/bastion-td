@@ -3145,6 +3145,35 @@ const EPOCH_CONFIG = {
   }
 };
 
+/* ============================================================
+   BASTION TD 23.0: THE PHOENIX PROTOCOL & CAUSAL FAILURE ENGINE
+   ============================================================ */
+const PHOENIX_CONFIG = {
+  standoff: {
+    duration: 10.0,
+    requiredKills: 15,
+    singularityBossDamagePct: 0.40,
+    scarredCritBonus: 0.25,
+    mechSpeedMultiplier: 1.6,
+    mechAttackSpeedMultiplier: 4.0
+  },
+  causalHeritage: {
+    monolithDiscount: 0.50,
+    monolithRangeBonus: 0.20,
+    scarDuration: 999.0,
+    scarDamageDps: 45
+  },
+  blackbox: {
+    baseEDMMultiplier: 10,
+    overheatEDMBonus: 25,
+    overkillEDMRatio: 0.05
+  },
+  grudge: {
+    defaultBountyGold: 500,
+    defaultBountyCores: 15
+  }
+};
+
 
 
 

@@ -2761,6 +2761,52 @@ Berdasarkan master blueprint `bastion_td_epoch_ascension_blueprint.md` yang dise
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 65 SFX sounds, 25 data-act & 38 data-ov, 58 element IDs)**
 - **Seluruh 33 Unit Test Suites di repositori: 100% LULUS.**
 
+---
+
+## 43. Implementasi Bastion TD 23.0: The Phoenix Protocol & Causal Failure Engine
+
+Berdasarkan master blueprint `bastion_td_phoenix_rebirth_blueprint.md` yang telah disetujui, telah diimplementasikan penuh sistem pengolahan kekalahan dramatis dan mekanik kausal adaptif lintas run:
+
+### 43.1 Rincian Lima Pilar Inti Bastion TD 23.0
+1. **The Phoenix Doomsday Protocol & 10-Second Ghost Standoff:**
+   - Ketika nyawa markas menyentuh 0 (`G.lives <= 0`), permainan tidak langsung memicu Game Over biasa.
+   - Pangkalan memicu **Doomsday Singularity Overload Wave**: ledakan energi global yang menyapu bersih seluruh creep normal di layar, dan memberikan 40% current HP true damage ke seluruh Elite dan Boss.
+   - Membuka fase darurat **10-Second Ghost Standoff** (`G.phoenix.ghostStandoff = true`, `standoffTimer = 10.0s`).
+   - Titan Mech memasuki wujud darurat **Berserk Phantom**: kebal kerusakan (*invulnerable*), baterai terkunci 100%, kecepatan gerak $1.6\times$, dan laju serang $4.0\times$.
+   - **Syarat Scarred Rebirth:** Jika dalam durasi 10 detik pemain berhasil membunuh **15 creep biasa ATAU 1 Elite/Boss**, protokol kepunahan dibatalkan! Markas bangkit kembali dengan 1 Nyawa dan memperoleh buff permanen **Scarred Bastion** (+25% Critical Damage permanen untuk sisa sesi permainan).
+
+2. **Catastrophic Blackbox & Post-Mortem Forensics:**
+   - Apabila Ghost Standoff gagal diselesaikan atau pemain mengalami kekalahan sejati, Blackbox Telemetri menganalisis akar penyebab kegagalan (*Root Cause*):
+     - **Thermal Starvation:** Bila $\ge 2$ menara mengalami *overheat* / kritis.
+     - **Tactical Monoculture:** Bila $\ge 65\%$ total kerusakan pangkalan bertumpu pada satu tipe damage tertentu sehingga memicu mutasi resistensi adaptif musuh.
+     - **Perimeter Breach:** Serbuan cepat melampaui kapasitas choke point garis depan.
+   - Analisis forensik mengungkap kelemahan taktis spesifik dari spesies musuh pembunuh markas (-80% resistance discovery).
+   - Menghitung **Entropic Dark Matter (EDM)** yang diekstraksi dari keruntuhan pangkalan:
+     $$\text{EDM} = (\text{Wave} \times 10) + (\text{HotTowers} \times 25) + \lfloor\text{Score} \times 0.05\rfloor$$
+     EDM disimpan secara persisten di `SAVE.edm`.
+
+3. **Causal Heritage & Anomaly Scars (Warisan Antar-Run):**
+   - **Causal Monolith Memorial:** Menara dengan total investasi tertinggi dari run yang gugur diabadikan sebagai monolit arwah (`SAVE.causalMonolith`). Pada sesi permainan berikutnya, monolit ini berdiri sebagai siluet holografik di medan perang dan dapat direstorasi dengan diskon biaya **50%** serta langsung memperoleh sifat **Awakened Ghost Memory** (+20% jangkauan tembak permanen).
+   - **Causal Scars:** Titik ledakan fatal pangkalan di run sebelumnya memicu anomali medan berupa kawah magma abadi (`SAVE.causalScars`) yang terus membakar musuh yang melintas di atasnya (45 DPS Plasma).
+
+4. **The Nemesis Grudge System:**
+   - Musuh yang berhasil menembus pertahanan dan menghancurkan markas tercatat sebagai **Grudge Nemesis** di `SAVE.grudgeNemesis` lengkap dengan gelarnya (misal: *"Brute the Conqueror"*).
+   - Pada sesi permainan berikutnya, Grudge Nemesis ini akan muncul kembali membawa tanda visual dendam dan ejekan dinamis di layar.
+   - Membunuh Grudge Nemesis ini memberikan hadiah balas dendam (**Vendetta Triumph Bounty**) berupa **+500 Gold** dan **+15 Nanite Cores**.
+
+5. **Bio-Sensory HUD & Forensics Overlays:**
+   - `drawPhoenixStandoffHUD`: Menampilkan bilah timer hitung mundur 10 detik berdenyut merah menyala, meteran eliminasi creep/boss yang dibutuhkan, dan status Titan Berserk.
+   - `drawBlackboxForensicsOverlay`: Menghadirkan tampilan layar holografik pasca-kekalahan bernuansa taktis cybernetic yang membedah akar penyebab kegagalan, kelemahan musuh, dan total EDM yang dipanen.
+   - `drawCausalMonolith` & `drawCausalScars`: Visualisasi monolit arwah holografik dan kawah magma menyala di kanvas pertempuran.
+
+---
+
+### 43.2 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_phoenix_rebirth.js`: **100% LULUS (Semua 7 Suite Pengujian Bastion TD 23.0 Terverifikasi)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 65 SFX sounds, 25 data-act & 38 data-ov, 58 element IDs)**
+- **Seluruh 35 Unit Test Suites di repositori: 100% LULUS.**
+
+
 
 
 

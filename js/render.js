@@ -532,6 +532,9 @@ function render() {
   drawCraters(c, time);
   // 22.0 The Epoch Horizon Tectonic Chasms
   drawTectonicChasms(c, time);
+  // 23.0 The Phoenix Protocol & Causal Failure Battlefield Relics
+  drawCausalMonolith(c, time);
+  drawCausalScars(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -729,6 +732,9 @@ function render() {
   drawEtherVoidAura(c, time);
   drawEpochAtmosphere(c, time);
   drawEpochHUD(c, time);
+  // 23.0 The Phoenix Protocol & Causal Failure Standoff and Blackbox HUD
+  drawPhoenixStandoffHUD(c, time);
+  drawBlackboxForensicsOverlay(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -4168,6 +4174,143 @@ function drawEpochHUD(c, time) {
       c.stroke();
     }
   }
+
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 23.0: THE PHOENIX PROTOCOL & CAUSAL FAILURE RENDERING
+   ============================================================ */
+
+function drawCausalMonolith(c, time) {
+  if (!G || !G.causalMonolith || G.causalMonolith.restored) return;
+  const m = G.causalMonolith;
+  c.save();
+  const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+
+  c.fillStyle = 'rgba(56, 189, 248, ' + (0.15 + 0.1 * pulse) + ')';
+  c.beginPath();
+  c.arc(m.x, m.y, 24, 0, TAU);
+  c.fill();
+
+  c.strokeStyle = '#38bdf8';
+  c.lineWidth = 2;
+  c.setLineDash([4, 4]);
+  c.stroke();
+  c.setLineDash([]);
+
+  c.fillStyle = 'rgba(15, 23, 42, 0.9)';
+  c.fillRect(m.x - 12, m.y - 20, 24, 28);
+  c.strokeStyle = '#38bdf8';
+  c.lineWidth = 1.5;
+  c.strokeRect(m.x - 12, m.y - 20, 24, 28);
+
+  c.font = '800 8.5px ' + FONT;
+  c.fillStyle = '#67e8f9';
+  c.textAlign = 'center';
+  c.fillText('MONOLITH', m.x, m.y - 26);
+  c.fillText((m.name || 'RELIC').toUpperCase(), m.x, m.y + 18);
+  c.restore();
+}
+
+function drawCausalScars(c, time) {
+  if (!G || !G.causalScars || G.causalScars.length === 0) return;
+  c.save();
+  for (const s of G.causalScars) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 5 + s.x);
+    c.fillStyle = 'rgba(239, 68, 68, ' + (0.2 + 0.1 * pulse) + ')';
+    c.beginPath();
+    c.arc(s.x, s.y, s.r || 35, 0, TAU);
+    c.fill();
+
+    c.strokeStyle = 'rgba(249, 115, 22, ' + (0.4 + 0.2 * pulse) + ')';
+    c.lineWidth = 2;
+    c.stroke();
+
+    c.font = '800 8px ' + FONT;
+    c.fillStyle = '#f97316';
+    c.textAlign = 'center';
+    c.fillText('MAGMA SCAR', s.x, s.y - (s.r || 35) - 4);
+  }
+  c.restore();
+}
+
+function drawPhoenixStandoffHUD(c, time) {
+  if (!G || !G.phoenix || !G.phoenix.ghostStandoff) return;
+  const p = G.phoenix;
+  const timer = clamp(p.standoffTimer || 0, 0, 10);
+  const kills = p.standoffKills || 0;
+  const pulse = 0.5 + 0.5 * Math.sin(time * 14);
+
+  c.save();
+  const sW = typeof W !== 'undefined' ? W : 960;
+  const bw = 460, bh = 46, bx = sW / 2 - bw / 2, by = 50;
+
+  c.strokeStyle = 'rgba(245, 158, 11, ' + (0.3 + 0.3 * pulse) + ')';
+  c.lineWidth = 10;
+  c.strokeRect(4, 4, sW - 8, (typeof H !== 'undefined' ? H : 600) - 8);
+
+  c.fillStyle = 'rgba(15, 23, 42, 0.95)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = '#f59e0b';
+  c.lineWidth = 2.5;
+  c.strokeRect(bx, by, bw, bh);
+
+  const pct = timer / 10.0;
+  c.fillStyle = '#ef4444';
+  c.fillRect(bx + 4, by + bh - 8, (bw - 8) * pct, 4);
+
+  c.font = '900 13px ' + FONT;
+  c.fillStyle = '#f59e0b';
+  c.textAlign = 'center';
+  c.fillText('★ PHOENIX PROTOCOL: GHOST STANDOFF [' + timer.toFixed(1) + 's] ★', sW / 2, by + 18);
+
+  c.font = '800 10.5px ' + FONT;
+  c.fillStyle = '#fef08a';
+  c.fillText('REQUIREMENT: KILL 15 CREEPS (' + kills + '/15) OR 1 ELITE/BOSS TO SURVIVE!', sW / 2, by + 32);
+  c.restore();
+}
+
+function drawBlackboxForensicsOverlay(c, time) {
+  if (!G || !G.phoenix || !G.phoenix.blackboxActive || !G.phoenix.blackboxData) return;
+  const data = G.phoenix.blackboxData;
+  c.save();
+  const sW = typeof W !== 'undefined' ? W : 960, sH = typeof H !== 'undefined' ? H : 600;
+
+  c.fillStyle = 'rgba(8, 14, 26, 0.88)';
+  c.fillRect(0, 0, sW, sH);
+
+  const bw = 540, bh = 220, bx = sW / 2 - bw / 2, by = sH / 2 - bh / 2;
+  c.fillStyle = 'rgba(15, 23, 42, 0.95)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = '#38bdf8';
+  c.lineWidth = 2;
+  c.strokeRect(bx, by, bw, bh);
+
+  c.font = '900 16px ' + FONT;
+  c.fillStyle = '#38bdf8';
+  c.textAlign = 'center';
+  c.fillText('⚡ CATASTROPHIC BLACKBOX FORENSICS ⚡', sW / 2, by + 28);
+
+  c.font = '800 11px ' + FONT;
+  c.fillStyle = '#f87171';
+  c.textAlign = 'left';
+  c.fillText('FATAL ROOT CAUSE:', bx + 24, by + 65);
+  c.fillStyle = '#ffffff';
+  c.font = '600 10.5px ' + FONT;
+  c.fillText(data.rootCause || 'Perimeter breach under heavy assault', bx + 24, by + 85);
+
+  c.font = '800 11px ' + FONT;
+  c.fillStyle = '#fbbf24';
+  c.fillText('TACTICAL REVELATION:', bx + 24, by + 120);
+  c.fillStyle = '#ffffff';
+  c.font = '600 10.5px ' + FONT;
+  c.fillText(data.vulnerability || 'Target armor vulnerable to alternate elements', bx + 24, by + 140);
+
+  c.font = '800 12px ' + FONT;
+  c.fillStyle = '#a855f7';
+  c.textAlign = 'center';
+  c.fillText('ENTROPIC DARK MATTER EARNED: +' + (data.edmEarned || 0) + ' EDM (TOTAL: ' + (data.totalEdm || 0) + ')', sW / 2, by + 185);
 
   c.restore();
 }

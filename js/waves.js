@@ -403,6 +403,18 @@ function saveBest() {
   if (G.wave > SAVE.bestWave) { SAVE.bestWave = G.wave; Store.set('nb_bestWave', SAVE.bestWave); }
 }
 function endGame(won) {
+  if (!won) {
+    // 23.0 The Phoenix Protocol: 10-Second Ghost Standoff Check
+    if (G && G.phoenix && !G.phoenix.standoffTriggered) {
+      if (typeof triggerPhoenixDoomsday === 'function') {
+        const started = triggerPhoenixDoomsday();
+        if (started) return;
+      }
+    }
+    if (typeof generateBlackboxForensics === 'function') {
+      generateBlackboxForensics();
+    }
+  }
   if (won) {
     G.score += G.lives * 50;
     if (typeof unlockNextAscension === 'function') unlockNextAscension(G.ascension || 0);
