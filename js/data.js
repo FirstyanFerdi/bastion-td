@@ -943,7 +943,11 @@ const ED = {
   // 22.0 The Epoch Horizon & Macro-Scale Metamorphosis Hostiles
   slime_weaver: { name: 'Corrosive Slime Weaver', hp: 420, speed: 65, r: 15, armor: 0.20, reward: 35, leak: 2, isSlimeWeaver: true },
   rift_breacher: { name: 'Dimensional Rift Breacher', hp: 550, speed: 75, r: 16, armor: 0.35, reward: 50, leak: 2, isEtherVoid: true },
-  planetary_leviathan: { name: 'Planetary World-Eater Leviathan', hp: 8500, speed: 32, r: 35, armor: 0.60, reward: 500, leak: 5, isLeviathan: true }
+  planetary_leviathan: { name: 'Planetary World-Eater Leviathan', hp: 8500, speed: 32, r: 35, armor: 0.60, reward: 500, leak: 5, isLeviathan: true },
+  // 25.0 The Unified Emergent Crucible: Mirror Architect Counter-Hijackers
+  galvanic_siphon: { name: 'Galvanic Siphon Leech', hp: 520, speed: 56, r: 16, armor: 0.25, reward: 42, leak: 2, isSiphon: true, mass: 2.2 },
+  mirror_husk: { name: 'Prismatic Mirror-Husk', hp: 460, speed: 62, r: 15, armor: 0.45, reward: 38, leak: 2, isMirrorHusk: true, mass: 1.8 },
+  anchor_behemoth: { name: 'Tectonic Anchor-Behemoth', hp: 980, speed: 36, r: 21, armor: 0.60, reward: 65, leak: 3, isAnchor: true, mass: 5.0 }
 };
 const hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
@@ -1052,6 +1056,15 @@ function buildSpawns(n) {
         applied++;
         if (applied >= (threat.id === 'deflector' ? 3 : 1)) break;
       }
+    }
+  }
+
+  // 25.0 Mirror Architect AI: Counter-Hijack Emergent Chain Spawns
+  if (typeof analyzeMirrorArchitectThreats === 'function') {
+    const hijackList = analyzeMirrorArchitectThreats(n);
+    for (let hIdx = 0; hIdx < hijackList.length; hIdx++) {
+      const unitType = hijackList[hIdx];
+      add(3.2 + hIdx * 2.5, unitType);
     }
   }
 
@@ -3281,6 +3294,71 @@ const BIOSPHERE_CONFIG = {
     broodlingHp: 350,
     broodlingDps: 60,
     rewardMultiplier: 2.0
+  }
+};
+
+/* ============================================================
+   BASTION TD 25.0: THE UNIFIED EMERGENT CRUCIBLE
+   Clean 3-Axiom Physics, Medium Coupling & Mirror Architect AI
+   ============================================================ */
+const EMERGENT_CRUCIBLE_CONFIG = {
+  maxChainDepth: 6,
+  novelty: {
+    minChainLength: 2,
+    freshMultiplier: 1.5,
+    staleThreshold: 5,
+    staleMultiplier: 0.25,
+    baseDiscoveryGold: 22,
+    rareCoreMinLength: 4
+  },
+  mediumCoupling: {
+    slingshotSpeedMult: 1.65,
+    slingshotSplashBonus: 1.35,
+    slingshotDmgMult: 1.30,
+    conduitIonizeMult: 1.25,
+    conduitArcRadius: 85,
+    cryoInfuseMult: 1.25,
+    cryoRefractAngle: 0.42,
+    cryoRefractRange: 145,
+    cryoRefractDmgShare: 0.55,
+    steamCoolingAmount: 18,
+    steamScaldDps: 45,
+    exhaustHeatThreshold: 75,
+    exhaustRadius: 78
+  },
+  surfaceCircuit: {
+    maxTiles: 16,
+    conductiveSoilTypes: ['frost_slick', 'acid_sinkhole'],
+    conductiveHazardTypes: ['radiation', 'frostfire'],
+    damageShare: 0.65
+  },
+  kineticBowling: {
+    impulsePerDeltaT: 32,
+    collisionRadius: 28,
+    damagePerMassSpeed: 18,
+    frostSlideBonus: 1.5
+  },
+  unitMass: {
+    swarm: 0.4,
+    scout: 0.8,
+    stealth: 0.7,
+    healer: 1.1,
+    breacher: 1.2,
+    sapper: 1.3,
+    gorger: 2.0,
+    brute: 3.0,
+    carrier: 3.5,
+    boss: 8.0,
+    galvanic_siphon: 2.2,
+    mirror_husk: 1.8,
+    anchor_behemoth: 5.0
+  },
+  mirrorArchitect: {
+    unlockWave: 5,
+    earlyUnlockWave: 3,
+    earlyUnlockChains: 3,
+    empBacklashDur: 2.5,
+    hijackTriggerCount: 2
   }
 };
 

@@ -447,6 +447,20 @@ function newGame(keepSpeed) {
       consumptionThisWave: { titanium: 0, promethium: 0, cryo_polymer: 0, nanofluid: 0 },
       embargoActive: false,
       embargoTimer: 0
+    },
+    // 25.0 The Unified Emergent Crucible Systems
+    emergent: {
+      discoveredChains: {},
+      uniqueCount: 0,
+      totalChains: 0,
+      recentSignatures: [],
+      signatureFreq: { circuit: 0, refract: 0, kinetic: 0 },
+      hijackThreats: [],
+      totalBonusGold: 0,
+      activeBanner: null,
+      circuitArcs: [],
+      refractBeams: [],
+      bowlingImpacts: []
     }
   };
   initDoctrineSkills();
@@ -1918,6 +1932,37 @@ function dealDamage(e, amount, type, src, opts) {
     return 0; // Immune to all tower weapons, only Titan Mech parry/finisher can destroy!
   }
 
+  // 25.0 Mirror Architect Hijack: Prismatic Mirror-Husk
+  if (e.isMirrorHusk && !e.dead) {
+    const isBeamOrEnergy = type === 'energy' || type === 'laser' || opts.isRefract || (src && (src.type === 'rail' || src.type === 'fusion_deathray'));
+    const isBluntOrKinetic = !isBeamOrEnergy && ((type === 'phys' && a >= 45) || type === 'plasma' || opts.isKineticBowling || opts.isImpulse);
+    if (!e.mirrorCracked && isBeamOrEnergy) {
+      if (src && typeof src === 'object') {
+        const backlashDur = (typeof EMERGENT_CRUCIBLE_CONFIG !== 'undefined') ? EMERGENT_CRUCIBLE_CONFIG.mirrorArchitect.empBacklashDur : 2.5;
+        src.empT = Math.max(src.empT || 0, backlashDur);
+        if (typeof addFx === 'function') addFx('rail', e.x, e.y, src.x, src.y, 0.25, '#f43f5e', 5);
+        addText(src.x, src.y - 22, 'MIRROR BACKLASH!', '#f43f5e', 12);
+      }
+      if (G && G.enemies) {
+        for (const ally of G.enemies) {
+          if (!ally.dead && ally !== e && Math.hypot(ally.x - e.x, ally.y - e.y) <= 85) {
+            ally.maxShield = Math.max(ally.maxShield || 0, Math.round((ally.maxHp || 300) * 0.25));
+            ally.shield = Math.min(ally.maxShield, (ally.shield || 0) + 45);
+          }
+        }
+      }
+      burst(e.x, e.y, 8, '#f43f5e', 90, 0.35, 2.5, true);
+      addText(e.x, e.y - e.r - 20, 'REFLECTED!', '#f43f5e', 12);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shield');
+      a *= 0.10;
+    } else if (!e.mirrorCracked && isBluntOrKinetic) {
+      e.mirrorCracked = true;
+      burst(e.x, e.y, 12, '#fbbf24', 110, 0.4, 3, true);
+      addText(e.x, e.y - e.r - 18, 'MIRROR CRACKED!', '#fbbf24', 12);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shatter');
+    }
+  }
+
   // 20.0 Epigenetic Swarm Adaptive Gene Mutations & Tracking
   if (G && G.epigeneticSwarm) {
     const swType = (type === 'kinetic' || type === 'phys') ? 'phys' : ((type === 'tesla' || type === 'energy') ? 'energy' : type);
@@ -2400,12 +2445,25 @@ function dealDamage(e, amount, type, src, opts) {
           dealDamage(o, a * 0.4, 'plasma', src, { isReaction: true, noReaction: true });
         }
       }
+      // 25.0 Thermobaric Piston Impulse on extreme temperature clash
+      if (!opts.isImpulse && typeof triggerThermobaricImpulse === 'function') {
+        const shockChain = appendChainStep(opts.chain, 'thermal_shock');
+        triggerThermobaricImpulse(e.x, e.y, src, shockChain);
+      }
       if (G && G.entropy && G.entropy.directive && G.entropy.directive.id === 'directive_thermal_shock') {
         G.entropy.directive.progress = (G.entropy.directive.progress || 0) + 1;
         if (G.entropy.directive.progress >= G.entropy.directive.targetCount) {
           resolveDirectiveReward();
         }
       }
+    }
+
+    // 25.0 Reverse Thermal Clash (Cryo hitting active Thermite burn -> Steam Expansion Piston)
+    if (type === 'cryo' && e.thermiteT > 0 && !opts.isImpulse && typeof triggerThermobaricImpulse === 'function') {
+      reactionTriggered = true;
+      e.thermiteT = 0;
+      const steamChain = appendChainStep(opts.chain, 'cryo_steam_piston');
+      triggerThermobaricImpulse(e.x, e.y, src, steamChain);
     }
 
     // 2. Electrolytic Detonation (Acid + Tesla)
@@ -2547,6 +2605,10 @@ function dealDamage(e, amount, type, src, opts) {
   }
   else e.dmgAcc += a;
   if (src && typeof src === 'object' && typeof src.dmg === 'number') src.dmg += a;
+  // 25.0 Emergent Chain Novelty Discovery Evaluation
+  if (opts && opts.chain && opts.chain.length >= 2 && !opts.isNoveltyEvaluated && typeof evaluateEmergentNovelty === 'function') {
+    evaluateEmergentNovelty(opts.chain, e.x, e.y);
+  }
   Sfx.play('hit');
   if (e.hp <= 0) killEnemy(e, src);
   return a;
@@ -7415,6 +7477,8 @@ function updateBastion20Systems(dt) {
   updatePhoenixSystems(dt);
   // 24.0 The Living Biosphere & Dynamic Commodity Crucible Systems
   updateBiosphereSystems(dt);
+  // 25.0 The Unified Emergent Crucible Systems
+  updateEmergentSystems(dt);
 }
 
 /* ============================================================
@@ -8722,5 +8786,604 @@ function recordBiosphereEndGame(won) {
   if (typeof Store !== 'undefined') {
     Store.set('nb_ecoMastery', SAVE.ecoMastery);
     Store.set('nb_marketReputation', SAVE.marketReputation);
+  }
+}
+
+/* ============================================================
+   25.0 THE UNIFIED EMERGENT CRUCIBLE (3-AXIOM PHYSICS & MIRROR ARCHITECT)
+   Clean universal rules producing emergent chain reactions without UI bloat.
+   ============================================================ */
+
+function getEmergentCfg() {
+  return (typeof EMERGENT_CRUCIBLE_CONFIG !== 'undefined') ? EMERGENT_CRUCIBLE_CONFIG : {
+    maxChainDepth: 6,
+    novelty: { minChainLength: 2, freshMultiplier: 1.5, staleThreshold: 5, staleMultiplier: 0.25, baseDiscoveryGold: 22, rareCoreMinLength: 4 },
+    mediumCoupling: {
+      slingshotSpeedMult: 1.65, slingshotSplashBonus: 1.35, slingshotDmgMult: 1.30,
+      conduitIonizeMult: 1.25, conduitArcRadius: 85, cryoInfuseMult: 1.25,
+      cryoRefractAngle: 0.42, cryoRefractRange: 145, cryoRefractDmgShare: 0.55,
+      steamCoolingAmount: 18, steamScaldDps: 45, exhaustHeatThreshold: 75, exhaustRadius: 78
+    },
+    surfaceCircuit: { maxTiles: 16, conductiveSoilTypes: ['frost_slick', 'acid_sinkhole'], conductiveHazardTypes: ['radiation', 'frostfire'], damageShare: 0.65 },
+    kineticBowling: { impulsePerDeltaT: 32, collisionRadius: 28, damagePerMassSpeed: 18, frostSlideBonus: 1.5 },
+    unitMass: { swarm: 0.4, scout: 0.8, stealth: 0.7, healer: 1.1, breacher: 1.2, brute: 3.0, carrier: 3.5, boss: 8.0, galvanic_siphon: 2.2, mirror_husk: 1.8, anchor_behemoth: 5.0 },
+    mirrorArchitect: { unlockWave: 5, earlyUnlockWave: 3, earlyUnlockChains: 3, empBacklashDur: 2.5, hijackTriggerCount: 2 }
+  };
+}
+
+function getUnitMass(e) {
+  if (!e) return 1.0;
+  if (typeof e.mass === 'number') return e.mass;
+  const map = getEmergentCfg().unitMass || {};
+  return map[e.type] || 1.0;
+}
+
+/**
+ * Builds a bounded immutable chain trace while suppressing immediate self-loops.
+ */
+function appendChainStep(chain, step) {
+  const maxD = getEmergentCfg().maxChainDepth || 6;
+  const arr = Array.isArray(chain) ? [...chain] : [];
+  if (arr.length >= maxD) return arr;
+  if (arr.length > 0 && arr[arr.length - 1] === step) return arr;
+  arr.push(step);
+  return arr;
+}
+
+function segsIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+  const ccw = (p1x, p1y, p2x, p2y, p3x, p3y) => (p3y - p1y) * (p2x - p1x) > (p2y - p1y) * (p3x - p1x);
+  return (ccw(ax, ay, cx, cy, dx, dy) !== ccw(bx, by, cx, cy, dx, dy)) &&
+         (ccw(ax, ay, bx, by, cx, cy) !== ccw(ax, ay, bx, by, dx, dy));
+}
+
+function classifyEmergentMotif(chain) {
+  if (!Array.isArray(chain)) return null;
+  if (chain.includes('surface_circuit') || chain.includes('conduit_ionize')) return 'circuit';
+  if (chain.includes('cryo_refract')) return 'refract';
+  if (chain.includes('thermobaric_piston') || chain.includes('kinetic_bowling') || chain.includes('thermal_shock') || chain.includes('cryo_steam_piston')) return 'kinetic';
+  return null;
+}
+
+/**
+ * Scores chain uniqueness: rewards novel physics chains and decays stale repetitions.
+ */
+function evaluateEmergentNovelty(chainTrace, x, y) {
+  if (!G || !G.emergent || !Array.isArray(chainTrace)) return null;
+  const cfg = getEmergentCfg().novelty;
+  // Compact duplicate adjacent labels
+  const clean = [];
+  for (const s of chainTrace) {
+    if (clean[clean.length - 1] !== s) clean.push(s);
+  }
+  if (clean.length < (cfg.minChainLength || 2)) return null;
+
+  const em = G.emergent;
+  const sig = clean.join('->');
+  const prevTotalForSig = em.discoveredChains[sig] || 0;
+  const isNew = prevTotalForSig === 0;
+
+  em.discoveredChains[sig] = prevTotalForSig + 1;
+  if (isNew) em.uniqueCount = (em.uniqueCount || 0) + 1;
+  em.totalChains = (em.totalChains || 0) + 1;
+
+  // Sliding window anti-stagnation check across last 12 chains
+  em.recentSignatures.push(sig);
+  if (em.recentSignatures.length > 12) em.recentSignatures.shift();
+  let recentCount = 0;
+  for (const r of em.recentSignatures) {
+    if (r === sig) recentCount++;
+  }
+
+  let freshness = 1.0;
+  let status = 'CHAIN';
+  if (isNew) {
+    freshness = cfg.freshMultiplier || 1.5;
+    status = 'DISCOVERY';
+  } else if (recentCount >= (cfg.staleThreshold || 5)) {
+    freshness = cfg.staleMultiplier || 0.25;
+    status = 'STALE';
+  }
+
+  const lenMult = 1 + 0.35 * (clean.length - 1);
+  const rareBonus = clean.length >= (cfg.rareCoreMinLength || 4) ? 1.5 : 1.0;
+  const bountyGold = Math.max(2, Math.round((cfg.baseDiscoveryGold || 22) * (clean.length - 1) * freshness * rareBonus));
+
+  G.gold = (G.gold || 0) + bountyGold;
+  em.totalBonusGold = (em.totalBonusGold || 0) + bountyGold;
+
+  if (isNew && clean.length >= (cfg.rareCoreMinLength || 4) && typeof addCores === 'function') {
+    addCores(1);
+  }
+
+  // Track motif frequencies for Mirror Architect AI
+  const motif = classifyEmergentMotif(clean);
+  if (motif && em.signatureFreq) {
+    em.signatureFreq[motif] = (em.signatureFreq[motif] || 0) + 1;
+  }
+
+  // Persistent Codex-free discovery tally
+  if (typeof SAVE !== 'undefined') {
+    SAVE.emergentDiscoveries = SAVE.emergentDiscoveries || {};
+    SAVE.emergentDiscoveries[sig] = (SAVE.emergentDiscoveries[sig] || 0) + 1;
+    if (isNew && typeof Store !== 'undefined') Store.set('nb_emergentDiscoveries', SAVE.emergentDiscoveries);
+  }
+
+  const px = typeof x === 'number' ? x : (typeof W !== 'undefined' ? W / 2 : 480);
+  const py = typeof y === 'number' ? y : (typeof H !== 'undefined' ? H / 2 : 300);
+  const labelSteps = clean.map(s => s.toUpperCase().replace(/_/g, ' ')).join(' -> ');
+
+  em.activeBanner = {
+    text: (isNew ? '★ NEW EMERGENT DISCOVERY! ' : status === 'STALE' ? 'REPEAT PATTERN (DIMINISHED): ' : '⚡ EMERGENT CHAIN: ') + clean.length + '-STEP',
+    sub: labelSteps + ' (+' + bountyGold + 'G)',
+    color: isNew ? '#fde047' : (status === 'STALE' ? '#94a3b8' : '#38bdf8'),
+    t: 0,
+    max: 3.0
+  };
+
+  if (typeof addText === 'function') {
+    const tag = isNew ? '★ ' + clean.length + '-CHAIN DISCOVERY +' + bountyGold + 'G!' : (status === 'STALE' ? clean.length + '-CHAIN (STALE +' + bountyGold + 'G)' : '⚡ ' + clean.length + '-CHAIN +' + bountyGold + 'G');
+    addText(px, py - 24, tag, em.activeBanner.color, isNew ? 15 : 13);
+  }
+  if (isNew && typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('matrix_unlock');
+  return { sig, isNew, freshness, bountyGold, multiplier: lenMult * freshness };
+}
+
+/**
+ * Evaluates Mirror Architect counter-hijack threats based on dominant player motifs.
+ */
+function analyzeMirrorArchitectThreats(waveNum) {
+  if (!G || !G.emergent) return [];
+  const cfg = getEmergentCfg().mirrorArchitect;
+  const w = waveNum || G.wave || 1;
+  const unlocked = (w >= (cfg.unlockWave || 5)) || (w >= (cfg.earlyUnlockWave || 3) && (G.emergent.totalChains || 0) >= (cfg.earlyUnlockChains || 3));
+  if (!unlocked) {
+    G.emergent.hijackThreats = [];
+    return [];
+  }
+
+  const freq = G.emergent.signatureFreq || {};
+  const thresh = cfg.hijackTriggerCount || 2;
+  const out = [];
+  if ((freq.circuit || 0) >= thresh) out.push('galvanic_siphon');
+  if ((freq.refract || 0) >= thresh) out.push('mirror_husk');
+  if ((freq.kinetic || 0) >= thresh) out.push('anchor_behemoth');
+  G.emergent.hijackThreats = out;
+  return out;
+}
+
+/**
+ * AXIOM 1: In-Flight Medium Coupling.
+ * Transforms beams/projectiles dynamically when intersecting relays, cryo zones, or gravity wells.
+ */
+function applyMediumCoupling(actor, x1, y1, x2, y2, elemType) {
+  if (!G || !actor) return actor;
+  const cfg = getEmergentCfg().mediumCoupling;
+  const segDistFn = typeof distToSeg === 'function' ? distToSeg : ((px, py, ax, ay) => Math.hypot(px - ax, py - ay));
+  actor.chain = Array.isArray(actor.chain) ? actor.chain : [elemType || 'shot'];
+
+  // 1. Cross Relay / Resonance / Flux Conduits -> Ionized Conduit Shot
+  if (!actor._coupledConduit && (elemType === 'phys' || elemType === 'rail' || elemType === 'gatling')) {
+    let crossed = false;
+    if (G.resonanceLines && G.resonanceLines.length > 0) {
+      for (const l of G.resonanceLines) {
+        if (segsIntersect(x1, y1, x2, y2, l.x1, l.y1, l.x2, l.y2)) { crossed = true; break; }
+      }
+    }
+    if (!crossed && G.fluxConduits && G.fluxConduits.length > 0) {
+      for (const fc of G.fluxConduits) {
+        if (!fc.disabledT && fc.t1 && fc.t2 && segsIntersect(x1, y1, x2, y2, fc.t1.x, fc.t1.y, fc.t2.x, fc.t2.y)) {
+          crossed = true; break;
+        }
+      }
+    }
+    if (crossed) {
+      actor._coupledConduit = true;
+      actor.ionized = true;
+      actor.dmg = (actor.dmg || 0) * (cfg.conduitIonizeMult || 1.25);
+      actor.chain = appendChainStep(actor.chain, 'conduit_ionize');
+      if (G.emergent && G.emergent.circuitArcs) {
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        G.emergent.circuitArcs.push({ x1, y1, x2: mx, y2: my, life: 0.35, color: '#38bdf8' });
+      }
+      if (typeof burst === 'function') burst((x1 + x2) / 2, (y1 + y2) / 2, 6, '#38bdf8', 80, 0.25, 2, true);
+    }
+  }
+
+  // 2. Cross Cryo Aura or Frost Slick -> Cryo-Plasma Infusion (or Cryo cooling hot towers)
+  if (!actor._coupledCryo && (elemType === 'plasma' || elemType === 'mortar')) {
+    let touchedCryo = false;
+    if (G.towers) {
+      for (const t of G.towers) {
+        if (t.type === 'cryo' || t.type === 'fusion_zero') {
+          const rPx = (typeof getTierData === 'function' ? getTierData(t).range : 2.5) * (typeof TILE !== 'undefined' ? TILE : 60);
+          if (segDistFn(t.x, t.y, x1, y1, x2, y2) <= rPx) { touchedCryo = true; break; }
+        }
+      }
+    }
+    if (!touchedCryo && G.soilTiles) {
+      const tileSz = typeof TILE !== 'undefined' ? TILE : 60;
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      const sk = Math.floor(mx / tileSz) + '_' + Math.floor(my / tileSz);
+      const ek = Math.floor(x2 / tileSz) + '_' + Math.floor(y2 / tileSz);
+      if ((G.soilTiles[sk] && G.soilTiles[sk].type === 'frost_slick') || (G.soilTiles[ek] && G.soilTiles[ek].type === 'frost_slick')) {
+        touchedCryo = true;
+      }
+    }
+    if (touchedCryo) {
+      actor._coupledCryo = true;
+      actor.cryoInfused = true;
+      actor.dmg = (actor.dmg || 0) * (cfg.cryoInfuseMult || 1.25);
+      actor.chain = appendChainStep(actor.chain, 'cryo_infuse');
+      if (typeof burst === 'function') burst((x1 + x2) / 2, (y1 + y2) / 2, 8, '#67e8f9', 90, 0.3, 2.5, true);
+    }
+  } else if (!actor._coupledSteam && elemType === 'cryo' && G.towers) {
+    // Cryo touching hot tower vents superheated steam, cooling the tower and scalding enemies
+    for (const t of G.towers) {
+      if ((t.heat || 0) >= (cfg.exhaustHeatThreshold || 75) && segDistFn(t.x, t.y, x1, y1, x2, y2) <= 45) {
+        actor._coupledSteam = true;
+        t.heat = Math.max(0, t.heat - (cfg.steamCoolingAmount || 18));
+        actor.chain = appendChainStep(actor.chain, 'steam_vent');
+        if (typeof burst === 'function') burst(t.x, t.y, 12, '#e2e8f0', 110, 0.4, 3, true);
+        if (typeof addText === 'function') addText(t.x, t.y - 22, 'STEAM COOLING VENT!', '#bae6fd', 12);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('steam_purge');
+        break;
+      }
+    }
+  }
+
+  // 3. Cross Singularity / Chrono-Rift / Zero-G Field -> Gravitational Slingshot
+  if (!actor._coupledGravity) {
+    let gravCenter = null;
+    if (G.hazards) {
+      const sing = G.hazards.find(h => h.type === 'singularity' && segDistFn(h.x, h.y, x1, y1, x2, y2) <= (h.r || 65));
+      if (sing) gravCenter = sing;
+    }
+    if (!gravCenter && G.anomalies) {
+      const rift = G.anomalies.find(a => a.type === 'chrono_rift' && segDistFn(a.x, a.y, x1, y1, x2, y2) <= (a.r || 55));
+      if (rift) gravCenter = rift;
+    }
+    if (!gravCenter && G.zeroGravityFields && G.zeroGravityFields.length > 0) {
+      const zg = G.zeroGravityFields.find(f => segDistFn(f.x, f.y, x1, y1, x2, y2) <= (f.r || 75));
+      if (zg) gravCenter = zg;
+    }
+    if (gravCenter) {
+      actor._coupledGravity = true;
+      actor.slingshot = true;
+      actor.speedMult = (actor.speedMult || 1.0) * (cfg.slingshotSpeedMult || 1.65);
+      if (typeof actor.splash === 'number') actor.splash *= (cfg.slingshotSplashBonus || 1.35);
+      actor.dmg = (actor.dmg || 0) * (cfg.slingshotDmgMult || 1.30);
+      actor.chain = appendChainStep(actor.chain, 'gravity_slingshot');
+      if (typeof addRing === 'function') addRing(gravCenter.x, gravCenter.y, 8, 55, 0.35, '#a855f7', 3);
+      if (typeof addText === 'function') addText(gravCenter.x, gravCenter.y - 24, 'GRAVITY SLINGSHOT!', '#c084fc', 12);
+    }
+  }
+  return actor;
+}
+
+/**
+ * AXIOM 1b: Frozen Targets & Prisms act as Crystal Refractors for linear beams/rails.
+ */
+function triggerFrozenCrystalRefraction(target, baseDmg, angle, src, chainTrace) {
+  if (!G || !G.enemies || !target || target.dead) return 0;
+  if (!(target.stunT > 0 || target.freezeT > 0)) return 0;
+  if (target.isMirrorHusk && !target.mirrorCracked) return 0; // Uncracked mirror hijacks instead of refracting cleanly
+
+  const cfg = getEmergentCfg();
+  const nextChain = appendChainStep(chainTrace, 'cryo_refract');
+  if (nextChain.length > (cfg.maxChainDepth || 6)) return 0;
+
+  const spread = cfg.mediumCoupling.cryoRefractAngle || 0.42;
+  const rLen = cfg.mediumCoupling.cryoRefractRange || 145;
+  const rDmg = baseDmg * (cfg.mediumCoupling.cryoRefractDmgShare || 0.55);
+  let totalHits = 0;
+
+  for (const sign of [-1, 1]) {
+    const ra = angle + sign * spread;
+    const dx = Math.cos(ra), dy = Math.sin(ra);
+    const ex = target.x + dx * rLen, ey = target.y + dy * rLen;
+    if (typeof addFx === 'function') addFx('rail', target.x, target.y, ex, ey, 0.25, '#67e8f9', 4);
+    if (G.emergent && G.emergent.refractBeams) {
+      G.emergent.refractBeams.push({ x1: target.x, y1: target.y, x2: ex, y2: ey, life: 0.32 });
+    }
+    for (const foe of G.enemies) {
+      if (foe.dead || foe === target) continue;
+      const rx = foe.x - target.x, ry = foe.y - target.y, proj = rx * dx + ry * dy;
+      if (proj > 0 && proj <= rLen && Math.abs(rx * dy - ry * dx) <= (foe.r || 12) + 8) {
+        dealDamage(foe, rDmg, 'energy', src, { crit: true, isRefract: true, chain: nextChain });
+        totalHits++;
+      }
+    }
+  }
+
+  if (typeof burst === 'function') burst(target.x, target.y, 8, '#67e8f9', 100, 0.35, 2.5, true);
+  if (totalHits > 0 && typeof addText === 'function') {
+    addText(target.x, target.y - (target.r || 14) - 22, 'CRYSTAL REFRACT x' + totalHits, '#67e8f9', 13);
+  }
+  return totalHits;
+}
+
+/**
+ * AXIOM 2: Conductive Surface Circuitry.
+ * Propagates electricity across connected wet/frost/acid/oil road tiles unless hijacked by Galvanic Siphon.
+ */
+function propagateSurfaceCircuit(startX, startY, baseDmg, src, chainTrace) {
+  if (!G) return false;
+  const tileSz = typeof TILE !== 'undefined' ? TILE : 60;
+  const cols = typeof COLS !== 'undefined' ? COLS : 16;
+  const rows = typeof ROWS !== 'undefined' ? ROWS : 10;
+  const cfg = getEmergentCfg();
+  const cCfg = cfg.surfaceCircuit;
+
+  const isTileConductive = (c, r) => {
+    if (c < 0 || r < 0 || c >= cols || r >= rows) return false;
+    const sk = c + '_' + r;
+    if (G.soilTiles && G.soilTiles[sk] && cCfg.conductiveSoilTypes.includes(G.soilTiles[sk].type)) return true;
+    const cx = c * tileSz + tileSz / 2, cy = r * tileSz + tileSz / 2;
+    if (G.hazards && G.hazards.some(h => cCfg.conductiveHazardTypes.includes(h.type) && Math.hypot(h.x - cx, h.y - cy) <= (h.r || 35) + 18)) return true;
+    if (G.biosphere && G.biosphere.geomorphicNodes) {
+      if (G.biosphere.geomorphicNodes.some(n => (n.type === 'oil_vent' || n.type === 'spore_grove') && Math.hypot(n.x - cx, n.y - cy) <= (n.r || 35) + 18)) return true;
+    }
+    return false;
+  };
+
+  const sc = Math.floor(startX / tileSz), sr = Math.floor(startY / tileSz);
+  const seedQueue = [];
+  if (isTileConductive(sc, sr)) seedQueue.push([sc, sr]);
+  else {
+    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (isTileConductive(sc + dc, sr + dr)) { seedQueue.push([sc + dc, sr + dr]); break; }
+    }
+  }
+  if (seedQueue.length === 0) return false;
+
+  // Bounded BFS over contiguous conductive surface tiles
+  const visited = new Set();
+  const circuitTiles = [];
+  const maxT = cCfg.maxTiles || 16;
+  while (seedQueue.length > 0 && circuitTiles.length < maxT) {
+    const [cc, cr] = seedQueue.shift();
+    const key = cc + '_' + cr;
+    if (visited.has(key)) continue;
+    visited.add(key);
+    circuitTiles.push({ c: cc, r: cr, x: cc * tileSz + tileSz / 2, y: cr * tileSz + tileSz / 2 });
+    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nc = cc + dc, nr = cr + dr;
+      if (!visited.has(nc + '_' + nr) && isTileConductive(nc, nr)) {
+        seedQueue.push([nc, nr]);
+      }
+    }
+  }
+
+  if (circuitTiles.length === 0) return false;
+
+  // Gather enemies standing anywhere on the electrified surface network
+  const touchedFoes = [];
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (foe.dead) continue;
+      const fc = Math.floor(foe.x / tileSz), fr = Math.floor(foe.y / tileSz);
+      if (visited.has(fc + '_' + fr)) touchedFoes.push(foe);
+    }
+  }
+
+  // Mirror Architect Hijack check: Galvanic Siphon steals the entire circuit!
+  const siphon = touchedFoes.find(f => f.isSiphon);
+  if (siphon) {
+    if (src && typeof src === 'object') {
+      const empDur = cfg.mirrorArchitect.empBacklashDur || 2.5;
+      src.empT = Math.max(src.empT || 0, empDur);
+      if (typeof addBolt === 'function') addBolt(siphon.x, siphon.y, src.x, src.y, '#f43f5e');
+      if (typeof addText === 'function') addText(src.x, src.y - 22, 'EMP BACKLASH!', '#f43f5e', 12);
+    }
+    for (const ally of touchedFoes) {
+      ally.maxShield = Math.max(ally.maxShield || 0, Math.round((ally.maxHp || 300) * 0.35));
+      ally.shield = Math.min(ally.maxShield, (ally.shield || 0) + 75);
+    }
+    if (typeof burst === 'function') burst(siphon.x, siphon.y, 18, '#38bdf8', 130, 0.5, 3.5, true);
+    if (typeof addText === 'function') addText(siphon.x, siphon.y - 24, '⚡ CIRCUIT HIJACKED!', '#f43f5e', 14);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('emp');
+    if (G.emergent && G.emergent.signatureFreq) G.emergent.signatureFreq.circuit = (G.emergent.signatureFreq.circuit || 0) + 1;
+    return false;
+  }
+
+  const nextChain = appendChainStep(chainTrace, 'surface_circuit');
+  const shockDmg = baseDmg * (cCfg.damageShare || 0.65);
+
+  for (let i = 1; i < circuitTiles.length; i++) {
+    const a = circuitTiles[i - 1], b = circuitTiles[i];
+    if (G.emergent && G.emergent.circuitArcs) {
+      G.emergent.circuitArcs.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, life: 0.35, color: '#22d3ee' });
+    }
+    if (typeof addBolt === 'function') addBolt(a.x, a.y, b.x, b.y, '#22d3ee');
+  }
+
+  for (const foe of touchedFoes) {
+    dealDamage(foe, shockDmg, 'energy', src, { isReaction: true, isSurfaceCircuit: true, chain: nextChain });
+  }
+  if (touchedFoes.length > 0 && typeof addText === 'function') {
+    addText(startX, startY - 30, '⚡ CIRCUIT x' + circuitTiles.length + ' TILES!', '#22d3ee', 13);
+  } else if (nextChain.length >= 2) {
+    evaluateEmergentNovelty(nextChain, startX, startY);
+  }
+  return true;
+}
+
+/**
+ * AXIOM 2b: Thermobaric Expansion Piston & Kinetic Bowling Collisions.
+ */
+function triggerThermobaricImpulse(x, y, src, chainTrace) {
+  if (!G || !G.enemies) return 0;
+  const cfg = getEmergentCfg();
+  const baseImpulse = cfg.kineticBowling.impulsePerDeltaT || 32;
+  const nextChain = appendChainStep(chainTrace, 'thermobaric_piston');
+  if (nextChain.length > (cfg.maxChainDepth || 6)) return 0;
+
+  let knocked = 0;
+  const tileSz = typeof TILE !== 'undefined' ? TILE : 60;
+  for (const e of G.enemies) {
+    if (e.dead) continue;
+    if (Math.hypot(e.x - x, e.y - y) <= 90) {
+      if (e.isAnchor) {
+        if (typeof addText === 'function') addText(e.x, e.y - (e.r || 18) - 18, '⚓ ANCHORED!', '#f59e0b', 12);
+        continue;
+      }
+      const ek = Math.floor(e.x / tileSz) + '_' + Math.floor(e.y / tileSz);
+      const onIce = G.soilTiles && G.soilTiles[ek] && G.soilTiles[ek].type === 'frost_slick';
+      const impulse = baseImpulse * (onIce ? (cfg.kineticBowling.frostSlideBonus || 1.5) : 1.0);
+      resolveKineticCollision(e, impulse, src, nextChain);
+      knocked++;
+    }
+  }
+  if (knocked > 0) {
+    if (typeof addRing === 'function') addRing(x, y, 8, 95, 0.45, '#fde047', 4);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shockwave');
+  }
+  return knocked;
+}
+
+function resolveKineticCollision(propelledEnemy, impulseD, src, chainTrace) {
+  if (!G || !propelledEnemy || propelledEnemy.dead) return 0;
+  if (propelledEnemy.isAnchor) return 0;
+
+  const cfg = getEmergentCfg();
+  const kbCfg = cfg.kineticBowling;
+  const hasPathD = typeof propelledEnemy.d === 'number' && propelledEnemy.d > 0;
+  const oldD = hasPathD ? propelledEnemy.d : 0;
+  const newD = hasPathD ? Math.max(0, oldD - impulseD) : 0;
+  if (hasPathD) {
+    propelledEnemy.d = newD;
+    // Update visual coordinates immediately only when enemy is actively traversing path
+    if (typeof posAt === 'function') {
+      const p = posAt(newD, propelledEnemy.seg || 0, propelledEnemy.pathId || 0);
+      propelledEnemy.seg = p.seg;
+      propelledEnemy.x = p.x - Math.sin(p.ang) * (propelledEnemy.off || 0);
+      propelledEnemy.y = p.y + Math.cos(p.ang) * (propelledEnemy.off || 0);
+    }
+  }
+
+  if (!G.enemies || G.enemies.length <= 1) return 0;
+  const mass = getUnitMass(propelledEnemy);
+  const colDmg = Math.round(mass * (impulseD / 20) * (kbCfg.damagePerMassSpeed || 18));
+  const span = kbCfg.collisionRadius || 28;
+  const bowlChain = appendChainStep(chainTrace, 'kinetic_bowling');
+  let struck = 0;
+
+  for (const o of G.enemies) {
+    if (o.dead || o === propelledEnemy) continue;
+    let collided = false;
+    if (hasPathD && typeof o.d === 'number') {
+      if ((o.pathId || 0) === (propelledEnemy.pathId || 0)) {
+        const od = o.d || 0;
+        if (od >= newD - span && od <= oldD + 10) collided = true;
+      }
+    } else if (Math.hypot(o.x - propelledEnemy.x, o.y - propelledEnemy.y) <= impulseD + span) {
+      collided = true;
+    }
+    if (collided) {
+      struck++;
+      if (!o.isAnchor) {
+        if (hasPathD && typeof o.d === 'number') o.d = Math.max(0, (o.d || 0) - impulseD * 0.45);
+        if (o.shield > 0) o.shield = Math.max(0, o.shield - colDmg);
+      }
+      if (G.emergent && G.emergent.bowlingImpacts) {
+        G.emergent.bowlingImpacts.push({ x: o.x, y: o.y, life: 0.35 });
+      }
+      dealDamage(o, colDmg, 'phys', src, { crit: mass >= 2.5, isKineticBowling: true, isReaction: true, chain: bowlChain });
+    }
+  }
+
+  if (struck > 0) {
+    if (typeof burst === 'function') burst(propelledEnemy.x, propelledEnemy.y, 12, '#fbbf24', 120, 0.35, 3, true);
+    if (typeof addText === 'function') addText(propelledEnemy.x, propelledEnemy.y - 26, '🎳 BOWLING x' + struck + '!', '#fbbf24', 14);
+  }
+  return struck;
+}
+
+/**
+ * AXIOM 2c: Hot tower radiant exhaust ignites adjacent oil vents or vaporizes frost into scalding steam.
+ */
+function processTowerRadiantExhaust(t, dt) {
+  if (!G || !t) return;
+  const cfg = getEmergentCfg().mediumCoupling;
+  if ((t.heat || 0) < (cfg.exhaustHeatThreshold || 75)) return;
+
+  t._exhaustCd = (t._exhaustCd || 0) - dt;
+  if (t._exhaustCd > 0) return;
+  t._exhaustCd = 1.25;
+
+  const rad = cfg.exhaustRadius || 78;
+  // Auto-ignite idle nearby oil vents
+  if (G.biosphere && G.biosphere.geomorphicNodes && typeof triggerGeomorphicReaction === 'function') {
+    for (const node of G.biosphere.geomorphicNodes) {
+      if (node.type === 'oil_vent' && node.state === 'idle' && Math.hypot(node.x - t.x, node.y - t.y) <= rad) {
+        if (triggerGeomorphicReaction(node.id, 'plasma')) {
+          evaluateEmergentNovelty([t.type, 'radiant_exhaust', 'oil_ignition'], node.x, node.y);
+          return;
+        }
+      }
+    }
+  }
+  // Vaporize adjacent frost_slick tile into steam burst + cool tower
+  if (G.soilTiles) {
+    const tileSz = typeof TILE !== 'undefined' ? TILE : 60;
+    for (const key in G.soilTiles) {
+      const tile = G.soilTiles[key];
+      if (tile && tile.type === 'frost_slick') {
+        const tx = tile.c * tileSz + tileSz / 2, ty = tile.r * tileSz + tileSz / 2;
+        if (Math.hypot(tx - t.x, ty - t.y) <= rad) {
+          delete G.soilTiles[key];
+          t.heat = Math.max(0, t.heat - 12);
+          if (typeof burst === 'function') burst(tx, ty, 12, '#e2e8f0', 90, 0.4, 3, false);
+          if (typeof addText === 'function') addText(tx, ty - 18, 'EXHAUST STEAM!', '#bae6fd', 12);
+          if (G.enemies) {
+            for (const foe of G.enemies) {
+              if (!foe.dead && Math.hypot(foe.x - tx, foe.y - ty) <= 65) {
+                dealDamage(foe, cfg.steamScaldDps || 45, 'energy', t, { isReaction: true, chain: [t.type, 'radiant_exhaust', 'steam_scald'] });
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+}
+
+function updateEmergentSystems(dt) {
+  if (!G || !G.emergent) return;
+  const em = G.emergent;
+
+  if (em.activeBanner) {
+    em.activeBanner.t += dt;
+    if (em.activeBanner.t >= em.activeBanner.max) em.activeBanner = null;
+  }
+
+  const decayList = (arr) => {
+    if (!arr || arr.length === 0) return;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      arr[i].life -= dt;
+      if (arr[i].life <= 0) arr.splice(i, 1);
+    }
+  };
+  decayList(em.circuitArcs);
+  decayList(em.refractBeams);
+  decayList(em.bowlingImpacts);
+
+  // AXIOM 1: Hostile mortar deflection when passing through active Singularities or Chrono-Rifts
+  if (G.incomingMortars && G.incomingMortars.length > 0 && G.enemies && G.enemies.length > 0) {
+    for (const m of G.incomingMortars) {
+      if (m.reflected) continue;
+      const hitWell = (G.hazards && G.hazards.some(h => h.type === 'singularity' && Math.hypot(h.x - m.x, h.y - m.y) <= (h.r || 65))) ||
+                      (G.anomalies && G.anomalies.some(a => a.type === 'chrono_rift' && Math.hypot(a.x - m.x, a.y - m.y) <= (a.r || 55)));
+      if (hitWell) {
+        m.reflected = true;
+        const foe = G.enemies.find(e => !e.dead);
+        if (foe) {
+          m.tx = foe.x; m.ty = foe.y;
+          dealDamage(foe, 140, 'plasma', 'singularity_deflect', { crit: true, chain: ['hostile_mortar', 'gravity_slingshot'] });
+          if (typeof burst === 'function') burst(m.x, m.y, 12, '#a855f7', 120, 0.4, 3, true);
+        }
+      }
+    }
   }
 }

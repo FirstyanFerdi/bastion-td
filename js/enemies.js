@@ -64,6 +64,12 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     isSlimeWeaver: type === 'slime_weaver',
     isEtherVoid: type === 'rift_breacher',
     isLeviathan: type === 'planetary_leviathan',
+    // 25.0 The Unified Emergent Crucible: Mirror Architect Properties
+    isSiphon: !!(d && d.isSiphon) || type === 'galvanic_siphon',
+    isMirrorHusk: !!(d && d.isMirrorHusk) || type === 'mirror_husk',
+    isAnchor: !!(d && d.isAnchor) || type === 'anchor_behemoth',
+    mirrorCracked: false,
+    mass: (d && d.mass) ? d.mass : 1.0,
     slimeSprayCd: 3.0,
     genome: { kin: 0.1, heat: 0.1, elec: 0.1, cryo: 0.1, twitch: 0.1, mitosis: 0, frenzy: 0, entropic: 0 }
   };
@@ -224,6 +230,19 @@ function updateEnemy(e, dt) {
         const heal = e.maxHp * 0.06 * dt;
         e.hp = Math.min(e.maxHp, e.hp + heal);
         if (Math.random() < 0.2) burst(e.x, e.y, 2, '#22c55e', 40, 0.3, 2, true);
+      }
+    } else {
+      e.noDmgT = 0;
+    }
+  }
+  // 25.0 Mirror-Husk regenerates cracked carapace after 4s untouched
+  if (e.isMirrorHusk && !e.dead && e.mirrorCracked) {
+    if (e.dmgT <= 0) {
+      e.noDmgT += dt;
+      if (e.noDmgT >= 4.0) {
+        e.mirrorCracked = false;
+        e.noDmgT = 0;
+        addText(e.x, e.y - e.r - 16, 'MIRROR RESTORED', '#c084fc', 11);
       }
     } else {
       e.noDmgT = 0;

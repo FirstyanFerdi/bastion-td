@@ -2884,6 +2884,43 @@ Menindaklanjuti masukan pengguna terkait tampilan toolbar atas (`.topbar-actions
 - `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (100% Bersih: 60 referenced element IDs terverifikasi utuh)**
 - **Seluruh 36 Unit Test Suites di repositori: 100% LULUS.**
 
+---
+
+## 46. Implementasi Bastion TD 25.0: The Unified Emergent Crucible
+
+Berdasarkan master blueprint `bastion_td_emergent_crucible_blueprint.md` yang telah disetujui pengguna, sistem permainan ditingkatkan menggunakan **3 Hukum Fisika Universal yang Sederhana** namun melahirkan interaksi berantai (*emergent combos*) yang kompleks, tak terduga, dan bebas penambahan tombol UI (*Zero Topbar Bloat*):
+
+### 46.1 Rincian Tiga Aksioma & Mekanik Inti
+1. **Aksioma 1 — Transmutasi Medium Terbang (`applyMediumCoupling` & `triggerFrozenCrystalRefraction` di `js/state.js`, `js/towers.js`, `js/waves.js`):**
+   - **Conduit Ionize:** Tembakan `gatling` atau `rail` yang melintasi garis kabel energi aktif (`resonanceLines` / `fluxConduits`) otomatis bermutasi di udara menjadi tembakan terionisasi (`+25% damage`, percikan busur petir ke target sekunder).
+   - **Cryo-Plasma Comet:** Proyektil `plasma` yang terbang melewati aura menara `cryo`/`fusion_zero` atau petak es `frost_slick` terinduksi Cryo (`+25% damage`) dan memicu *Thermobaric Piston* saat meledak.
+   - **Gravitational Slingshot:** Proyektil atau mortir musuh (`G.incomingMortars`) yang melintasi medan gravitasi `singularity`, `chrono_rift`, atau `zeroGravityFields` berakselerasi (`1.65x` kecepatan, `1.35x` radius splash, `+30%` damage) — bahkan mortir musuh dibelokkan balik menyerang pasukan musuh sendiri!
+   - **Steam Cooling Vent:** Gelombang `cryoPulse` yang menyapu menara berpanas kritis ($\text{heat} \ge 75$) mendinginkan menara sebesar 18 panas sambil melepaskan uap panas.
+   - **Frozen Crystal Refraction:** Sinar `rail` yang menghantam musuh dalam kondisi beku (`stunT > 0` atau `freezeT > 0`) terbias ke 2 sudut ($\pm 0.42\text{ rad}$, jangkauan 145px) dan merusak target di belakangnya.
+
+2. **Aksioma 2 — Konduktivitas Domino & Kekekalan Momentum (`propagateSurfaceCircuit`, `triggerThermobaricImpulse`, `resolveKineticCollision`, `processTowerRadiantExhaust` di `js/state.js`):**
+   - **Natural Surface Circuitry:** Sambaran `fireTesla` menyebar melalui penelusuran BFS terikat (maks 16 petak bersebelahan) melintasi jaringan petak `frost_slick`, `acid_sinkhole`, `radiation`, `frostfire`, serta nodus minyak/spora yang terhubung (`65% damage`).
+   - **Thermobaric Piston & Kinetic Bowling:** Benturan suhu ekstrem (*Thermal Shockwave* Plasma $\times$ Beku atau Cryo $\times$ *Thermite Burn*) melepaskan gelombang tekanan $\Delta T$ yang mendorong mundur musuh sepanjang jalur (`1.5x` lebih jauh di atas es `frost_slick`), lalu menghitung tabrakan fisik berantai (`mass × impulse`) terhadap barisan musuh di belakangnya serta mengikis *shield*.
+   - **Radiant Tower Exhaust:** Menara bersuhu $\ge 75$ secara otomatis memantik *Oil Vent* yang berdekatan atau menguapkan `frost_slick` menjadi semburan uap sambil mendinginkan diri.
+
+3. **Aksioma 3 — The Mirror Architect AI & Mesin Kebaruan (`evaluateEmergentNovelty` & `analyzeMirrorArchitectThreats` di `js/state.js`, `js/data.js`, `js/enemies.js`):**
+   - **3 Unit Pembajak Hukum Fisika:**
+     - **`galvanic_siphon`:** Menyerap jaringan listrik `propagateSurfaceCircuit` pada petak tanah yang diinjaknya, mengisinya ke *shield* sekutu sekitar, lalu membalikkan pulsa EMP ($2.5\text{ detik}$) ke menara Tesla penyerang.
+     - **`mirror_husk`:** Memantulkan balik tembakan sinar `rail` / `energy` ($2.5\text{ detik}$ EMP backlash, -90% damage) hingga cangkang cerminnya diretakkan terlebih dahulu dengan pukulan kinetik/tumpul non-beam $\ge 45$ atau tabrakan *Kinetic Bowling*.
+     - **`anchor_behemoth`:** Bermassa berat ($5.0$) dan berjangkar gravitasi penuh sehingga kebal terhadap dorongan mundur *Thermobaric Impulse*.
+   - **Novelty Discovery & Anti-Stagnation Decay:** Rantai $\ge 2$ langkah baru diberi pengali $1.5\times$ (`★ NEW EMERGENT DISCOVERY!`) dan +1 Nanite Core untuk rantai langka $\ge 4$ langkah (tersimpan di `SAVE.emergentDiscoveries`), sementara pengulangan pola identik $\ge 5\times$ di 12 rantai terakhir mengalami peluruhan imbalan ($0.25\times$).
+
+4. **Visualisasi Diegetik Tanpa Menambah UI (`drawEmergentFieldVfx` & `drawEmergentCrucibleHUD` di `js/render.js`):**
+   - Pewarnaan proyektil bermutasi di udara (`cyan` untuk Cryo-Plasma, `ungu` untuk Slingshot), busur sirkuit permukaan tanah, sinar bias kristal, cincin tabrakan bowling, aura khusus unit pembajak, serta *Floating Discovery Telemetry Pill* di kanvas tanpa menambah 1 pun tombol di topbar (tetap tepat 23 `.cbtn`).
+
+---
+
+### 46.2 Hasil Pengujian & Verifikasi Komprehensif
+- `tests/test_emergent_crucible.js`: **100% LULUS (7/7 Suite Aksioma Emergent, Pembajakan Mirror Architect, Anti-Stagnasi, & Anti-UI Bloat Terverifikasi)**
+- `tests/audit_bugs.js`: **0 Static Inconsistency Bugs (60 referenced element IDs, 65 SFX cases)**
+- `tests/smoke.js`: **LULUS (Simulasi headless stabil)**
+- **Seluruh 36 Unit Test Suites di repositori: 100% LULUS (termasuk `test_grand_expansion.js` dan `test_ui_layout_overhaul.js`).**
+
 
 
 

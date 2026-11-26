@@ -395,6 +395,13 @@ function onWaveClear() {
     settleBiosphereWave();
   }
 
+  // 25.0 Mirror Architect Motif Frequency Gentle Decay
+  if (G && G.emergent && G.emergent.signatureFreq) {
+    for (const k in G.emergent.signatureFreq) {
+      G.emergent.signatureFreq[k] = Math.floor(G.emergent.signatureFreq[k] * 0.5);
+    }
+  }
+
   if (n >= WIN_WAVE && !G.endless) { endGame(true); return; }
   G.state = 'prep'; G.prepT = 20; G.uiDirty = true;
 }
@@ -610,11 +617,13 @@ function update(dt) {
   if (G.state === 'over') return;
   for (const t of G.towers) updateTower(t, dt);
   for (let i = G.proj.length - 1; i >= 0; i--) {
-    const p = G.proj[i], dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy), step = PLASMA_SPD * dt;
+    const p = G.proj[i], dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy), step = PLASMA_SPD * (p.speedMult || 1.0) * dt;
     p.trail -= dt;
     if (p.trail <= 0) {
       p.trail = 0.02; const q = partPool.get(); q.x = p.x; q.y = p.y; q.vx = rand(-12, 12); q.vy = rand(-12, 12);
-      q.life = q.max = 0.3; q.size = 3.5; q.color = p.type === 'singularity_orb' ? '#818cf8' : '#fb923c'; q.drag = 2; q.round = true;
+      q.life = q.max = 0.3; q.size = 3.5;
+      q.color = p.type === 'singularity_orb' ? '#818cf8' : (p.cryoInfused ? '#67e8f9' : (p.slingshot ? '#a855f7' : '#fb923c'));
+      q.drag = 2; q.round = true;
     }
     // Gravitational Singularity suction while flying
     if (p.type === 'singularity_orb') {
@@ -626,8 +635,14 @@ function update(dt) {
         }
       }
     }
-    if (d <= step) { p.x = p.tx; p.y = p.ty; explode(p); G.proj.splice(i, 1); }
-    else { p.x += dx / d * step; p.y += dy / d * step; }
+    if (d <= step) {
+      if (typeof applyMediumCoupling === 'function') applyMediumCoupling(p, p.x, p.y, p.tx, p.ty, 'plasma');
+      p.x = p.tx; p.y = p.ty; explode(p); G.proj.splice(i, 1);
+    } else {
+      const nx = p.x + dx / d * step, ny = p.y + dy / d * step;
+      if (typeof applyMediumCoupling === 'function') applyMediumCoupling(p, p.x, p.y, nx, ny, 'plasma');
+      p.x = nx; p.y = ny;
+    }
   }
   // effects
   for (const p of partPool.items) {

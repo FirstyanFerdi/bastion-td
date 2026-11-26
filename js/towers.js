@@ -580,6 +580,11 @@ function updateTower(t, dt) {
 
   t.heat = Math.max(0, (t.heat || 0) - dt * dissipation);
 
+  // 25.0 Emergent Radiant Tower Exhaust (Hot towers auto-ignite adjacent oil vents / vaporize frost)
+  if (typeof processTowerRadiantExhaust === 'function') {
+    processTowerRadiantExhaust(t, dt);
+  }
+
   // 5.0 Thermal Overheat Throttle (-40% Fire Rate)
   const maxH = typeof THERMAL_CONFIG !== 'undefined' ? THERMAL_CONFIG.maxHeat : 100;
   if ((t.heat || 0) >= maxH) {
@@ -732,10 +737,21 @@ function fireGatling(t, st, e) {
   const mx = t.x + Math.cos(t.angle) * (28 + t.tier * 3), my = t.y + Math.sin(t.angle) * (28 + t.tier * 3);
   t.recoil = 1; t.flash = 1;
   const isFlak = t.branch === 'B';
-  const color = isFlak ? '#0ea5e9' : (t.branch === 'A' ? '#38bdf8' : '#a5f3fc');
+  // 25.0 In-Flight Medium Coupling (Conduit Wire / Gravity Slingshot)
+  const gActor = (typeof applyMediumCoupling === 'function')
+    ? applyMediumCoupling({ dmg: st.dmg, chain: ['gatling'] }, mx, my, e.x, e.y, 'gatling')
+    : { dmg: st.dmg, chain: ['gatling'] };
+  const color = gActor.ionized ? '#22d3ee' : (isFlak ? '#0ea5e9' : (t.branch === 'A' ? '#38bdf8' : '#a5f3fc'));
   addFx('tracer', mx, my, e.x, e.y, 0.09, color, isFlak ? 3.5 : 2);
   burst(e.x, e.y, isFlak ? 8 : 2, color, isFlak ? 110 : 70, 0.25, isFlak ? 3 : 2, false);
-  dealDamage(e, st.dmg, 'phys', t);
+  dealDamage(e, gActor.dmg, gActor.ionized ? 'energy' : 'phys', t, { chain: gActor.chain });
+  if (gActor.ionized && G.enemies) {
+    const o = G.enemies.find(foe => !foe.dead && foe !== e && Math.hypot(foe.x - e.x, foe.y - e.y) <= 85);
+    if (o) {
+      addBolt(e.x, e.y, o.x, o.y, '#22d3ee');
+      dealDamage(o, gActor.dmg * 0.65, 'energy', t, { isReaction: true, chain: gActor.chain });
+    }
+  }
 
   // 6.0 Neural Synapse: Gatling + Railgun Kinetic Piercing (+2 targets pierced)
   const syns = typeof getTowerSynapses === 'function' ? getTowerSynapses(t) : [];
@@ -776,11 +792,14 @@ function firePlasma(t, st, e) {
     const p = posAt(Math.min(PLEN, e.d + e.curSpeed * tt), e.seg, e.pathId);
     tx = p.x - Math.sin(p.ang) * e.off; ty = p.y + Math.cos(p.ang) * e.off;
   }
-  G.proj.push({
+  const pObj = {
     x: mx, y: my, tx, ty, dmg: st.dmg, splash: st.splash * TILE, shred: st.shred, src: t, trail: 0,
     branch: t.branch, radDur: st.radDur, radDps: st.radDps, acidAmp: st.acidAmp,
-    catalyst: !!(t.leyline && t.leyline.id === 'catalyst')
-  });
+    catalyst: !!(t.leyline && t.leyline.id === 'catalyst'),
+    chain: ['plasma'], speedMult: 1.0
+  };
+  if (typeof applyMediumCoupling === 'function') applyMediumCoupling(pObj, mx, my, mx, my, 'plasma');
+  G.proj.push(pObj);
   t.recoil = 1; t.flash = 1;
   burst(mx, my, 6, '#fdba74', 90, 0.3, 3, true);
   Sfx.play('plasma');
@@ -809,11 +828,18 @@ function explode(p) {
     }
     return;
   }
-  addFx('blast', p.x, p.y, p.x, p.y, 0.35, '#fb923c', 1).r1 = p.splash;
-  addRing(p.x, p.y, 6, p.splash, 0.4, '#fdba74', 3);
-  burst(p.x, p.y, 22, '#fb923c', 190, 0.6, 4, true);
+  addFx('blast', p.x, p.y, p.x, p.y, 0.35, p.cryoInfused ? '#38bdf8' : (p.slingshot ? '#a855f7' : '#fb923c'), 1).r1 = p.splash;
+  addRing(p.x, p.y, 6, p.splash, 0.4, p.cryoInfused ? '#67e8f9' : '#fdba74', 3);
+  burst(p.x, p.y, 22, p.cryoInfused ? '#38bdf8' : '#fb923c', 190, 0.6, 4, true);
   burst(p.x, p.y, 10, '#fff7ed', 120, 0.35, 3, true);
-  shake(2.2); Sfx.play('boom');
+  shake(p.slingshot ? 4.5 : 2.2); Sfx.play('boom');
+  // 25.0 Cryo-Infused Plasma detonates instant Thermal Shock + Thermobaric Piston Impulse
+  if (p.cryoInfused) {
+    addText(p.x, p.y - 26, '★ CRYO-PLASMA COMET! ★', '#67e8f9', 15);
+    if (typeof triggerThermobaricImpulse === 'function') {
+      triggerThermobaricImpulse(p.x, p.y, p.src, appendChainStep(p.chain, 'cryo_plasma_boom'));
+    }
+  }
   // 9.0 Reactive Dynamic Soil: Thermal Ash & Vitrified Soil
   const pSoilKey = Math.floor(p.x / TILE) + '_' + Math.floor(p.y / TILE);
   const existingSoil = G.soilTiles && G.soilTiles[pSoilKey];
@@ -866,7 +892,8 @@ function explode(p) {
         e.brittleT = acidDur;
         e.acidT = acidDur;
       }
-      dealDamage(e, p.dmg * fall, 'plasma', p.src);
+      if (p.cryoInfused) { e.slowT = Math.max(e.slowT || 0, 1.5); e.slowAmt = Math.max(e.slowAmt || 0, 0.35); }
+      dealDamage(e, p.dmg * fall, 'plasma', p.src, { chain: p.chain });
     }
   }
 }
@@ -898,6 +925,10 @@ function cryoPulse(t, st, rangePx, effRate) {
   addRing(t.x, t.y, 10, rangePx, 0.55, isAbsZero ? '#93c5fd' : (isVortex ? '#3b82f6' : 'rgba(147,197,253,0.9)'), isAbsZero ? 5 : 4);
   addRing(t.x, t.y, 4, rangePx * 0.75, 0.45, 'rgba(219,234,254,0.6)', 2);
   Sfx.play('cryo');
+  // 25.0 Cryo interacting with nearby overheated tower triggers Steam Vent Cooling
+  const cryoActor = (typeof applyMediumCoupling === 'function')
+    ? applyMediumCoupling({ dmg: st.dmg, chain: ['cryo'] }, t.x, t.y, t.x + rangePx * 0.6, t.y, 'cryo')
+    : { chain: ['cryo'] };
   for (const e of G.enemies) {
     if (e.dead || e.x < 2) continue;
     if ((e.x - t.x) ** 2 + (e.y - t.y) ** 2 > (rangePx + e.r) ** 2) continue;
@@ -917,7 +948,7 @@ function cryoPulse(t, st, rangePx, effRate) {
       e.stunT = (isAbsZero ? st.freezeDur : 0.9) * (isCat ? 1.5 : 1);
       addText(e.x, e.y - e.r - 14, 'FROZEN', '#e0f2fe', 12);
     }
-    dealDamage(e, st.dmg, 'energy', t);
+    dealDamage(e, st.dmg, 'cryo', t, { chain: cryoActor.chain });
   }
 
   // 6.0 Neural Synapse: Cryo + Plasma (Thermonuclear Frost Puddles)
@@ -974,9 +1005,14 @@ function fireTesla(t, st, e) {
     }
     addBolt(px, py, h.x, h.y, isEmp ? '#38bdf8' : '#fde047');
     burst(h.x, h.y, 4, isEmp ? '#7dd3fc' : '#fef08a', 100, 0.3, 2.5, false);
-    dealDamage(h, st.dmg * Math.pow(0.88, i), 'energy', t, { shieldMult: st.sm });
+    dealDamage(h, st.dmg * Math.pow(0.88, i), 'energy', t, { shieldMult: st.sm, chain: ['tesla'] });
     px = h.x; py = h.y;
   });
+
+  // 25.0 Natural Surface Circuitry: Tesla lightning conducts along connected wet/frost/acid/oil tiles
+  if (hit.length > 0 && typeof propagateSurfaceCircuit === 'function') {
+    propagateSurfaceCircuit(hit[0].x, hit[0].y, st.dmg, t, ['tesla']);
+  }
 
   // 6.0 Neural Synapse: Tesla + Relay (Conduit Perimeter Lightning)
   const tSyns = typeof getTowerSynapses === 'function' ? getTowerSynapses(t) : [];
@@ -1001,6 +1037,11 @@ function fireRail(t, st, e) {
   const len = st.range * TILE + 30, mx = t.x + dx * (34 + t.tier * 4), my = t.y + dy * (34 + t.tier * 4);
   let crit = Math.random() < (st.crit + (hasPerk('targeting_matrix') ? 0.10 : 0));
   let dmg = st.dmg * (crit ? st.cm : 1);
+  // 25.0 In-Flight Medium Coupling (Conduit Ionize / Gravity Slingshot)
+  const rActor = (typeof applyMediumCoupling === 'function')
+    ? applyMediumCoupling({ dmg, chain: ['rail'] }, mx, my, mx + dx * len, my + dy * len, 'rail')
+    : { dmg, chain: ['rail'] };
+  dmg = rActor.dmg;
   const hits = [];
   for (const o of G.enemies) {
     if (o.dead || o.x < 2) continue;
@@ -1013,7 +1054,11 @@ function fireRail(t, st, e) {
   for (let i = 0; i < n; i++) {
     const o = hits[i].o;
     o.revealT = 3.0; // reveals stealth
-    burst(o.x, o.y, 8, '#fda4af', 150, 0.4, 3, false);
+    burst(o.x, o.y, 8, rActor.ionized ? '#22d3ee' : '#fda4af', 150, 0.4, 3, false);
+    // 25.0 Frozen Crystal Refraction (Frozen enemies act as Optical/Energy Prisms!)
+    if ((o.stunT > 0 || o.freezeT > 0) && typeof triggerFrozenCrystalRefraction === 'function') {
+      triggerFrozenCrystalRefraction(o, dmg, a, t, rActor.chain);
+    }
     // Executioner execution check (Boss immune on Ascension 5)
     if (t.branch === 'B' && st.execThresh && (o.type !== 'boss' || !(G.ascension >= 5)) && (o.hp / o.maxHp) <= st.execThresh) {
       o.hp = 0;
@@ -1021,7 +1066,7 @@ function fireRail(t, st, e) {
       burst(o.x, o.y, 20, '#f43f5e', 180, 0.5, 3.5, true);
       killEnemy(o, t);
     } else {
-      dealDamage(o, dmg, 'phys', t, { crit, fromAngle: a });
+      dealDamage(o, dmg, rActor.ionized ? 'energy' : 'phys', t, { crit, fromAngle: a, chain: rActor.chain });
     }
     // Modular Chip: Prism Refractor (laser splits into 3 refracted beams on frozen/shielded)
     if (t.chips && t.chips.includes('prism_refractor') && (o.slowT > 0 || o.stunT > 0 || o.shield > 0)) {

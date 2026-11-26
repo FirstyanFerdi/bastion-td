@@ -722,5 +722,7 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   PHOENIX_CONFIG, triggerPhoenixDoomsday, resolvePhoenixRebirth, generateBlackboxForensics, restoreCausalMonolith, updatePhoenixSystems,
   // 24.0 The Living Biosphere & Dynamic Commodity Crucible Exports
   BIOSPHERE_CONFIG, updateBiosphereSystems, executeCommodityTrade, triggerGeomorphicReaction, fireSensorFlare, deployBioScrubber, settleBiosphereWave, recordBiosphereEndGame, spawnSymbioticBroodling, spawnBioTitanRootWalker,
+  // 25.0 The Unified Emergent Crucible Exports
+  EMERGENT_CRUCIBLE_CONFIG, appendChainStep, evaluateEmergentNovelty, analyzeMirrorArchitectThreats, applyMediumCoupling, triggerFrozenCrystalRefraction, propagateSurfaceCircuit, triggerThermobaricImpulse, resolveKineticCollision, processTowerRadiantExhaust, updateEmergentSystems, getUnitMass,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateTower, updateDreadnought
 };

@@ -539,6 +539,8 @@ function render() {
   drawGeomorphicNodes(c, time);
   drawSymbioticBroodlings(c, time);
   drawSensorFlares(c, time);
+  // 25.0 The Unified Emergent Crucible Battlefield VFX
+  drawEmergentFieldVfx(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -646,10 +648,12 @@ function render() {
   drawDreadnoughtStrike(c, time);
   drawNemesisBosses(c, time);
   drawFinisherPrompt(c, time);
-  // plasma shells
+  // plasma shells (with 25.0 in-flight mutation coloring)
   for (const p of G.proj) {
-    glow(c, p.x, p.y, 13, '#fb923c', 0.9);
-    c.fillStyle = '#fff7ed'; c.beginPath(); c.arc(p.x, p.y, 3.8, 0, TAU); c.fill();
+    const glowCol = p.cryoInfused ? '#67e8f9' : (p.slingshot ? '#a855f7' : '#fb923c');
+    const coreCol = p.cryoInfused ? '#ecfeff' : (p.slingshot ? '#f3e8ff' : '#fff7ed');
+    glow(c, p.x, p.y, p.slingshot ? 16 : 13, glowCol, 0.9);
+    c.fillStyle = coreCol; c.beginPath(); c.arc(p.x, p.y, p.slingshot ? 4.5 : 3.8, 0, TAU); c.fill();
   }
   drawFx(c);
   c.globalCompositeOperation = 'lighter';
@@ -742,6 +746,8 @@ function render() {
   // 24.0 The Living Biosphere Spore Fog & Biosphere HUD
   drawSporeFogOverlay(c, time);
   drawBiosphereHUD(c, time);
+  // 25.0 The Unified Emergent Crucible Telemetry HUD & Discovery Pill
+  drawEmergentCrucibleHUD(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -4500,5 +4506,148 @@ function drawBiosphereHUD(c, time) {
     c.textAlign = 'left';
     c.fillText('Ti:' + Math.round(bourse.prices.titanium || 50) + 'G  Pm:' + Math.round(bourse.prices.promethium || 60) + 'G', bx + 6, by + 38);
   }
+  c.restore();
+}
+
+/* ============================================================
+   BASTION TD 25.0: THE UNIFIED EMERGENT CRUCIBLE RENDERING
+   Diegetic battlefield physics feedback & zero-clutter telemetry pill.
+   ============================================================ */
+
+function drawEmergentFieldVfx(c, time) {
+  if (!G) return;
+  c.save();
+
+  // Conductive surface circuit arcs
+  const em = G.emergent;
+  if (em) {
+    if (em.circuitArcs && em.circuitArcs.length > 0) {
+      for (const arc of em.circuitArcs) {
+        const alpha = clamp(arc.life / 0.35, 0, 1);
+        c.strokeStyle = arc.color || '#22d3ee';
+        c.globalAlpha = alpha;
+        c.lineWidth = 2.5;
+        c.beginPath();
+        c.moveTo(arc.x1, arc.y1);
+        c.lineTo((arc.x1 + arc.x2) / 2 + rand(-5, 5), (arc.y1 + arc.y2) / 2 + rand(-5, 5));
+        c.lineTo(arc.x2, arc.y2);
+        c.stroke();
+      }
+      c.globalAlpha = 1;
+    }
+
+    // Crystal refraction crystal rays
+    if (em.refractBeams && em.refractBeams.length > 0) {
+      for (const rb of em.refractBeams) {
+        c.strokeStyle = 'rgba(103, 232, 249, ' + clamp(rb.life / 0.32, 0, 1) + ')';
+        c.lineWidth = 3;
+        c.beginPath();
+        c.moveTo(rb.x1, rb.y1);
+        c.lineTo(rb.x2, rb.y2);
+        c.stroke();
+      }
+    }
+
+    // Kinetic bowling collision shock rings
+    if (em.bowlingImpacts && em.bowlingImpacts.length > 0) {
+      for (const bi of em.bowlingImpacts) {
+        const k = clamp(bi.life / 0.35, 0, 1);
+        c.strokeStyle = 'rgba(251, 191, 36, ' + k + ')';
+        c.lineWidth = 2.5;
+        c.beginPath();
+        c.arc(bi.x, bi.y, 12 + (1 - k) * 20, 0, TAU);
+        c.stroke();
+      }
+    }
+  }
+
+  // Mirror Architect Hostile Visual Telegraphing on live enemies
+  if (G.enemies && G.enemies.length > 0) {
+    for (const foe of G.enemies) {
+      if (foe.dead) continue;
+      if (foe.isSiphon) {
+        c.strokeStyle = '#38bdf8';
+        c.lineWidth = 1.8;
+        c.setLineDash([4, 3]);
+        c.beginPath();
+        c.arc(foe.x, foe.y, (foe.r || 16) + 5 + Math.sin(time * 8) * 2, 0, TAU);
+        c.stroke();
+        c.setLineDash([]);
+      } else if (foe.isMirrorHusk && !foe.mirrorCracked) {
+        c.strokeStyle = '#e2e8f0';
+        c.lineWidth = 2;
+        c.beginPath();
+        for (let k = 0; k < 6; k++) {
+          const ang = time * 1.5 + (k * TAU) / 6;
+          const vx = foe.x + Math.cos(ang) * ((foe.r || 15) + 4);
+          const vy = foe.y + Math.sin(ang) * ((foe.r || 15) + 4);
+          if (k === 0) c.moveTo(vx, vy); else c.lineTo(vx, vy);
+        }
+        c.closePath();
+        c.stroke();
+      } else if (foe.isAnchor) {
+        c.strokeStyle = '#f59e0b';
+        c.lineWidth = 2.2;
+        const rrSz = (foe.r || 21) + 4;
+        c.strokeRect(foe.x - rrSz, foe.y - rrSz, rrSz * 2, rrSz * 2);
+      }
+    }
+  }
+
+  c.restore();
+}
+
+function drawEmergentCrucibleHUD(c, time) {
+  if (!G || !G.emergent) return;
+  const em = G.emergent;
+  c.save();
+
+  // Compact discovery counter pill directly beneath Biosphere HUD (zero topbar impact)
+  const bx = 16, by = 96, bw = 175, bh = 22;
+  c.fillStyle = 'rgba(15, 23, 42, 0.90)';
+  c.fillRect(bx, by, bw, bh);
+  c.strokeStyle = (em.hijackThreats && em.hijackThreats.length > 0) ? '#f43f5e' : '#38bdf8';
+  c.lineWidth = 1.2;
+  c.strokeRect(bx, by, bw, bh);
+
+  c.font = '800 8px ' + FONT;
+  c.fillStyle = '#fde047';
+  c.textAlign = 'left';
+  c.fillText('CHAINS: ' + (em.uniqueCount || 0) + ' UNIQ', bx + 6, by + 14);
+
+  c.textAlign = 'right';
+  if (em.hijackThreats && em.hijackThreats.length > 0) {
+    c.fillStyle = '#fb7185';
+    c.fillText('HIJACK: ' + em.hijackThreats.length, bx + bw - 6, by + 14);
+  } else {
+    c.fillStyle = '#94a3b8';
+    c.fillText('+' + (em.totalBonusGold || 0) + 'G', bx + bw - 6, by + 14);
+  }
+
+  // Diegetic floating chain discovery telemetry pill
+  if (em.activeBanner) {
+    const b = em.activeBanner;
+    const sW = typeof W !== 'undefined' ? W : 960;
+    const alpha = clamp(Math.min(b.t * 4, (b.max - b.t) * 2.5), 0, 1);
+    const py = (G.phoenix && G.phoenix.ghostStandoff) ? 104 : 58;
+    const pw = 360, ph = 32, px = sW / 2 - pw / 2;
+
+    c.globalAlpha = alpha;
+    c.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    c.fillRect(px, py, pw, ph);
+    c.strokeStyle = b.color || '#38bdf8';
+    c.lineWidth = 1.5;
+    c.strokeRect(px, py, pw, ph);
+
+    c.font = '900 9.5px ' + FONT;
+    c.fillStyle = b.color || '#38bdf8';
+    c.textAlign = 'center';
+    c.fillText(b.text, sW / 2, py + 13);
+
+    c.font = '700 8px ' + FONT;
+    c.fillStyle = '#e2e8f0';
+    c.fillText(b.sub || '', sW / 2, py + 25);
+  }
+
   c.restore();
 }

@@ -73,7 +73,9 @@ const SAVE = {
   // 24.0 The Living Biosphere & Dynamic Commodity Crucible
   marketReputation: Store.get('nb_marketReputation', 100),
   ecoMastery: Store.get('nb_ecoMastery', 0),
-  futuresProfit: Store.get('nb_futuresProfit', 0)
+  futuresProfit: Store.get('nb_futuresProfit', 0),
+  // 25.0 The Unified Emergent Crucible
+  emergentDiscoveries: Store.get('nb_emergentDiscoveries', {})
 };
 
 function setDoctrine(id) {
