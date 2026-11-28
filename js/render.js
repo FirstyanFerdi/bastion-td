@@ -541,6 +541,8 @@ function render() {
   drawSensorFlares(c, time);
   // 25.0 The Unified Emergent Crucible Battlefield VFX
   drawEmergentFieldVfx(c, time);
+  // 26.0 The Topological Crucible Battlefield VFX
+  drawTopologicalFieldVfx(c, time);
 
   // Tesla Overcharger conduits
   for (const t of G.towers) {
@@ -748,6 +750,8 @@ function render() {
   drawBiosphereHUD(c, time);
   // 25.0 The Unified Emergent Crucible Telemetry HUD & Discovery Pill
   drawEmergentCrucibleHUD(c, time);
+  // 26.0 The Topological Crucible Compact Status Pill
+  drawTopologicalHUD(c, time);
 
   if (G.banner) {
     const b = G.banner, a = clamp(Math.min(b.t, b.max - b.t) * 3, 0, 1), by = H * 0.3, bh = b.sub ? 92 : 66;
@@ -1010,11 +1014,33 @@ function drawCorpses(c, time) {
     c.arc(cp.x + 3, cp.y + 2, 2, 0, TAU);
     c.fill();
 
-    // Interactive prompt
-    c.fillStyle = '#38bdf8';
-    c.font = '700 8.5px ' + FONT;
-    c.textAlign = 'center';
-    c.fillText('SIPHON [CLICK] / CRUSH [MECH]', cp.x, cp.y + 16);
+    // Interactive prompt or Frozen Ice-Tomb Prism Crystal
+    if (cp.frozenTomb) {
+      const crystalR = Math.max(16, (cp.r || 14) + 4);
+      c.fillStyle = 'rgba(103, 232, 249, ' + (0.28 + 0.12 * pulse) + ')';
+      c.strokeStyle = '#67e8f9';
+      c.lineWidth = 2;
+      c.beginPath();
+      for (let k = 0; k < 6; k++) {
+        const ang = (k / 6) * TAU + Math.PI / 6;
+        const px = cp.x + Math.cos(ang) * crystalR;
+        const py = cp.y + Math.sin(ang) * (crystalR * 0.85);
+        if (k === 0) c.moveTo(px, py);
+        else c.lineTo(px, py);
+      }
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = '#e0f2fe';
+      c.font = '700 8.5px ' + FONT;
+      c.textAlign = 'center';
+      c.fillText('❄ ICE-TOMB PRISM', cp.x, cp.y + 18);
+    } else {
+      c.fillStyle = '#38bdf8';
+      c.font = '700 8.5px ' + FONT;
+      c.textAlign = 'center';
+      c.fillText('SIPHON [CLICK] / CRUSH [MECH]', cp.x, cp.y + 16);
+    }
   }
   c.restore();
 }
@@ -2062,6 +2088,20 @@ function drawBarricades(c, time) {
       c.fillRect(x - 16, y - 14, 32, 4);
       c.fillStyle = pct > 0.5 ? '#10b981' : (pct > 0.25 ? '#f59e0b' : '#ef4444');
       c.fillRect(x - 16, y - 14, 32 * pct, 4);
+    }
+    // 26.0 Barricade Capacitor Charge Ring & Charge Bar
+    if (bar.capCharge && bar.capCharge > 5) {
+      const capPct = clamp(bar.capCharge / 120, 0, 1);
+      const pulse = 0.5 + 0.5 * Math.sin(time * 7 + x);
+      c.strokeStyle = 'rgba(56, 189, 248, ' + (0.35 + 0.45 * capPct * pulse) + ')';
+      c.lineWidth = 1.5 + capPct * 1.5;
+      c.beginPath();
+      c.arc(x, y, 22 + 4 * pulse, 0, TAU);
+      c.stroke();
+      c.fillStyle = 'rgba(15,23,42,0.85)';
+      c.fillRect(x - 16, y + 10, 32, 3);
+      c.fillStyle = '#38bdf8';
+      c.fillRect(x - 16, y + 10, 32 * capPct, 3);
     }
   }
   c.restore();
@@ -4513,6 +4553,114 @@ function drawBiosphereHUD(c, time) {
    BASTION TD 25.0: THE UNIFIED EMERGENT CRUCIBLE RENDERING
    Diegetic battlefield physics feedback & zero-clutter telemetry pill.
    ============================================================ */
+
+/* ============================================================
+   BASTION TD 26.0: TOPOLOGICAL CRUCIBLE FIELD VFX & COMPACT PILL
+   ============================================================ */
+
+function drawTopologicalFieldVfx(c, time) {
+  if (!G) return;
+  c.save();
+  const topo = G.topology;
+
+  if (topo) {
+    // Golden Crossfire Pincer Vectors
+    if (topo.crossfireArcs && topo.crossfireArcs.length > 0) {
+      for (const cf of topo.crossfireArcs) {
+        const a = clamp(cf.life / 0.45, 0, 1);
+        c.strokeStyle = 'rgba(251, 191, 36, ' + a + ')';
+        c.lineWidth = 2.2;
+        for (const ang of [cf.a1, cf.a2]) {
+          c.beginPath();
+          c.moveTo(cf.x - Math.cos(ang) * 32, cf.y - Math.sin(ang) * 32);
+          c.lineTo(cf.x, cf.y);
+          c.stroke();
+        }
+        c.beginPath();
+        c.arc(cf.x, cf.y, 16 * (1 - a * 0.4), 0, TAU);
+        c.stroke();
+      }
+    }
+
+    // Overkill Signal Relay & Grid Spillover Conduction Pulses
+    if (topo.relayPulses && topo.relayPulses.length > 0) {
+      for (const rp of topo.relayPulses) {
+        const a = clamp(rp.life / 0.45, 0, 1);
+        c.strokeStyle = rp.color || '#22d3ee';
+        c.globalAlpha = a;
+        c.lineWidth = 2.4;
+        c.beginPath();
+        c.moveTo(rp.x1, rp.y1);
+        c.lineTo((rp.x1 + rp.x2) / 2 + rand(-4, 4), (rp.y1 + rp.y2) / 2 + rand(-4, 4));
+        c.lineTo(rp.x2, rp.y2);
+        c.stroke();
+      }
+      c.globalAlpha = 1;
+    }
+  }
+
+  // Symbiotic Ecology Enemy Silhouettes
+  if (G.enemies) {
+    for (const e of G.enemies) {
+      if (e.dead) continue;
+      if (e.isScavenger) {
+        c.strokeStyle = 'rgba(34, 197, 94, 0.85)';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.arc(e.x, e.y, (e.r || 13) + 5, 0, TAU);
+        c.stroke();
+      } else if (e.isSplitter) {
+        c.strokeStyle = e.hasSplit ? 'rgba(192, 132, 252, 0.5)' : 'rgba(192, 132, 252, 0.9)';
+        c.lineWidth = 2;
+        c.setLineDash([4, 3]);
+        c.beginPath();
+        c.arc(e.x, e.y, (e.r || 15) + 5, 0, TAU);
+        c.stroke();
+        c.setLineDash([]);
+      } else if (e.isMartyr) {
+        c.strokeStyle = 'rgba(244, 63, 94, 0.9)';
+        c.lineWidth = 2.2;
+        c.beginPath();
+        c.arc(e.x, e.y, (e.r || 12) + 5, 0, TAU);
+        c.stroke();
+      }
+    }
+  }
+  c.restore();
+}
+
+function drawTopologicalHUD(c, time) {
+  if (!G || !G.topology) return;
+  const t = G.topology;
+  if ((t.crossAxiomCount || 0) === 0 && (!t.ecologyThreats || t.ecologyThreats.length === 0) &&
+      (t.crossfireCount || 0) === 0 && (t.relayCount || 0) === 0) {
+    return;
+  }
+
+  c.save();
+  const bx = 197, by = 96, bw = 152, bh = 22;
+  c.fillStyle = 'rgba(15, 23, 42, 0.82)';
+  c.strokeStyle = (t.ecologyThreats && t.ecologyThreats.length > 0) ? 'rgba(192, 132, 252, 0.7)' : 'rgba(251, 191, 36, 0.65)';
+  c.lineWidth = 1.5;
+  rr(c, bx, by, bw, bh, 5);
+  c.fill();
+  c.stroke();
+
+  c.font = '700 9.5px ' + FONT;
+  c.textAlign = 'left';
+  c.fillStyle = '#fbbf24';
+  c.fillText('X-AX: ' + (t.crossAxiomCount || 0), bx + 7, by + 14.5);
+
+  c.textAlign = 'right';
+  if (t.ecologyThreats && t.ecologyThreats.length > 0) {
+    c.fillStyle = '#c084fc';
+    c.fillText('ECO: ' + t.ecologyThreats[0], bx + bw - 7, by + 14.5);
+  } else {
+    c.fillStyle = '#22d3ee';
+    c.fillText('PIN:' + (t.crossfireCount || 0) + ' RLY:' + (t.relayCount || 0), bx + bw - 7, by + 14.5);
+  }
+  c.restore();
+}
 
 function drawEmergentFieldVfx(c, time) {
   if (!G) return;

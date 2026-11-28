@@ -2921,6 +2921,44 @@ Berdasarkan master blueprint `bastion_td_emergent_crucible_blueprint.md` yang te
 - `tests/smoke.js`: **LULUS (Simulasi headless stabil)**
 - **Seluruh 36 Unit Test Suites di repositori: 100% LULUS (termasuk `test_grand_expansion.js` dan `test_ui_layout_overhaul.js`).**
 
+---
+
+## 47. Bastion TD 26.0: The Topological Crucible & Living Matter Alchemy
+
+Melanjutkan prinsip aturan dasar yang bersih namun menghasilkan interaksi emergent lintas-sistem tanpa menambah kepadatan antarmuka (0 tombol topbar tambahan; tetap 23 `.cbtn`), rilis **Bastion TD 26.0** mengintegrasikan **3 Aksioma Topologi & Materi Hidup**, persimpangan *Cross-Axiom Masterwork* dengan sistem 25.0, serta ekosistem predator simbiotik adaptif:
+
+### 47.1 Arsitektur Tiga Aksioma & Interaksi Berantai
+1. **Aksioma 1 — Geometri Medan & Kemacetan Ruang (`processCrossfirePinning`, `processGridSpillover` di [js/state.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js), konfigurasi `TOPOLOGICAL_ALCHEMY_CONFIG` di [js/data.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js)):**
+   - **Geometric Crossfire Pinning:** Serangan dari dua menara berbeda pada sudut datang $\ge 120^\circ$ ($\approx 2.094\text{ rad}$) dalam jendela $1.8\text{ detik}$ mengikis armor ($+0.25$), memberi *pinning slow* ($35\%$ selama $1.0\text{ detik}$ pasca-reaksi), dan memperbesar damage sebesar $1.35\times$ (dipicu secara seragam lewat vektor arah peluru/serangan di `dealDamage`, `fireGatling`, `explode`, dan `fireRail`).
+   - **Grid High-Load Spillover Arcs:** Saat rasio beban jaringan listrik (`getGridPowerStatus`) mencapai $\ge 85\%$, menara aktif melepaskan loncatan busur tegangan ke musuh terdekat dalam jangkauan $1.5\text{ petak}$ tiap $1.6\text{ detik}$ ($38\text{ energy damage}$).
+
+2. **Aksioma 2 — Relai Sinyal Overkill (`triggerOverkillSignalRelay` di [js/state.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js)):**
+   - Setiap pembunuhan dengan *excess lethal damage* ($\text{overkill} \ge 20$) memancarkan pulsa relai yang memangkas waktu jeda (`cd`) sebesar $55\%$ pada maksimal $2$ menara tetangga terdekat dalam radius $2.2\text{ petak}$.
+
+3. **Aksioma 3 — Alkimia Materi Hidup: Mayat & Barikade (`transmuteCorpseMatter`, `chargeBarricadeCapacitor`, `detonateBarricadeNova` di [js/state.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js), [js/towers.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/towers.js), [js/enemies.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js)):**
+   - **Alkimia Mayat 3 Elemen:**
+     - **Plasma / Fire:** Memicu *Corpse Shrapnel Detonation* dalam radius $85\text{ px}$ dengan rantai berantai maksimal 4 ledakan (`maxChainExplosions = 4`) yang juga mewariskan vektor sudut untuk *Crossfire Pin*.
+     - **Cryo / Freeze:** Membekukan bangkai berukuran besar ($r \ge 12$) menjadi **Ice-Tomb Prism** berdurasi $5.0\text{ detik}$ yang menahan musuh darat non-bos di sekitar radius $34\text{ px}$ sekaligus membiaskan tembakan `fireRail` melalui jembatan **Cross-Axiom 25.0 × 26.0** (`triggerFrozenCrystalRefraction`).
+     - **Tesla / Energy:** Memanen muatan bio-voltaik dari mayat untuk memperbaiki barikade terdekat ($+40\text{ HP}$), mengisi kapasitor barikade, memotong $30\%$ cooldown menara sekitar, serta mengisi ulang $+12$ baterai *Titan Mech*.
+   - **Living Barricade Capacitors:** Barikade menyimpan energi benturan (*capCharge* hingga $120$) untuk mempercepat pemulihan cooldown menara di sekitarnya ($+20\%$), lalu meledakkan *Revenge Capacitor Nova* saat hancur yang langsung bersinergi dengan **25.0 Kinetic Bowling** (`resolveKineticCollision`).
+   - **Cross-Axiom Masterwork Bonus (`evaluateEmergentNovelty`):** Kombinasi rantai aksioma 25.0 dan 26.0 memberikan hadiah perdana $+35\text{ Gold}$ dan $+1\text{ Nanite Core}$ dengan pelacakan `G.topology.discoveredMasterworks`.
+
+4. **Ekosistem Predator Simbiotik Adaptif (`analyzeSymbioticEcology` di [js/state.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/state.js), [js/data.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/data.js), [js/enemies.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/enemies.js), [js/waves.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/waves.js)):**
+   - Aktif mulai gelombang ke-5 (atau gelombang ke-3 jika sudah membuka $\ge 2$ *Cross-Axiom Masterwork*), meluruh perlahan pada akhir gelombang (`onWaveClear`):
+     - **`corpse_scavenger`:** Mengejar dan melahap mayat tak-beku sebelum dialkimia untuk menyembuhkan HP dan memperoleh perisai, namun mengabaikan *Ice-Tomb* beku.
+     - **`phase_splitter`:** Mengalami mitosis menjadi dua kembaran terpisah saat terperangkap dalam *Crossfire Pin* ($\ge 120^\circ$).
+     - **`martyr_dampener`:** Menyerap sinyal *Overkill Relay* di radius $95\text{ px}$ untuk memblokir pemotongan cooldown menara sambil mengonversinya menjadi perisai sekutu.
+
+5. **Visualisasi Kanvas Diegetik Tanpa Penambahan Tombol (`drawTopologicalFieldVfx` & `drawTopologicalHUD` di [js/render.js](file:///d:/PROJEK%20COBA%20COBA/bastion-td/js/render.js)):**
+   - Visual vektor *Crossfire Pin* emas, pulsa busur *Overkill Relay*, prisma kristal heksagonal *Ice-Tomb*, cincin muatan kapasitor barikade, penanda aura 3 unit predator ekologi, serta *compact HUD pill* di kanvas tanpa menambah tombol UI topbar baru.
+
+### 47.2 Hasil Pengujian & Verifikasi Komprehensif
+- `node tests/test_topological_crucible.js`: **LULUS (7/7 Skenario Uji Aksioma 26.0, Sinergi Lintas-Aksioma 25.0 × 26.0, Ekologi Adaptif, & Anti-UI Bloat — tepat 23 `.cbtn`)**
+- `node tests/audit_bugs.js`: **ZERO STATIC INCONSISTENCY BUGS FOUND! (64 SFX calls / 65 cases, 60 HTML element IDs)**
+- `node tests/smoke.js`: **LULUS (`OK state=over wave=3 lives=12 towers=24 score=87312 steps=41447`)**
+- **Seluruh 37 Unit Test Suites di repositori (`tests/test_*.js`): 100% LULUS (`ALL 37 TEST SUITES + AUDIT + SMOKE PASSED!`).**
+
+
 
 
 

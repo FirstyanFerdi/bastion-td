@@ -70,6 +70,11 @@ function spawnEnemy(type, n, affix, threat, pathId, titanId) {
     isAnchor: !!(d && d.isAnchor) || type === 'anchor_behemoth',
     mirrorCracked: false,
     mass: (d && d.mass) ? d.mass : 1.0,
+    // 26.0 The Topological Crucible: Symbiotic Predator Ecology Properties
+    isScavenger: !!(d && d.isScavenger) || type === 'corpse_scavenger',
+    isSplitter: !!(d && d.isSplitter) || type === 'phase_splitter',
+    isMartyr: !!(d && d.isMartyr) || type === 'martyr_dampener',
+    hasSplit: false,
     slimeSprayCd: 3.0,
     genome: { kin: 0.1, heat: 0.1, elec: 0.1, cryo: 0.1, twitch: 0.1, mitosis: 0, frenzy: 0, entropic: 0 }
   };
@@ -643,13 +648,57 @@ function updateEnemy(e, dt) {
         sp = 0;
         const atkDmg = (e.type === 'boss' ? 80 : (e.type === 'brute' || e.type === 'carrier' ? 45 : 18));
         bar.hp -= atkDmg * dt;
+        // 26.0 Barricade Capacitor Kinetic Charging
+        if (typeof chargeBarricadeCapacitor === 'function') {
+          chargeBarricadeCapacitor(bar, atkDmg * dt * 1.2, 'kinetic');
+        }
         if (Math.random() < 0.15) burst(bar.x, bar.y, 2, '#38bdf8', 35, 0.2, 1.5, false);
         if (bar.hp <= 0) {
           burst(bar.x, bar.y, 14, '#38bdf8', 90, 0.4, 2.5, true);
           addText(bar.x, bar.y - 15, 'BARRICADE SHATTERED!', '#f87171', 12);
           if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shatter');
+          // 26.0 Revenge Kinetic Nova on Shatter
+          if (typeof detonateBarricadeNova === 'function') detonateBarricadeNova(bar);
           G.barricades.splice(bIdx, 1);
         }
+      }
+    }
+  }
+
+  // 26.0 Cryo Ice-Tomb Corpse Roadblock Halting
+  if (!e.isRaptor && e.type !== 'boss' && !e.dead && G && G.corpses && G.corpses.length > 0) {
+    const tombBlockR = (typeof TOPOLOGICAL_ALCHEMY_CONFIG !== 'undefined') ? TOPOLOGICAL_ALCHEMY_CONFIG.corpseAlchemy.iceTombBlockRadius : 34;
+    for (const cp of G.corpses) {
+      if (cp.frozenTomb && cp.freezeT > 0 && Math.hypot(cp.x - e.x, cp.y - e.y) <= tombBlockR) {
+        sp = 0;
+        if (Math.random() < 0.12) burst(cp.x, cp.y, 1, '#67e8f9', 25, 0.2, 1.5, false);
+        break;
+      }
+    }
+  }
+
+  // 26.0 Necro-Scavenger Corpse Devouring (Counters Corpse Alchemy before player detonates/freezes)
+  if (e.isScavenger && !e.dead && G && G.corpses && G.corpses.length > 0) {
+    let targetCp = null, minCpDist = 175;
+    for (const cp of G.corpses) {
+      if (cp.frozenTomb || cp.crushed || cp.detonated) continue;
+      const dCp = Math.hypot(cp.x - e.x, cp.y - e.y);
+      if (dCp < minCpDist) { minCpDist = dCp; targetCp = cp; }
+    }
+    if (targetCp) {
+      if (minCpDist > 18) {
+        e.x += ((targetCp.x - e.x) / minCpDist) * 75 * dt;
+        e.y += ((targetCp.y - e.y) / minCpDist) * 75 * dt;
+        sp = 0;
+      } else {
+        const idxCp = G.corpses.indexOf(targetCp);
+        if (idxCp !== -1) G.corpses.splice(idxCp, 1);
+        e.hp = Math.min(e.maxHp, e.hp + Math.round(e.maxHp * 0.35));
+        e.maxShield = Math.max(e.maxShield || 0, 50);
+        e.shield = Math.min(e.maxShield, (e.shield || 0) + 50);
+        e.speedBoostT = Math.max(e.speedBoostT || 0, 3.5);
+        burst(e.x, e.y, 10, '#22c55e', 90, 0.35, 2.5, true);
+        addText(e.x, e.y - (e.r || 13) - 18, '☠ CORPSE DEVOURED!', '#22c55e', 12);
       }
     }
   }

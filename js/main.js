@@ -724,5 +724,7 @@ window.__nb = { setDoctrine, COMMANDER_DOCTRINES, MODULAR_CHIPS, HIVE_MUTATIONS,
   BIOSPHERE_CONFIG, updateBiosphereSystems, executeCommodityTrade, triggerGeomorphicReaction, fireSensorFlare, deployBioScrubber, settleBiosphereWave, recordBiosphereEndGame, spawnSymbioticBroodling, spawnBioTitanRootWalker,
   // 25.0 The Unified Emergent Crucible Exports
   EMERGENT_CRUCIBLE_CONFIG, appendChainStep, evaluateEmergentNovelty, analyzeMirrorArchitectThreats, applyMediumCoupling, triggerFrozenCrystalRefraction, propagateSurfaceCircuit, triggerThermobaricImpulse, resolveKineticCollision, processTowerRadiantExhaust, updateEmergentSystems, getUnitMass,
+  // 26.0 The Topological Crucible & Living Matter Alchemy Exports
+  TOPOLOGICAL_ALCHEMY_CONFIG, processCrossfirePinning, triggerOverkillSignalRelay, processGridSpillover, transmuteCorpseMatter, chargeBarricadeCapacitor, detonateBarricadeNova, analyzeSymbioticEcology, updateTopologicalSystems,
   explode, cryoPulse, dealDamage, killEnemy, updateEnemy, updateTower, updateDreadnought
 };

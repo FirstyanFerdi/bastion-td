@@ -401,6 +401,12 @@ function onWaveClear() {
       G.emergent.signatureFreq[k] = Math.floor(G.emergent.signatureFreq[k] * 0.5);
     }
   }
+  // 26.0 Symbiotic Predator Ecology Motif Frequency Gentle Decay
+  if (G && G.topology && G.topology.motifFreq) {
+    for (const k in G.topology.motifFreq) {
+      G.topology.motifFreq[k] = Math.floor(G.topology.motifFreq[k] * 0.5);
+    }
+  }
 
   if (n >= WIN_WAVE && !G.endless) { endGame(true); return; }
   G.state = 'prep'; G.prepT = 20; G.uiDirty = true;

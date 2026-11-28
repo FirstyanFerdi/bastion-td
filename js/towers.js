@@ -742,9 +742,10 @@ function fireGatling(t, st, e) {
     ? applyMediumCoupling({ dmg: st.dmg, chain: ['gatling'] }, mx, my, e.x, e.y, 'gatling')
     : { dmg: st.dmg, chain: ['gatling'] };
   const color = gActor.ionized ? '#22d3ee' : (isFlak ? '#0ea5e9' : (t.branch === 'A' ? '#38bdf8' : '#a5f3fc'));
+  const gAng = Math.atan2(e.y - my, e.x - mx);
   addFx('tracer', mx, my, e.x, e.y, 0.09, color, isFlak ? 3.5 : 2);
   burst(e.x, e.y, isFlak ? 8 : 2, color, isFlak ? 110 : 70, 0.25, isFlak ? 3 : 2, false);
-  dealDamage(e, gActor.dmg, gActor.ionized ? 'energy' : 'phys', t, { chain: gActor.chain });
+  dealDamage(e, gActor.dmg, gActor.ionized ? 'energy' : 'phys', t, { chain: gActor.chain, fromAngle: gAng });
   if (gActor.ionized && G.enemies) {
     const o = G.enemies.find(foe => !foe.dead && foe !== e && Math.hypot(foe.x - e.x, foe.y - e.y) <= 85);
     if (o) {
@@ -893,8 +894,13 @@ function explode(p) {
         e.acidT = acidDur;
       }
       if (p.cryoInfused) { e.slowT = Math.max(e.slowT || 0, 1.5); e.slowAmt = Math.max(e.slowAmt || 0, 0.35); }
-      dealDamage(e, p.dmg * fall, 'plasma', p.src, { chain: p.chain });
+      const blastAng = Math.atan2(e.y - p.y, e.x - p.x);
+      dealDamage(e, p.dmg * fall, 'plasma', p.src, { chain: p.chain, fromAngle: blastAng });
     }
+  }
+  // 26.0 Corpse Matter Alchemy: Plasma Detonation & Shrapnel Chain
+  if (typeof transmuteCorpseMatter === 'function') {
+    transmuteCorpseMatter(p.x, p.y, 'plasma', p.dmg, p.src, p.chain, Math.max(85, p.splash || 85));
   }
 }
 function cryoPulse(t, st, rangePx, effRate) {
@@ -949,6 +955,11 @@ function cryoPulse(t, st, rangePx, effRate) {
       addText(e.x, e.y - e.r - 14, 'FROZEN', '#e0f2fe', 12);
     }
     dealDamage(e, st.dmg, 'cryo', t, { chain: cryoActor.chain });
+  }
+
+  // 26.0 Corpse Matter Alchemy: Cryo Ice-Tomb Roadblock & Prism
+  if (typeof transmuteCorpseMatter === 'function') {
+    transmuteCorpseMatter(t.x, t.y, 'cryo', st.dmg, t, cryoActor.chain, rangePx);
   }
 
   // 6.0 Neural Synapse: Cryo + Plasma (Thermonuclear Frost Puddles)
@@ -1012,6 +1023,10 @@ function fireTesla(t, st, e) {
   // 25.0 Natural Surface Circuitry: Tesla lightning conducts along connected wet/frost/acid/oil tiles
   if (hit.length > 0 && typeof propagateSurfaceCircuit === 'function') {
     propagateSurfaceCircuit(hit[0].x, hit[0].y, st.dmg, t, ['tesla']);
+  }
+  // 26.0 Corpse Matter Alchemy: Voltaic Bio-Capacitance Harvest
+  if (hit.length > 0 && typeof transmuteCorpseMatter === 'function') {
+    transmuteCorpseMatter(hit[0].x, hit[0].y, 'energy', st.dmg, t, ['tesla']);
   }
 
   // 6.0 Neural Synapse: Tesla + Relay (Conduit Perimeter Lightning)
@@ -1091,6 +1106,17 @@ function fireRail(t, st, e) {
       addRing(o.x, o.y, 10, 42, 0.4, '#38bdf8', 4);
       addText(o.x, o.y - o.r - 20, 'DOME BLOCKED', '#38bdf8', 13);
       break;
+    }
+  }
+  // 26.0 Ice-Tomb Corpse Optical Refraction (Cross-Axiom Bridge with 25.0 Crystal Refraction)
+  if (G.corpses && typeof triggerFrozenCrystalRefraction === 'function') {
+    for (const cp of G.corpses) {
+      if (!cp || !cp.frozenTomb) continue;
+      const rx = cp.x - mx, ry = cp.y - my, proj = rx * dx + ry * dy;
+      if (proj >= -12 && proj <= len && Math.abs(rx * dy - ry * dx) <= (cp.r || 14) + 8) {
+        const tombChain = (typeof appendChainStep === 'function') ? appendChainStep(rActor.chain, 'ice_tomb') : ['rail', 'ice_tomb'];
+        triggerFrozenCrystalRefraction(cp, dmg, a, t, tombChain);
+      }
     }
   }
   const isBeam = t.branch === 'A';

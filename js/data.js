@@ -947,7 +947,11 @@ const ED = {
   // 25.0 The Unified Emergent Crucible: Mirror Architect Counter-Hijackers
   galvanic_siphon: { name: 'Galvanic Siphon Leech', hp: 520, speed: 56, r: 16, armor: 0.25, reward: 42, leak: 2, isSiphon: true, mass: 2.2 },
   mirror_husk: { name: 'Prismatic Mirror-Husk', hp: 460, speed: 62, r: 15, armor: 0.45, reward: 38, leak: 2, isMirrorHusk: true, mass: 1.8 },
-  anchor_behemoth: { name: 'Tectonic Anchor-Behemoth', hp: 980, speed: 36, r: 21, armor: 0.60, reward: 65, leak: 3, isAnchor: true, mass: 5.0 }
+  anchor_behemoth: { name: 'Tectonic Anchor-Behemoth', hp: 980, speed: 36, r: 21, armor: 0.60, reward: 65, leak: 3, isAnchor: true, mass: 5.0 },
+  // 26.0 The Topological Crucible: Symbiotic Predator Ecology Units
+  corpse_scavenger: { name: 'Necro-Scavenger Swarmer', hp: 290, speed: 95, r: 13, armor: 0.15, reward: 26, leak: 2, isScavenger: true, mass: 0.9 },
+  phase_splitter: { name: 'Phase-Splitter Twin', hp: 410, speed: 68, r: 15, armor: 0.25, reward: 34, leak: 2, isSplitter: true, mass: 1.5 },
+  martyr_dampener: { name: 'Martyr Overkill Buffer', hp: 140, speed: 86, r: 12, armor: 0.10, reward: 24, leak: 1, isMartyr: true, mass: 0.8 }
 };
 const hpScale = n => 1 + 0.22 * (n - 1) + 0.015 * (n - 1) * (n - 1);
 const WIN_WAVE = 20;
@@ -1065,6 +1069,14 @@ function buildSpawns(n) {
     for (let hIdx = 0; hIdx < hijackList.length; hIdx++) {
       const unitType = hijackList[hIdx];
       add(3.2 + hIdx * 2.5, unitType);
+    }
+  }
+
+  // 26.0 Symbiotic Predator Ecology: Asymmetric Counter-Spawns
+  if (typeof analyzeSymbioticEcology === 'function') {
+    const ecoList = analyzeSymbioticEcology(n);
+    for (let eIdx = 0; eIdx < ecoList.length; eIdx++) {
+      add(4.0 + eIdx * 2.8, ecoList[eIdx]);
     }
   }
 
@@ -3351,7 +3363,10 @@ const EMERGENT_CRUCIBLE_CONFIG = {
     boss: 8.0,
     galvanic_siphon: 2.2,
     mirror_husk: 1.8,
-    anchor_behemoth: 5.0
+    anchor_behemoth: 5.0,
+    corpse_scavenger: 0.9,
+    phase_splitter: 1.5,
+    martyr_dampener: 0.8
   },
   mirrorArchitect: {
     unlockWave: 5,
@@ -3359,6 +3374,57 @@ const EMERGENT_CRUCIBLE_CONFIG = {
     earlyUnlockChains: 3,
     empBacklashDur: 2.5,
     hijackTriggerCount: 2
+  }
+};
+
+/* ============================================================
+   BASTION TD 26.0: THE TOPOLOGICAL CRUCIBLE & LIVING MATTER ALCHEMY
+   Geometric Crossfire, Overkill Relay, Corpse/Barricade Matter & Counter-Ecology
+   ============================================================ */
+const TOPOLOGICAL_ALCHEMY_CONFIG = {
+  crossfire: {
+    windowSec: 1.8,
+    minAngleRad: 2.094, // ~120 degrees opposing angles
+    dmgMult: 1.35,
+    armorShred: 0.25,
+    pinSlowAmt: 0.35,
+    pinSlowDur: 1.0
+  },
+  overkillRelay: {
+    minOverkill: 20,
+    radiusTiles: 2.2,
+    cooldownCutPct: 0.55,
+    maxNeighbors: 2,
+    martyrAbsorbRadius: 95
+  },
+  gridSpillover: {
+    loadThreshold: 0.85,
+    interval: 1.6,
+    radiusTiles: 1.5,
+    dmg: 38
+  },
+  corpseAlchemy: {
+    chainRadius: 85,
+    shrapnelDmgRatio: 0.45,
+    maxChainExplosions: 4,
+    iceTombDuration: 5.0,
+    iceTombMinRadius: 12,
+    iceTombBlockRadius: 34,
+    voltaicRepairAmount: 40,
+    voltaicChargeCut: 0.30
+  },
+  barricadeCapacitor: {
+    maxCharge: 120,
+    chargePerHitRatio: 1.2,
+    nearbyCdBoost: 0.20,
+    novaRadius: 110,
+    novaDmg: 160
+  },
+  ecology: {
+    unlockWave: 5,
+    earlyUnlockWave: 3,
+    earlyUnlockCrossAxioms: 2,
+    triggerCount: 2
   }
 };
 

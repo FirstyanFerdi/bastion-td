@@ -461,6 +461,21 @@ function newGame(keepSpeed) {
       circuitArcs: [],
       refractBeams: [],
       bowlingImpacts: []
+    },
+    // 26.0 The Topological Crucible & Living Matter Alchemy Systems
+    topology: {
+      crossfireCount: 0,
+      relayCount: 0,
+      spilloverCount: 0,
+      corpseAlchemyCount: 0,
+      barricadeNovaCount: 0,
+      crossAxiomCount: 0,
+      discoveredMasterworks: {},
+      motifFreq: { crossfire: 0, overkill: 0, corpse: 0 },
+      ecologyThreats: [],
+      spilloverT: 0,
+      crossfireArcs: [],
+      relayPulses: []
     }
   };
   initDoctrineSkills();
@@ -1963,6 +1978,16 @@ function dealDamage(e, amount, type, src, opts) {
     }
   }
 
+  // 26.0 Geometric Crossfire Pincer Evaluation & Phase-Splitter Counter
+  let cfPinRes = null;
+  if (typeof processCrossfirePinning === 'function' && !e.dead && (!opts || (!opts.isReaction && !opts.isGridSpillover && !opts.isCorpseChain))) {
+    cfPinRes = processCrossfirePinning(e, src, a, opts);
+    if (cfPinRes) {
+      a = cfPinRes.dmg;
+      if (cfPinRes.splitTriggered) return 0;
+    }
+  }
+
   // 20.0 Epigenetic Swarm Adaptive Gene Mutations & Tracking
   if (G && G.epigeneticSwarm) {
     const swType = (type === 'kinetic' || type === 'phys') ? 'phys' : ((type === 'tesla' || type === 'energy') ? 'energy' : type);
@@ -2605,10 +2630,17 @@ function dealDamage(e, amount, type, src, opts) {
   }
   else e.dmgAcc += a;
   if (src && typeof src === 'object' && typeof src.dmg === 'number') src.dmg += a;
+  // 26.0 Apply Crossfire Pinning slow after damage reactions so heavy phys hits don't self-consume it
+  if (cfPinRes && cfPinRes.pinSlow && e.hp > 0) {
+    const cfCfg = getTopoCfg().crossfire;
+    e.slowAmt = Math.max(e.slowAmt || 0, cfCfg.pinSlowAmt || 0.35);
+    e.slowT = Math.max(e.slowT || 0, cfCfg.pinSlowDur || 1.0);
+  }
   // 25.0 Emergent Chain Novelty Discovery Evaluation
   if (opts && opts.chain && opts.chain.length >= 2 && !opts.isNoveltyEvaluated && typeof evaluateEmergentNovelty === 'function') {
     evaluateEmergentNovelty(opts.chain, e.x, e.y);
   }
+  e._lastChain = opts && opts.chain ? opts.chain.slice() : null;
   Sfx.play('hit');
   if (e.hp <= 0) killEnemy(e, src);
   return a;
@@ -2687,6 +2719,10 @@ function killEnemy(e, src) {
 
   // 13.0 Visceral Resonance: Overkill Kinetic Shatter & Arc Discharge
   const overkill = Math.max(0, -e.hp);
+  // 26.0 Overkill Signal Relay to Nearest Neighboring Towers
+  if (typeof triggerOverkillSignalRelay === 'function') {
+    triggerOverkillSignalRelay(e, overkill, src, e._lastChain || ['kill']);
+  }
   const dmgType = e.lastDmgType || 'phys';
   if (dmgType === 'phys' || dmgType === 'kinetic') {
     if (typeof spawnOverkillDebris === 'function') {
@@ -7479,6 +7515,8 @@ function updateBastion20Systems(dt) {
   updateBiosphereSystems(dt);
   // 25.0 The Unified Emergent Crucible Systems
   updateEmergentSystems(dt);
+  // 26.0 The Topological Crucible & Living Matter Alchemy Systems
+  updateTopologicalSystems(dt);
 }
 
 /* ============================================================
@@ -8886,7 +8924,7 @@ function evaluateEmergentNovelty(chainTrace, x, y) {
 
   const lenMult = 1 + 0.35 * (clean.length - 1);
   const rareBonus = clean.length >= (cfg.rareCoreMinLength || 4) ? 1.5 : 1.0;
-  const bountyGold = Math.max(2, Math.round((cfg.baseDiscoveryGold || 22) * (clean.length - 1) * freshness * rareBonus));
+  let bountyGold = Math.max(2, Math.round((cfg.baseDiscoveryGold || 22) * (clean.length - 1) * freshness * rareBonus));
 
   G.gold = (G.gold || 0) + bountyGold;
   em.totalBonusGold = (em.totalBonusGold || 0) + bountyGold;
@@ -8901,11 +8939,40 @@ function evaluateEmergentNovelty(chainTrace, x, y) {
     em.signatureFreq[motif] = (em.signatureFreq[motif] || 0) + 1;
   }
 
+  // 26.0 Cross-Axiom Masterwork & Symbiotic Ecology Motif Tracking
+  let isCrossAxiomMw = false;
+  if (G.topology) {
+    const tags25 = ['cryo_infuse', 'steam_vent', 'gravity_slingshot', 'cryo_refract', 'surface_circuit', 'thermobaric_piston', 'kinetic_bowling', 'conduit_ionize', 'cryo_plasma_boom', 'thermal_shock', 'cryo_steam_piston'];
+    const tags26 = ['crossfire_pin', 'overkill_relay', 'grid_spillover', 'corpse_detonation', 'ice_tomb', 'voltaic_corpse', 'barricade_nova'];
+    const has25 = clean.some(s => tags25.includes(s));
+    const has26 = clean.some(s => tags26.includes(s));
+    if (clean.includes('crossfire_pin')) G.topology.motifFreq.crossfire = (G.topology.motifFreq.crossfire || 0) + 1;
+    if (clean.includes('overkill_relay')) G.topology.motifFreq.overkill = (G.topology.motifFreq.overkill || 0) + 1;
+    if (clean.includes('corpse_detonation') || clean.includes('ice_tomb') || clean.includes('voltaic_corpse') || clean.includes('barricade_nova')) {
+      G.topology.motifFreq.corpse = (G.topology.motifFreq.corpse || 0) + 1;
+    }
+    if (has25 && has26) {
+      const mwSig = clean.join('->');
+      const isNewMw = !G.topology.discoveredMasterworks[mwSig];
+      if (isNewMw) {
+        G.topology.discoveredMasterworks[mwSig] = 1;
+        G.topology.crossAxiomCount = (G.topology.crossAxiomCount || 0) + 1;
+        G.gold = (G.gold || 0) + 35;
+        em.totalBonusGold = (em.totalBonusGold || 0) + 35;
+        if (typeof addCores === 'function') addCores(1);
+        bountyGold += 35;
+        isCrossAxiomMw = true;
+      } else {
+        G.topology.discoveredMasterworks[mwSig]++;
+      }
+    }
+  }
+
   // Persistent Codex-free discovery tally
   if (typeof SAVE !== 'undefined') {
     SAVE.emergentDiscoveries = SAVE.emergentDiscoveries || {};
     SAVE.emergentDiscoveries[sig] = (SAVE.emergentDiscoveries[sig] || 0) + 1;
-    if (isNew && typeof Store !== 'undefined') Store.set('nb_emergentDiscoveries', SAVE.emergentDiscoveries);
+    if ((isNew || isCrossAxiomMw) && typeof Store !== 'undefined') Store.set('nb_emergentDiscoveries', SAVE.emergentDiscoveries);
   }
 
   const px = typeof x === 'number' ? x : (typeof W !== 'undefined' ? W / 2 : 480);
@@ -8913,9 +8980,9 @@ function evaluateEmergentNovelty(chainTrace, x, y) {
   const labelSteps = clean.map(s => s.toUpperCase().replace(/_/g, ' ')).join(' -> ');
 
   em.activeBanner = {
-    text: (isNew ? '★ NEW EMERGENT DISCOVERY! ' : status === 'STALE' ? 'REPEAT PATTERN (DIMINISHED): ' : '⚡ EMERGENT CHAIN: ') + clean.length + '-STEP',
+    text: (isCrossAxiomMw ? '★ CROSS-AXIOM MASTERWORK! ' : (isNew ? '★ NEW EMERGENT DISCOVERY! ' : status === 'STALE' ? 'REPEAT PATTERN (DIMINISHED): ' : '⚡ EMERGENT CHAIN: ')) + clean.length + '-STEP',
     sub: labelSteps + ' (+' + bountyGold + 'G)',
-    color: isNew ? '#fde047' : (status === 'STALE' ? '#94a3b8' : '#38bdf8'),
+    color: (isCrossAxiomMw || isNew) ? '#fde047' : (status === 'STALE' ? '#94a3b8' : '#38bdf8'),
     t: 0,
     max: 3.0
   };
@@ -9065,7 +9132,7 @@ function applyMediumCoupling(actor, x1, y1, x2, y2, elemType) {
  */
 function triggerFrozenCrystalRefraction(target, baseDmg, angle, src, chainTrace) {
   if (!G || !G.enemies || !target || target.dead) return 0;
-  if (!(target.stunT > 0 || target.freezeT > 0)) return 0;
+  if (!(target.stunT > 0 || target.freezeT > 0 || target.frozenTomb)) return 0;
   if (target.isMirrorHusk && !target.mirrorCracked) return 0; // Uncracked mirror hijacks instead of refracting cleanly
 
   const cfg = getEmergentCfg();
@@ -9387,3 +9454,498 @@ function updateEmergentSystems(dt) {
     }
   }
 }
+
+/* ============================================================
+   26.0 THE TOPOLOGICAL CRUCIBLE & LIVING MATTER ALCHEMY
+   Geometric Crossfire, Overkill Relay, Corpse/Barricade Matter & Counter-Ecology
+   ============================================================ */
+
+function getTopoCfg() {
+  return (typeof TOPOLOGICAL_ALCHEMY_CONFIG !== 'undefined') ? TOPOLOGICAL_ALCHEMY_CONFIG : {
+    crossfire: { windowSec: 1.8, minAngleRad: 2.094, dmgMult: 1.35, armorShred: 0.25, pinSlowAmt: 0.35, pinSlowDur: 1.0 },
+    overkillRelay: { minOverkill: 20, radiusTiles: 2.2, cooldownCutPct: 0.55, maxNeighbors: 2, martyrAbsorbRadius: 95 },
+    gridSpillover: { loadThreshold: 0.85, interval: 1.6, radiusTiles: 1.5, dmg: 38 },
+    corpseAlchemy: { chainRadius: 85, shrapnelDmgRatio: 0.45, maxChainExplosions: 4, iceTombDuration: 5.0, iceTombMinRadius: 12, iceTombBlockRadius: 34, voltaicRepairAmount: 40, voltaicChargeCut: 0.30 },
+    barricadeCapacitor: { maxCharge: 120, chargePerHitRatio: 1.2, nearbyCdBoost: 0.20, novaRadius: 110, novaDmg: 160 },
+    ecology: { unlockWave: 5, earlyUnlockWave: 3, earlyUnlockCrossAxioms: 2, triggerCount: 2 }
+  };
+}
+
+/**
+ * AXIOM 1: Geometric Crossfire Pinning.
+ * Hits arriving >=120 deg apart within 1.8s armor-shred, slow-pin, and amplify damage (+35%).
+ */
+function processCrossfirePinning(e, src, dmg, opts) {
+  if (!G || !e || e.dead) return { dmg, splitTriggered: false };
+  const cfg = getTopoCfg().crossfire;
+  const now = G.time || 0;
+  let ang = (opts && typeof opts.fromAngle === 'number') ? opts.fromAngle : null;
+  if (ang === null && src && typeof src === 'object' && typeof src.x === 'number' && typeof src.y === 'number') {
+    const dx = e.x - src.x, dy = e.y - src.y;
+    if (dx !== 0 || dy !== 0) ang = Math.atan2(dy, dx);
+  }
+  if (ang === null || !Number.isFinite(ang)) return { dmg, splitTriggered: false };
+
+  let splitTriggered = false;
+  let nextDmg = dmg;
+  if (typeof e._lastHitAngle === 'number' && typeof e._lastHitTime === 'number' && (now - e._lastHitTime) <= cfg.windowSec && (!src || src !== e._lastHitSrc)) {
+    let diff = Math.abs((ang - e._lastHitAngle) % (Math.PI * 2));
+    if (diff > Math.PI) diff = Math.PI * 2 - diff;
+    if (diff >= cfg.minAngleRad && (!e._splitIFrameT || e._splitIFrameT <= 0)) {
+      // Phase-Splitter Ecology Counter: Mitosis Split when caught in a geometric crossfire!
+      if (e.isSplitter && !e.hasSplit && typeof spawnEnemy === 'function' && G.enemies) {
+        e.hasSplit = true;
+        e._splitIFrameT = 0.6;
+        const splitHp = Math.max(40, Math.round(e.hp * 0.6));
+        e.hp = splitHp;
+        e.maxHp = Math.max(e.maxHp, splitHp);
+        spawnEnemy('phase_splitter', G.wave || 1, null, null, e.pathId || 0);
+        const twin = G.enemies[G.enemies.length - 1];
+        if (twin) {
+          twin.hasSplit = true;
+          twin._splitIFrameT = 0.6;
+          twin.hp = splitHp;
+          twin.maxHp = splitHp;
+          twin.dispHp = splitHp;
+          twin.d = Math.max(0, (e.d || 0) - 20);
+          twin.seg = e.seg || 0;
+          twin.off = -(e.off || 10);
+          if (typeof e.d === 'number' && e.d > 0 && typeof posAt === 'function') {
+            const tp = posAt(twin.d, twin.seg, twin.pathId || 0);
+            twin.x = tp.x - Math.sin(tp.ang) * twin.off;
+            twin.y = tp.y + Math.cos(tp.ang) * twin.off;
+          } else {
+            twin.x = e.x - Math.cos(ang) * 18;
+            twin.y = e.y - Math.sin(ang) * 18;
+          }
+        }
+        if (typeof burst === 'function') burst(e.x, e.y, 16, '#c084fc', 110, 0.45, 3, true);
+        if (typeof addText === 'function') addText(e.x, e.y - (e.r || 15) - 22, '❖ PHASE MITOSIS!', '#c084fc', 13);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('reaction');
+        if (G.topology && G.topology.motifFreq) G.topology.motifFreq.crossfire = (G.topology.motifFreq.crossfire || 0) + 1;
+        splitTriggered = true;
+      } else {
+        nextDmg = dmg * (cfg.dmgMult || 1.35);
+        if (e.armor > 0) e.shred = Math.min(e.armor, (e.shred || 0) + (cfg.armorShred || 0.25));
+        if (opts) opts.chain = (typeof appendChainStep === 'function') ? appendChainStep(opts.chain || [], 'crossfire_pin') : ['crossfire_pin'];
+
+        if (G.topology) {
+          G.topology.crossfireCount = (G.topology.crossfireCount || 0) + 1;
+          G.topology.motifFreq.crossfire = (G.topology.motifFreq.crossfire || 0) + 1;
+          if (G.topology.crossfireArcs) {
+            G.topology.crossfireArcs.push({ x: e.x, y: e.y, a1: e._lastHitAngle, a2: ang, life: 0.45 });
+          }
+        }
+        if (typeof burst === 'function') burst(e.x, e.y, 8, '#fbbf24', 95, 0.3, 2.5, true);
+        if (typeof addText === 'function') addText(e.x, e.y - (e.r || 14) - 18, '⌖ CROSSFIRE PIN!', '#fbbf24', 12);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shatter');
+        e._lastHitAngle = ang;
+        e._lastHitTime = now;
+        e._lastHitSrc = src;
+        return { dmg: nextDmg, splitTriggered: false, pinSlow: true };
+      }
+    }
+  }
+
+  e._lastHitAngle = ang;
+  e._lastHitTime = now;
+  e._lastHitSrc = src;
+  return { dmg: nextDmg, splitTriggered, pinSlow: false };
+}
+
+/**
+ * AXIOM 2: Overkill Signal Relay.
+ * Excess lethal damage (>= 20) relays a 55% cooldown reset pulse to up to 2 nearest neighboring towers.
+ * Blocked/absorbed if a Martyr Dampener exists nearby.
+ */
+function triggerOverkillSignalRelay(e, overkill, src, chainTrace) {
+  if (!G || !e || !G.towers || G.towers.length === 0) return 0;
+  const cfg = getTopoCfg().overkillRelay;
+  if (overkill < (cfg.minOverkill || 20)) return 0;
+
+  // Martyr Dampener Counter Check
+  const absorbR = cfg.martyrAbsorbRadius || 95;
+  let martyr = e.isMartyr ? e : null;
+  if (!martyr && G.enemies) {
+    martyr = G.enemies.find(f => !f.dead && f !== e && f.isMartyr && Math.hypot(f.x - e.x, f.y - e.y) <= absorbR);
+  }
+  if (martyr) {
+    const shieldBoost = Math.max(25, Math.min(250, Math.round(overkill * 1.4)));
+    if (martyr !== e) {
+      martyr.maxShield = Math.max(martyr.maxShield || 0, shieldBoost);
+      martyr.shield = Math.min(martyr.maxShield, (martyr.shield || 0) + shieldBoost);
+    }
+    if (G.enemies) {
+      for (const ally of G.enemies) {
+        if (!ally.dead && ally !== e && Math.hypot(ally.x - martyr.x, ally.y - martyr.y) <= 85) {
+          ally.maxShield = Math.max(ally.maxShield || 0, 50);
+          ally.shield = Math.min(ally.maxShield, (ally.shield || 0) + 35);
+        }
+      }
+    }
+    if (typeof burst === 'function') burst(martyr.x, martyr.y, 12, '#f43f5e', 110, 0.4, 3, true);
+    if (typeof addText === 'function') addText(martyr.x, martyr.y - (martyr.r || 12) - 20, '🛡 OVERKILL ABSORBED!', '#f43f5e', 12);
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shield');
+    if (G.topology && G.topology.motifFreq) G.topology.motifFreq.overkill = (G.topology.motifFreq.overkill || 0) + 1;
+    return 0;
+  }
+
+  const tileSz = typeof TILE !== 'undefined' ? TILE : 60;
+  const maxR = (cfg.radiusTiles || 2.2) * tileSz;
+  const candidates = [];
+  for (const t of G.towers) {
+    if (t === src || (t.empT && t.empT > 0) || (t.meltdownT && t.meltdownT > 0)) continue;
+    const dist = Math.hypot(t.x - e.x, t.y - e.y);
+    if (dist <= maxR) {
+      candidates.push({ t, dist, onCd: (t.cd || 0) > 0 ? 1 : 0 });
+    }
+  }
+  if (candidates.length === 0) return 0;
+
+  // Prefer towers actively waiting on cooldown, then strictly nearest Euclidean distance
+  candidates.sort((a, b) => (b.onCd - a.onCd) || (a.dist - b.dist));
+  const limit = Math.min(cfg.maxNeighbors || 2, candidates.length);
+  const cutPct = cfg.cooldownCutPct || 0.55;
+  const nextChain = (typeof appendChainStep === 'function') ? appendChainStep(chainTrace, 'overkill_relay') : ['overkill_relay'];
+  let relayed = 0;
+
+  for (let i = 0; i < limit; i++) {
+    const t = candidates[i].t;
+    t.cd = Math.max(0, (t.cd || 0) * (1 - cutPct));
+    relayed++;
+    if (G.topology && G.topology.relayPulses) {
+      G.topology.relayPulses.push({ x1: e.x, y1: e.y, x2: t.x, y2: t.y, life: 0.45, color: '#22d3ee' });
+    }
+    if (typeof addBolt === 'function') addBolt(e.x, e.y, t.x, t.y, '#22d3ee');
+    if (typeof addText === 'function') addText(t.x, t.y - 22, '⚡ RELAY -55% CD', '#22d3ee', 11);
+  }
+
+  if (relayed > 0) {
+    if (G.topology) {
+      G.topology.relayCount = (G.topology.relayCount || 0) + 1;
+      G.topology.motifFreq.overkill = (G.topology.motifFreq.overkill || 0) + 1;
+    }
+    if (nextChain.length >= 2 && typeof evaluateEmergentNovelty === 'function') {
+      evaluateEmergentNovelty(nextChain, e.x, e.y);
+    }
+    if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+  }
+  return relayed;
+}
+
+/**
+ * AXIOM 1b: Grid High-Load Spillover Arcs (>= 85% Grid Load).
+ * Discharges spare electromagnetic voltage from active towers into nearby enemies.
+ */
+function processGridSpillover(dt) {
+  if (!G || !G.topology || !G.towers || !G.enemies || G.enemies.length === 0) return 0;
+  const cfg = getTopoCfg().gridSpillover;
+  const pStatus = (typeof getGridPowerStatus === 'function') ? getGridPowerStatus() : { used: 0, capacity: 60 };
+  const load = (pStatus.used || 0) / Math.max(1, pStatus.capacity || 60);
+  if (load < (cfg.loadThreshold || 0.85)) {
+    G.topology.spilloverT = 0;
+    return 0;
+  }
+
+  G.topology.spilloverT = (G.topology.spilloverT || 0) + dt;
+  if (G.topology.spilloverT < (cfg.interval || 1.6)) return 0;
+  G.topology.spilloverT = 0;
+
+  const tileSz = typeof TILE !== 'undefined' ? TILE : 60;
+  const rPx = (cfg.radiusTiles || 1.5) * tileSz;
+  const dmg = cfg.dmg || 38;
+  let zapped = 0;
+
+  for (const t of G.towers) {
+    if ((t.empT && t.empT > 0) || (t.meltdownT && t.meltdownT > 0)) continue;
+    let best = null, bd = rPx * rPx;
+    for (const foe of G.enemies) {
+      if (foe.dead) continue;
+      const d2 = (foe.x - t.x) ** 2 + (foe.y - t.y) ** 2;
+      if (d2 <= bd) { bd = d2; best = foe; }
+    }
+    if (best) {
+      zapped++;
+      if (G.topology.relayPulses) {
+        G.topology.relayPulses.push({ x1: t.x, y1: t.y, x2: best.x, y2: best.y, life: 0.35, color: '#38bdf8' });
+      }
+      if (typeof addBolt === 'function') addBolt(t.x, t.y, best.x, best.y, '#38bdf8');
+      dealDamage(best, dmg, 'energy', t, { isReaction: true, isGridSpillover: true, chain: ['grid_spillover'] });
+    }
+  }
+  if (zapped > 0) {
+    G.topology.spilloverCount = (G.topology.spilloverCount || 0) + zapped;
+  }
+  return zapped;
+}
+
+/**
+ * AXIOM 3a: Corpse Matter Alchemy.
+ * Plasma detonates corpses (bone-shrapnel), Cryo freezes large corpses (Ice-Tomb prism roadblock),
+ * and Tesla harvests voltaic charge to heal barricades, charge capacitors & recharge Mech battery.
+ */
+function transmuteCorpseMatter(x, y, elemType, baseDmg, src, chainTrace, radiusOverride) {
+  if (!G || !G.corpses || G.corpses.length === 0) return 0;
+  const cfg = getTopoCfg().corpseAlchemy;
+  const chainR = Math.max(cfg.chainRadius || 85, radiusOverride || 0);
+  const nextBase = chainTrace || [elemType];
+  let processed = 0;
+
+  // Guard maximum explosive chain recursion
+  const explDepth = nextBase.filter(s => s === 'corpse_detonation').length;
+  if ((elemType === 'plasma' || elemType === 'fire' || elemType === 'thermite') && explDepth >= (cfg.maxChainExplosions || 4)) {
+    return 0;
+  }
+
+  for (let i = G.corpses.length - 1; i >= 0; i--) {
+    const cp = G.corpses[i];
+    if (!cp || cp.crushed || cp.detonated) continue;
+    const dist = Math.hypot(cp.x - x, cp.y - y);
+    if (dist > chainR + (cp.r || 12)) continue;
+
+    if (elemType === 'plasma' || elemType === 'fire' || elemType === 'thermite') {
+      cp.detonated = true;
+      G.corpses.splice(i, 1);
+      processed++;
+      const blastR = cfg.chainRadius || 85;
+      const shrapDmg = Math.min(600, Math.max(40, Math.round((baseDmg || 100) * (cfg.shrapnelDmgRatio || 0.45) + (cp.maxHp || 300) * 0.12)));
+      const nextChain = (typeof appendChainStep === 'function') ? appendChainStep(nextBase, 'corpse_detonation') : [...nextBase, 'corpse_detonation'];
+
+      if (typeof addRing === 'function') addRing(cp.x, cp.y, 8, blastR, 0.4, '#f97316', 3.5);
+      if (typeof burst === 'function') burst(cp.x, cp.y, 16, '#fb923c', 150, 0.45, 3.2, true);
+      if (typeof addText === 'function') addText(cp.x, cp.y - 20, '☠ CORPSE SHRAPNEL!', '#fb923c', 13);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('boom');
+
+      if (G.enemies) {
+        for (const foe of G.enemies) {
+          if (foe.dead) continue;
+          if (Math.hypot(foe.x - cp.x, foe.y - cp.y) <= blastR + (foe.r || 12)) {
+            const ang = Math.atan2(foe.y - cp.y, foe.x - cp.x);
+            dealDamage(foe, shrapDmg, 'phys', src, { isReaction: true, isCorpseChain: true, fromAngle: ang, chain: nextChain });
+          }
+        }
+      }
+      if (nextChain.length >= 2 && typeof evaluateEmergentNovelty === 'function') {
+        evaluateEmergentNovelty(nextChain, cp.x, cp.y);
+      }
+      if (G.topology) {
+        G.topology.corpseAlchemyCount = (G.topology.corpseAlchemyCount || 0) + 1;
+        G.topology.motifFreq.corpse = (G.topology.motifFreq.corpse || 0) + 1;
+      }
+      // Chain explosion to adjacent corpses (respecting maxChainExplosions cap)
+      transmuteCorpseMatter(cp.x, cp.y, 'plasma', shrapDmg, src, nextChain, blastR);
+    } else if (elemType === 'cryo' || elemType === 'freeze') {
+      if ((cp.r || 14) >= (cfg.iceTombMinRadius || 12) && !cp.frozenTomb) {
+        cp.frozenTomb = true;
+        const dur = cfg.iceTombDuration || 5.0;
+        cp.freezeT = dur;
+        cp.stunT = dur;
+        cp.life = Math.max(cp.life || 0, dur);
+        cp.maxLife = Math.max(cp.maxLife || dur, dur);
+        processed++;
+        const nextChain = (typeof appendChainStep === 'function') ? appendChainStep(nextBase, 'ice_tomb') : [...nextBase, 'ice_tomb'];
+        if (typeof addRing === 'function') addRing(cp.x, cp.y, 6, 36, 0.5, '#67e8f9', 3);
+        if (typeof burst === 'function') burst(cp.x, cp.y, 12, '#e0f2fe', 90, 0.4, 2.5, true);
+        if (typeof addText === 'function') addText(cp.x, cp.y - 20, '❄ ICE-TOMB PRISM!', '#67e8f9', 12);
+        if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('freeze');
+        if (nextChain.length >= 2 && typeof evaluateEmergentNovelty === 'function') {
+          evaluateEmergentNovelty(nextChain, cp.x, cp.y);
+        }
+        if (G.topology) {
+          G.topology.corpseAlchemyCount = (G.topology.corpseAlchemyCount || 0) + 1;
+          G.topology.motifFreq.corpse = (G.topology.motifFreq.corpse || 0) + 1;
+        }
+      }
+    } else if (elemType === 'energy' || elemType === 'tesla' || elemType === 'voltaic') {
+      cp.crushed = true;
+      G.corpses.splice(i, 1);
+      processed++;
+      const nextChain = (typeof appendChainStep === 'function') ? appendChainStep(nextBase, 'voltaic_corpse') : [...nextBase, 'voltaic_corpse'];
+      const repAmt = cfg.voltaicRepairAmount || 40;
+      const cdCut = cfg.voltaicChargeCut || 0.30;
+
+      if (G.barricades) {
+        for (const bar of G.barricades) {
+          if (Math.hypot(bar.x - cp.x, bar.y - cp.y) <= 150) {
+            bar.hp = Math.min(bar.maxHp || 300, (bar.hp || 0) + repAmt);
+            chargeBarricadeCapacitor(bar, repAmt * 0.75, 'voltaic');
+            if (typeof addBolt === 'function') addBolt(cp.x, cp.y, bar.x, bar.y, '#fde047');
+          }
+        }
+      }
+      if (G.towers) {
+        for (const t of G.towers) {
+          if (Math.hypot(t.x - cp.x, t.y - cp.y) <= 135) {
+            t.cd = Math.max(0, (t.cd || 0) * (1 - cdCut));
+            if (typeof addBolt === 'function') addBolt(cp.x, cp.y, t.x, t.y, '#22d3ee');
+          }
+        }
+      }
+      if (G.mech && G.mech.battery !== undefined && Math.hypot((G.mech.x || 0) - cp.x, (G.mech.y || 0) - cp.y) <= 180) {
+        G.mech.battery = Math.min(100, (G.mech.battery || 0) + 12);
+      }
+      if (typeof burst === 'function') burst(cp.x, cp.y, 12, '#fde047', 110, 0.4, 2.8, true);
+      if (typeof addText === 'function') addText(cp.x, cp.y - 20, '⚡ BIO-VOLTAIC SURGE!', '#fde047', 12);
+      if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('overcharge');
+      if (nextChain.length >= 2 && typeof evaluateEmergentNovelty === 'function') {
+        evaluateEmergentNovelty(nextChain, cp.x, cp.y);
+      }
+      if (G.topology) {
+        G.topology.corpseAlchemyCount = (G.topology.corpseAlchemyCount || 0) + 1;
+        G.topology.motifFreq.corpse = (G.topology.motifFreq.corpse || 0) + 1;
+      }
+    }
+  }
+  return processed;
+}
+
+/**
+ * AXIOM 3b: Barricade Capacitors — Absorb Siege Impacts & Unleash Revenge Kinetic Nova.
+ */
+function chargeBarricadeCapacitor(bar, rawAmount, elemTag) {
+  if (!bar) return 0;
+  const cfg = getTopoCfg().barricadeCapacitor;
+  const maxC = cfg.maxCharge || 120;
+  bar.capCharge = Math.min(maxC, (bar.capCharge || 0) + Math.max(0, rawAmount));
+  if (elemTag) bar.lastCapElem = elemTag;
+  return bar.capCharge;
+}
+
+function detonateBarricadeNova(bar) {
+  if (!G || !bar || (bar.capCharge || 0) <= 0) return 0;
+  const cfg = getTopoCfg().barricadeCapacitor;
+  const chargeRatio = Math.max(0.4, (bar.capCharge || 0) / 100);
+  const dmg = Math.round((cfg.novaDmg || 160) * chargeRatio);
+  const radius = cfg.novaRadius || 110;
+  const chain = ['barricade_nova'];
+
+  if (typeof addRing === 'function') addRing(bar.x, bar.y, 10, radius, 0.5, '#f59e0b', 4);
+  if (typeof burst === 'function') burst(bar.x, bar.y, 24, '#38bdf8', 170, 0.55, 3.5, true);
+  if (typeof addText === 'function') addText(bar.x, bar.y - 24, '⚡ CAPACITOR NOVA!', '#fde047', 14);
+  if (typeof Sfx !== 'undefined' && Sfx.play) Sfx.play('shockwave');
+
+  let hits = 0;
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (foe.dead) continue;
+      if (Math.hypot(foe.x - bar.x, foe.y - bar.y) <= radius + (foe.r || 12)) {
+        hits++;
+        dealDamage(foe, dmg, 'energy', null, { isReaction: true, isImpulse: true, chain });
+        if (!foe.dead && typeof resolveKineticCollision === 'function') {
+          resolveKineticCollision(foe, 34 * Math.min(1.5, chargeRatio), null, chain);
+        }
+      }
+    }
+  }
+  if (typeof evaluateEmergentNovelty === 'function') {
+    evaluateEmergentNovelty(['barricade_nova', 'kinetic_bowling'], bar.x, bar.y);
+  }
+  if (G.topology) {
+    G.topology.barricadeNovaCount = (G.topology.barricadeNovaCount || 0) + 1;
+    G.topology.motifFreq.corpse = (G.topology.motifFreq.corpse || 0) + 1;
+  }
+  return hits;
+}
+
+/**
+ * Symbiotic Predator Ecology: Asymmetric Counter-Spawns targeting overused 26.0 tactics.
+ */
+function analyzeSymbioticEcology(wave) {
+  if (!G || !G.topology) return [];
+  const cfg = getTopoCfg().ecology;
+  const unlocked = (wave >= (cfg.unlockWave || 5)) ||
+    (wave >= (cfg.earlyUnlockWave || 3) && (G.topology.crossAxiomCount || 0) >= (cfg.earlyUnlockCrossAxioms || 2));
+  if (!unlocked) {
+    G.topology.ecologyThreats = [];
+    return [];
+  }
+
+  const freq = G.topology.motifFreq || {};
+  const trig = cfg.triggerCount || 2;
+  const cap = Math.min(4, 1 + Math.floor(wave / 4));
+  const picks = [];
+  const activeNames = [];
+
+  if ((freq.corpse || 0) >= trig) {
+    picks.push('corpse_scavenger');
+    activeNames.push('SCAVENGER');
+  }
+  if ((freq.crossfire || 0) >= trig) {
+    picks.push('phase_splitter');
+    activeNames.push('SPLITTER');
+  }
+  if ((freq.overkill || 0) >= trig) {
+    picks.push('martyr_dampener');
+    activeNames.push('MARTYR');
+  }
+
+  G.topology.ecologyThreats = activeNames;
+  if (picks.length === 0) return [];
+  const res = [];
+  for (let i = 0; i < cap; i++) {
+    res.push(picks[i % picks.length]);
+  }
+  return res;
+}
+
+/**
+ * Per-frame updater for 26.0 Topological Crucible systems.
+ */
+function updateTopologicalSystems(dt) {
+  if (!G || !G.topology) return;
+  const topo = G.topology;
+  const cfg = getTopoCfg();
+  const tileSz = typeof TILE !== 'undefined' ? TILE : 60;
+
+  // Decay Frozen Ice-Tomb timers on corpses & enemy split immunity windows
+  if (G.corpses) {
+    for (const cp of G.corpses) {
+      if (cp.frozenTomb && cp.freezeT > 0) {
+        cp.freezeT = Math.max(0, cp.freezeT - dt);
+        cp.stunT = cp.freezeT;
+        if (cp.freezeT <= 0) cp.frozenTomb = false;
+      }
+    }
+  }
+  if (G.enemies) {
+    for (const foe of G.enemies) {
+      if (foe._splitIFrameT > 0) foe._splitIFrameT = Math.max(0, foe._splitIFrameT - dt);
+    }
+  }
+
+  // Barricade Capacitor aura boosts neighboring towers' cooldown recovery
+  if (G.barricades && G.barricades.length > 0 && G.towers && G.towers.length > 0) {
+    const boostR = 2.0 * tileSz;
+    const boostRate = cfg.barricadeCapacitor.nearbyCdBoost || 0.20;
+    const maxC = cfg.barricadeCapacitor.maxCharge || 120;
+    for (const t of G.towers) {
+      if ((t.cd || 0) <= 0 || (t.empT && t.empT > 0)) continue;
+      let maxFrac = 0;
+      for (const bar of G.barricades) {
+        if ((bar.capCharge || 0) >= 15 && Math.hypot(bar.x - t.x, bar.y - t.y) <= boostR) {
+          maxFrac = Math.max(maxFrac, Math.min(1, bar.capCharge / maxC));
+        }
+      }
+      if (maxFrac > 0) {
+        t.cd = Math.max(0, t.cd - dt * boostRate * maxFrac);
+      }
+    }
+  }
+
+  // Grid High-Load Spillover Arcs
+  if (G.state === 'active') {
+    processGridSpillover(dt);
+  }
+
+  // Decay ephemeral VFX arcs
+  const decay = (arr) => {
+    if (!arr || arr.length === 0) return;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      arr[i].life -= dt;
+      if (arr[i].life <= 0) arr.splice(i, 1);
+    }
+  };
+  decay(topo.crossfireArcs);
+  decay(topo.relayPulses);
+}
+
